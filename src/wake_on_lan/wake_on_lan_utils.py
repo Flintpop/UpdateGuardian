@@ -6,7 +6,8 @@ import subprocess
 
 def is_secureon_password_valid(secureon_password: str) -> bool:
     # Vérifier que le mot de passe SecureOn a 12 caractères hexadécimaux et les sépare par des deux-points
-    if len(secureon_password) != 17:
+    length_secureon_password = 17
+    if len(secureon_password) != length_secureon_password:
         return False
 
     # Utiliser une expression régulière pour vérifier le format
@@ -71,8 +72,36 @@ def get_mac_addresses(ip_addresses: list[str]) -> dict:
     return mac_addresses
 
 
+def get_router_ip():
+    router_ip = None
+
+    try:
+        if platform.system() == 'Windows':
+            output = subprocess.check_output(['ipconfig'], text=True)
+            output = output.replace("Default Gateway", "Passerelle par défaut")
+            regex_pattern = r"Default Gateway[^\n]*\n[^\d]*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
+            try:
+                router_ip = re.search(regex_pattern, output, re.IGNORECASE).group(1)
+            except AttributeError:
+                # Check if the ipconfig returned french text
+                regex_pattern = r"Passerelle par défaut[^\n]*\n[^\d]*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
+                router_ip = re.search(regex_pattern, output, re.IGNORECASE).group(1)
+        else:
+            output = subprocess.check_output(['route', '-n'], text=True)
+            regex_pattern = r"^0\.0\.0\.0\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
+            router_ip = re.search(regex_pattern, output, re.IGNORECASE).group(1)
+    except subprocess.CalledProcessError:
+        print("Erreur lors de la récupération de l'adresse IP du routeur.")
+    except AttributeError:
+        print("Impossible de trouver l'adresse IP du routeur.")
+
+    return router_ip
+
+
 # Exemple d'utilisation
 if __name__ == "__main__":
+    print()
+    print("Adresse du routeur : ", get_router_ip())
     print()
     ip_list = ["192.168.2.44", "192.168.2.254"]
     mac_list = get_mac_addresses(ip_list)
