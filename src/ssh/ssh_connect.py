@@ -1,11 +1,15 @@
 import paramiko
-from src.config import data_dict_json
-
-from src.config import remote_host, remote_user, remote_password
 
 
-def ssh_connect(cur_remote_host, cur_remote_user, cur_remote_password) -> paramiko.SSHClient:
-    ssh = paramiko.SSHClient()
+def ssh_connect(cur_remote_host: str, cur_remote_user: str, cur_remote_password: str) -> paramiko.SSHClient:
+    """
+    Connect to a remote computer using SSH.
+    :param cur_remote_host: The remote computer's IP address or hostname.
+    :param cur_remote_user: The remote computer's username.
+    :param cur_remote_password: The remote computer's password.
+    :return: The SSH session.
+    """
+    ssh: paramiko.SSHClient = paramiko.SSHClient()
 
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -14,9 +18,10 @@ def ssh_connect(cur_remote_host, cur_remote_user, cur_remote_password) -> parami
     return ssh
 
 
-def find_and_connect_all_remote_computers() -> list:
-    ssh_sessions = []
-    for i in range(len(data_dict_json.get("remote_user"))):
-        ssh_sessions.append(ssh_connect(remote_host[i], remote_user[i], remote_password[i]))
-
-    return ssh_sessions
+def get_number_of_computers(data_json: dict) -> int:
+    try:
+        return len(data_json.get("remote_user"))
+    except TypeError:
+        raise TypeError("The JSON file is empty.")
+    except AttributeError:
+        raise AttributeError("The JSON file wrongly formatted.")

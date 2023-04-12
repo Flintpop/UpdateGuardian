@@ -1,5 +1,8 @@
 {
   "remote_user" : ["user1", "user2"],
   "remote_host" : ["192.168.1.5", "192.168.2.1"],
-  "remote_password" : ["password1", "password2"]
+  "remote_password" : ["password1", "password2"],
+  "max_computers_per_iteration": 3,
+  "subnet_mask" : "1",
+  "taken_ip" : ["192.168.1.1"]
 }
