@@ -18,6 +18,6 @@ def install_windows_update_all_pc(max_computers_per_iteration: int, n_computers:
 def install_windows_update(i: int, max_computers_per_iteration: int, n_computers: int):
     for j in range(i, n_computers, max_computers_per_iteration):
         print("Installing Windows Update on pc " + str(j) + "...")
-        # TODO: All steps to update a windows pc via ssh and scripts...
+        # TODO: All steps to update a Windows pc via ssh and scripts...
         sleep(5)
         print("Windows Update installed successfully")
