@@ -68,8 +68,8 @@ Here is an example of the json file:
   "remote_host" : ["192.168.1.5", "192.168.2.1"],
   "remote_password" : ["password1", "password2"],
   "max_computers_per_iteration": 3,
-  "subnet_mask" : "1", # used for 192.168.**1**.xxx
-  "taken_ip" : ["192.168.1.1"] # Usually the router ip. Make sur to add the server ip if it is in the same subnet
+  "subnet_mask" : "1", // used for 192.168.**1**.xxx
+  "taken_ip" : ["192.168.1.1"] // Usually the router ip. Make sur to add the server ip if it is in the same subnet
 }
 ```
 
