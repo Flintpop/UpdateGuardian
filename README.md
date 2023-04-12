@@ -46,13 +46,16 @@ List of prerequisites for running UpdateGuardian (e.g., Python, Paramiko, etc.).
 - Windows 10 or 11 **wired** local network (wake on lan, which is for automatic boot)
 - A server (could be simply a windows pc running on 24/7)
 - The list of statically assigned IP addresses of the PCs in the local network (not dhcp for now)
-- The list of the PCs username in the local networ
+- The list of the PCs username in the local network
 - The list of the PCs password in the local network
 - SSH server enabled on the PCs in the local network
 - Wake on lan enabled on the PCs in the local network. It is strongly recommended to use a secureOn password for the wake on lan feature.
 - Look out in requirements.txt for the pip packages (to be installed)
 
 ## Installation and Configuration
+
+Make sure all SSH server are enabled on the PCs in the local network.
+If not, please follow [this](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?source=recommendations&tabs=powershell) tutorial for each computer (I know it is a pain, but it is the only way for now)
 
 Work in progress.
 
@@ -95,7 +98,8 @@ This is a work in progress project, so there is no support for now.
 
 ## Contributions
 
-Contributions are welcome. Please read the [contributing guidelines](CONTRIBUTING.md) before submitting a pull request.
+If anyone has different, and possibly better structural ideas (using something else than ssh for exemple), feel free to contact me or to make a pull request.
+Contributions are welcome. Please read the [not so done for now contributing guidelines](CONTRIBUTING.md) before submitting a pull request.
 
 ## License
 
