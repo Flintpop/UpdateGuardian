@@ -19,7 +19,7 @@
 
 UpdateGuardian is an automation system for updating a local network of Windows 10 PCs, designed to streamline and secure update operations while reducing the technical maintenance required.
 
-The idea came from the hassle to update a moderate number of Windows 10 PCs spread out in a local network, without the need or cost at our disposal to install a full-fledged MDM solution, like a windows server. In addition, I intentionnally did not look out for other solution to grow my knowledge in python and network programming, and to have a project to work on for my internship.
+The idea came from the hassle to update a moderate number of Windows 10 PCs spread out in a local network, without the need or cost at our disposal to install a windows server. In addition, I intentionnally did not look out for other solution to grow my knowledge in python and network programming, and to have a project to work on for my internship.
 
 It is a free and open source project, licensed under the Apache License 2.0.
 The project is currently in development, and is not yet ready for production use.
@@ -43,7 +43,7 @@ These are the features planned :
 List of prerequisites for running UpdateGuardian (e.g., Python, Paramiko, etc.).
 
 - Python 3.11
-- Windows 10 or 11 local network
+- Windows 10 or 11 **wired** local network (wake on lan, which is for automatic boot)
 - A server (could be simply a windows pc running on 24/7)
 - The list of statically assigned IP addresses of the PCs in the local network (not dhcp for now)
 - The list of the PCs username in the local networ
