@@ -1,8 +1,9 @@
 import json
+import os
 import unittest
 
-from src.data.generate_json import generate_dict
-from src.data.local_network_data import Data
+from src.server.data.generate_json import generate_dict
+from src.server.data.local_network_data import Data
 
 JSON_TEST_FILENAME = 'test.json'
 JSON_FILE_PATH = '../tests/' + JSON_TEST_FILENAME
@@ -69,3 +70,35 @@ class TestLoadJson(unittest.TestCase):
 
         with self.assertRaises(json.JSONDecodeError):
             Data(JSON_FILE_PATH)
+
+
+class TestCheminFichier(unittest.TestCase):
+    json_test_dict: dict = generate_dict(13)
+    data: Data = Data(JSON_FILE_PATH, json_test_dict)
+
+    def test_valid_path(self):
+        valid_path = self.data.is_path_valid
+        windows_path = "C:/Users/utilisateur/Documents/mon_fichier.py"
+        linux_path = "/home/utilisateur/Documents/mon_fichier.py"
+        invalid_windows_path = "C:/Users/utilisateur/Documents/mon_fichier.txt"
+        invalid_windows_path2 = "C:Users/utilisateur/Documents/mon_fichier.py"
+
+        self.assertTrue(valid_path(windows_path), "Windows path should be valid.")
+        self.assertTrue(valid_path(linux_path), "Linux path should be valid.")
+        self.assertFalse(valid_path(invalid_windows_path), "Windows path should not be valid.")
+        self.assertFalse(valid_path(invalid_windows_path2), "Windows path should not be valid (lacks '/').")
+
+    def test_fichier_existe(self):
+        does_file_exists = self.data.does_file_exists
+        file_exists_name: str = "test_fichier_existant.py"
+        file_not_exists_path: str = "tests/test_fichier_non_existant.py"
+
+        with open(file_exists_name, 'w') as file:
+            file.write("print('Hello World!')")
+
+        file_exists_path = os.path.abspath(file_exists_name)
+
+        self.assertTrue(does_file_exists(file_exists_path), "Le fichier devrait exister.")
+        self.assertFalse(does_file_exists(file_not_exists_path), "Le fichier ne devrait pas exister.")
+
+        os.remove(file_exists_name)

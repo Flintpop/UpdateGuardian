@@ -1,4 +1,6 @@
 import ipaddress
+import os
+import re
 import json
 
 
@@ -10,7 +12,7 @@ class Data:
     """
     data_json: dict = {}
 
-    def __init__(self, filename: str = '../computers_informations.json', json_data: dict = None):
+    def __init__(self, filename: str = r'../../computers_informations.json', json_data: dict = None):
         if json_data is None:
             self.__load_data(filename)
         else:
@@ -40,7 +42,8 @@ class Data:
     def __check_json_integrity(self) -> bool:
         # Vérifier la présence des champs requis
         required_fields = ["remote_user", "remote_host", "remote_password", "max_computers_per_iteration",
-                           "subnet_mask", "taken_ips"]
+                           "subnet_mask", "taken_ips", "python_client_script_path"]
+
         for field in required_fields:
             if field not in self.data_json:
                 print(f"Champ manquant : {field}")
@@ -83,3 +86,57 @@ class Data:
 
     def get_max_computers_per_iteration(self) -> int:
         return self.data_json.get("max_computers_per_iteration")
+
+    def get_number_of_computers(self) -> int:
+        try:
+            return len(self.data_json.get("remote_user"))
+        except TypeError:
+            raise TypeError("The JSON file is empty.")
+        except AttributeError:
+            raise AttributeError("The JSON file wrongly formatted.")
+
+    def get_python_script_path(self, user_index: int = 0) -> str:
+        """
+        Return the path to the python scripts folder **on the client computer** via it's username index listed in the
+        json file.
+        :param user_index: Index of the username in the json file
+        :return: The string of the path of the
+        """
+        path_chose_by_user: str = self.data_json.get("python_client_script_path")
+        if path_chose_by_user == "":
+            return os.path.join(r'C:\Users', self.data_json.get("remote_user")[user_index])
+
+        return os.path.join(self.data_json.get("python_client_script_path"),
+                            self.data_json.get("remote_user")[user_index])
+
+    def is_path_valid(self, path="") -> bool:
+        # TODO: A tester
+        evaluate_path = self.get_python_script_path() if path == "" else path
+
+        # Détecte l'OS actuel
+        current_os = os.name
+
+        # Expression régulière pour les chemins de fichiers Windows
+        windows_regex = re.compile(
+            r'^\w:[\\/](?:[\w\-._]+\\)*\w[\w\-._]*\.py$'
+        )
+
+        # Expression régulière pour les chemins de fichiers Linux
+        linux_regex = re.compile(
+            r'^/(?:[\w\-._]+/)*\w[\w\-._]*\.py$'
+        )
+
+        # Vérifie si le chemin est valide pour l'OS actuel
+        if current_os == 'nt':  # Windows
+            return bool(windows_regex.match(evaluate_path))
+        elif current_os == 'posix':  # Linux
+            return bool(linux_regex.match(evaluate_path))
+        else:
+            return False
+
+    def does_file_exists(self, path="") -> bool:
+        evaluate_path: str = self.get_python_script_path() if path == "" else path
+        return os.path.isfile(evaluate_path) and path.endswith('.py')
+
+    def get_ip_address(self, i: int):
+        return self.data_json.get("remote_host")[i]
