@@ -17,6 +17,8 @@
 
 ## Introduction
 
+### ⚠️ UpdateGuardian is under heavy development. It is not ready for any usage.
+<br>
 UpdateGuardian is an automation system for updating a local network of Windows 10 PCs, designed to streamline and secure
 update operations while reducing the technical maintenance required.
 
