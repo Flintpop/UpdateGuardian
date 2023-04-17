@@ -26,6 +26,12 @@ def send_wol_with_secureon(mac_address: str, secureon_password: str) -> None:
     send_magic_packet(f"{mac_address}/{secureon_password}")
 
 
+def send_wol(ip_address: str) -> None:
+    # TODO: Change that because test
+    mac_address: str = get_mac_address(ip_address)
+    send_magic_packet(mac_address)
+
+
 def ping_ip(ip_address: str) -> bool:
     if platform.system() == 'Windows':
         ping_command = ['ping', '-n', '1', '-w', '1000', ip_address]
@@ -43,6 +49,7 @@ def ping_ip(ip_address: str) -> bool:
 
 def get_mac_address(ip_address: str) -> str | None:
     if not ping_ip(ip_address):
+        print("Impossible de récupérer l'adresse MAC car l'ordinateur est éteint.")
         return None
 
     try:
@@ -78,7 +85,6 @@ def get_router_ip():
     try:
         if platform.system() == 'Windows':
             output = subprocess.check_output(['ipconfig'], text=True)
-            output = output.replace("Default Gateway", "Passerelle par défaut")
             regex_pattern = r"Default Gateway[^\n]*\n[^\d]*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
             try:
                 router_ip = re.search(regex_pattern, output, re.IGNORECASE).group(1)
@@ -103,7 +109,7 @@ if __name__ == "__main__":
     print()
     print("Adresse du routeur : ", get_router_ip())
     print()
-    ip_list = ["192.168.2.44", "192.168.2.254"]
+    ip_list = ["192.168.7.227"]
     mac_list = get_mac_addresses(ip_list)
 
     for ip, mac in mac_list.items():

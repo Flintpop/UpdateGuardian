@@ -1,7 +1,7 @@
 {
   "remote_user" : ["Administrateur"],
-  "remote_host" : ["192.168.7.226"],
-  "remote_password" : [""],
+  "remote_host" : ["192.168.7.227"],
+  "remote_passwords" : [],
   "max_computers_per_iteration": 1,
   "subnet_mask" : "7",
   "taken_ips" : ["192.168.7.254"],

@@ -1,5 +1,7 @@
 import socket
 
+from update_windows import start_client_update
+
 
 def main_loop() -> None:
     # Lancer les mises à jour avec la fonction update_windows() définie précédemment
@@ -11,11 +13,10 @@ def main_loop() -> None:
     client.connect((server_ip, server_port))
 
     print("Connected to server.")
-    # Votre logique de communication avec le serveur
-    # Par exemple, envoyer des résultats de mise à jour, etc.
 
-    # Fermer la connexion une fois terminé
-    client.close()
+    start_client_update()
+
+    # client.close()
 
 
 if __name__ == '__main__':

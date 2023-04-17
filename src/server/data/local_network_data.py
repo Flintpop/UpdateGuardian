@@ -3,6 +3,8 @@ import os
 import re
 import json
 
+from src.server.commands.path_functions import find_file
+
 
 class Data:
     """
@@ -10,9 +12,13 @@ class Data:
     Getters are used to access the data.
     Checks are made to ensure the integrity of the JSON file.
     """
+    project_name = "UpdateGuardian"
+    python_version = "3.11"
+    python_folder_name = f"Python{python_version.replace('.', '')}"
+    python_precise_version = "3.11.3"
     data_json: dict = {}
 
-    def __init__(self, filename: str = r'../../computers_informations.json', json_data: dict = None):
+    def __init__(self, filename: str = find_file("computers_informations.json"), json_data: dict = None):
         if json_data is None:
             self.__load_data(filename)
         else:
@@ -22,11 +28,23 @@ class Data:
         if not data_check:
             raise ValueError("Le fichier JSON est invalide.")
 
-    def __load_data(self, filename: str = '../computers_informations.json'):
+    def __load_data(self, filename: str = find_file("computers_informations.json")):
         # Ouvrir le fichier JSON en mode lecture
         with open(filename, 'r', encoding='utf-8') as fichier:
             # Charger le contenu du fichier JSON dans une variable
             self.data_json: dict = json.load(fichier)
+
+        if not self.data_json.get("remote_passwords"):
+            self.__load_passwords()
+
+    def __load_passwords(self):
+        with open(find_file("passwords.txt"), 'r', encoding='utf-8') as fichier:
+            passwords = fichier.readlines()
+
+            # Enlever les sauts de ligne et ignorer les lignes vides
+        cleaned_passwords = [pwd.strip() for pwd in passwords if pwd.strip()]
+
+        self.data_json['remote_passwords'] = cleaned_passwords
 
     def get_data_json(self) -> dict:
         return self.data_json
@@ -41,7 +59,7 @@ class Data:
 
     def __check_json_integrity(self) -> bool:
         # Vérifier la présence des champs requis
-        required_fields = ["remote_user", "remote_host", "remote_password", "max_computers_per_iteration",
+        required_fields = ["remote_user", "remote_host", "remote_passwords", "max_computers_per_iteration",
                            "subnet_mask", "taken_ips", "python_client_script_path"]
 
         for field in required_fields:
@@ -51,8 +69,8 @@ class Data:
 
         # Vérifier l'intégrité des longueurs des listes
         if not (len(self.data_json["remote_user"]) == len(self.data_json["remote_host"]) == len(
-                self.data_json["remote_password"])):
-            print("Les longueurs des listes 'remote_user', 'remote_host' et 'remote_password' ne correspondent pas.")
+                self.data_json["remote_passwords"])):
+            print("Les longueurs des listes 'remote_user', 'remote_host' et 'remote_passwords' ne correspondent pas.")
             print("Vous avez probablement oublié de mettre à jour l'un des trois champs. Il doit manquer un mot "
                   "de passe, un nom d'utilisateur ou une adresse IP.")
             return False
@@ -104,10 +122,10 @@ class Data:
         """
         path_chose_by_user: str = self.data_json.get("python_client_script_path")
         if path_chose_by_user == "":
-            return os.path.join(r'C:\Users', self.data_json.get("remote_user")[user_index])
+            return os.path.join(r'C:\Users', self.data_json.get("remote_user")[user_index], Data.project_name)
 
         return os.path.join(self.data_json.get("python_client_script_path"),
-                            self.data_json.get("remote_user")[user_index])
+                            self.data_json.get("remote_user")[user_index], Data.project_name)
 
     def is_path_valid(self, path="") -> bool:
         # TODO: A tester
@@ -140,3 +158,25 @@ class Data:
 
     def get_ip_address(self, i: int):
         return self.data_json.get("remote_host")[i]
+
+    def get_python_requirements_path(self, i: int):
+        return os.path.join(self.get_python_script_path(i), "requirements_client.txt")
+
+    @staticmethod
+    def get_server_python_installer_path() -> str:
+        current_file_path: str = os.path.dirname(os.path.abspath(__file__))
+        installer_path = os.path.join(current_file_path, "..", "..", "..", "python_3.11.3.exe")
+        return os.path.abspath(installer_path)
+
+    @staticmethod
+    def get_installer_name() -> str:
+        return "python_" + Data.python_precise_version + ".exe"
+
+    def get_client_info(self, i: int) -> tuple[str, str, str]:
+        """
+        Return the tuple (ip_address, username, password) of the client computer at index i.
+        :param i: Client index.
+        :return: Tuple (ip_address, username, password)
+        """
+        return self.data_json.get("remote_host")[i], self.data_json.get("remote_user")[i], \
+            self.data_json.get("remote_passwords")[i]

@@ -84,7 +84,7 @@ Here is an example of the json file:
     "192.168.1.5",
     "192.168.2.1"
   ],
-  "remote_password": [
+  "remote_passwords": [
     "password1",
     "password2"
   ],

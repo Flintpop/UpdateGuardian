@@ -1,15 +1,18 @@
+import os
 import threading
 import socket
 
-
 import paramiko
 
-from src.server.commands.install_update_win_util import check_python_script_installed, install_python_script
+from src.server.commands.install_client_files_and_dependencies import check_and_install_client_setup
+from src.server.commands.path_functions import find_file
 from src.server.data.local_network_data import Data
+from src.server.ssh.ssh_commands import stdout_err_execute_ssh_command
 from src.server.ssh.ssh_connect import ssh_connect
+from src.server.wake_on_lan.wake_on_lan_utils import send_wol
 
 
-def install_windows_update_all_pc(data: Data):
+def install_windows_update_all_pc(data: Data) -> None:
     max_computers_per_iteration = data.get_max_computers_per_iteration()
     threads: list[threading.Thread] = []
 
@@ -24,23 +27,32 @@ def install_windows_update_all_pc(data: Data):
         thread.join()
 
 
-def ssh_connexion_via_index(data: Data, i: int) -> paramiko.SSHClient:
-    remote_user = data.get_data_json().get("remote_user")[i]
-    remote_password = data.get_data_json().get("remote_password")[i]
-    remote_host = data.get_data_json().get("remote_host")[i]
-    return ssh_connect(remote_user=remote_user, remote_password=remote_password, remote_host=remote_host)
+def ssh_connexion_via_index(data: Data, i: int) -> paramiko.SSHClient | None:
+    try:
+        remote_user = data.get_data_json().get("remote_user")[i]
+        remote_passwords = data.get_data_json().get("remote_passwords")[i]
+        remote_host = data.get_data_json().get("remote_host")[i]
+        return ssh_connect(remote_user=remote_user, remote_passwords=remote_passwords, remote_host=remote_host)
+    except TimeoutError:
+        print("Timeout error, the pc is probably off, trying to wake it up...")
+        try:
+            wake_up_pc(data.get_data_json().get("remote_host")[i])
+        except TimeoutError:
+            print("Error, IP address or password are probably not valid.")
+            return None
 
 
-def wake_up_pc(ip_address: str):
+def wake_up_pc(ip_address: str) -> None:
     """
     Turn on the pc to update windows.
-    # TODO:
-    :return: ?
+    :return: Void
     """
-    pass
+    print("Waking up the pc...")
+    send_wol(ip_address)
+    print("The pc is now awake.")
 
 
-def connect_to_remote_computer(ssh: paramiko.SSHClient) -> socket.socket:
+def connect_to_remote_computer() -> socket.socket:
     server: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(('0.0.0.0', 12345))
     server.listen(5)
@@ -49,38 +61,51 @@ def connect_to_remote_computer(ssh: paramiko.SSHClient) -> socket.socket:
     return server
 
 
+def start_python_scripts(ssh: paramiko.SSHClient, python_main_script_path: str) -> None:
+    print("Starting the python script...")
+    command: str = "cd " + Data.project_name + " && python " + python_main_script_path
+    stdout, stderr = stdout_err_execute_ssh_command(ssh, command)
+    print("Python script started.")
+
+    if stderr:
+        print("Stderr:")
+        print(stderr)
+    if stdout:
+        print("Stdout:")
+        print(stdout)
+
+
 def install_windows_update(data: Data, i: int):
     n_computers = data.get_number_of_computers()
     max_computers_per_iteration = data.get_max_computers_per_iteration()
     for j in range(i, n_computers, max_computers_per_iteration):
+        client_number = j + 1
         print("Installing Windows Update on pc " + str(j) + "...")
-        wake_up_pc("")
+        # TODO: Building so remove mac address later
+        # wake_up_pc("c8-60-00-38-64-79")
 
-        print("Connecting to pc '" + str(i) + "' of ip address '" + data.get_ip_address(i) + "'")
+        print("Connecting to pc '" + str(client_number) + "' of ip address '" + data.get_ip_address(i) + "'")
         ssh = ssh_connexion_via_index(data, j)
 
-        print("Connected to pc '" + str(i) + "' of ip address '" + data.get_ip_address(i) + "'")
-        installed: bool = check_python_script_installed(data.get_python_script_path(), ssh)
+        if ssh is None:
+            print("Connection failed")
+            continue
 
-        if not installed:
-            install_python_script(data, ssh)
+        print("Connected to pc '" + str(client_number) + "' of ip address '" + data.get_ip_address(i) + "'")
 
-        # socket = connect_to_remote_computer(ssh)
-        #
-        # server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # server.bind(('0.0.0.0', 12345))
-        # server.listen(5)
-        #
-        # print("Serveur en écoute sur le port 12345")
-        #
-        # client_socket, client_address = server.accept()
-        # print(f"Connexion établie avec {client_address}")
+        client_is_setup: bool = check_and_install_client_setup(ssh, data, j)
+        if not client_is_setup:
+            print(f"Client setup {client_number} failed")
+            continue
 
-        # send_installation_flag(socket)
+        main_path: str = os.path.join(data.get_python_script_path(), "main.py")
+        start_python_scripts(ssh, main_path)
 
-        print("Windows Update installed successfully")
+        print("Windows Update installed successfully on pc " + str(client_number))
 
 
 if __name__ == '__main__':
-    data_test: Data = Data("computers_informations.json")
+    data_test: Data = Data(find_file("computers_informations.json"))
     install_windows_update(data_test, 0)
+
+    # send_wol("c8-60-00-38-64-79")

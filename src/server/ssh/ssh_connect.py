@@ -1,13 +1,15 @@
 import paramiko
 import chardet
 
+from src.server.Exceptions.DecodingExceptions import DecodingError
 
-def ssh_connect(remote_host: str, remote_user: str, remote_password: str) -> paramiko.SSHClient:
+
+def ssh_connect(remote_host: str, remote_user: str, remote_passwords: str) -> paramiko.SSHClient:
     """
     Connect to a remote computer using SSH.
     :param remote_host: The remote computer's IP address or hostname.
     :param remote_user: The remote computer's username.
-    :param remote_password: The remote computer's password.
+    :param remote_passwords: The remote computer's password.
     :return: The SSH session.
     """
     ssh: paramiko.SSHClient = paramiko.SSHClient()
@@ -15,7 +17,7 @@ def ssh_connect(remote_host: str, remote_user: str, remote_password: str) -> par
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     # Se connecter à la machine distante
-    ssh.connect(remote_host, username=remote_user, password=remote_password)
+    ssh.connect(remote_host, username=remote_user, password=remote_passwords)
     return ssh
 
 
@@ -27,8 +29,16 @@ def execute_and_get_all_decoded_streams_ssh(ssh: paramiko.SSHClient, command: st
 def decode_stream(stream) -> str | None:
     if stream is None or stream == b'':
         return None
-    detected_encoding = chardet.detect(stream)['encoding']
-    return stream.decode(detected_encoding).strip().replace("\n", "").replace("\r", "")
+
+    encodings = ['cp850', chardet.detect(stream)['encoding'], 'cp1252', 'iso-8859-1', 'utf-8', 'utf-16', 'utf-32']
+
+    for encoding in encodings:
+        try:
+            return stream.decode(encoding, errors="replace").strip().replace("\n", "").replace("\r", "")
+        except UnicodeDecodeError:
+            pass
+
+    raise DecodingError("None of the tested encodings were able to decode the stream")
 
 
 def decode_all_ssh_streams(stdin, stdout, stderr) -> tuple[str, str, str]:

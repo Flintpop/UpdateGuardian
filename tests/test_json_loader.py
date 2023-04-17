@@ -16,7 +16,7 @@ class TestLoadJson(unittest.TestCase):
         json_test_dict: dict = {
             "remote_user": ["user1", "user2"],
             "remote_host": ["192.168.1.14", "192.168.1.3"],
-            "remote_password": ["password154554", "password2"],
+            "remote_passwords": ["password154554", "password2"],
             "max_computers_per_iteration": 2,
             "subnet_mask": "1",
             "taken_ips": ["192.168.1.1"]
@@ -33,7 +33,7 @@ class TestLoadJson(unittest.TestCase):
         json_test_dict: dict = {
             "remote_user": [],
             "remote_host": [],
-            "remote_password": [],
+            "remote_passwords": [],
             "max_computers_per_iteration": 0,
             "subnet_mask": "0",
             "taken_ips": []

@@ -1,42 +1,39 @@
 import ctypes
 import sys
+import logging
 
 import win32com.client
+
+logging.basicConfig(level=logging.INFO, filename="update_windows.log", filemode="a",
+                    format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def is_admin():
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
     except Exception as e:
-        print(e)
+        logging.error(e)
         return False
 
 
 def update_windows():
     wua = win32com.client.Dispatch("Microsoft.Update.Session")
     searcher = wua.CreateUpdateSearcher()
-    print("Recherche de mises à jour...")
+    logging.info("Searching for new updates...")
     search_result = searcher.Search("IsInstalled=0 and Type='Software'")
     updates_to_install = win32com.client.Dispatch("Microsoft.Update.UpdateColl")
 
     if search_result.Updates.Count == 0:
-        print("Aucune mise à jour à installer.")
+        logging.info("No updates found.")
         return
     else:
-        print(f"{search_result.Updates.Count} mise(s) à jour trouvée(s).")
+        logging.info(f"{search_result.Updates.Count} update(s) found.")
 
     for update in search_result.Updates:
-        print(f"La mise à jour {update.Title} est disponible.")
-
-    for unitary_windows_update in search_result.Updates:
-        if unitary_windows_update.InstallationBehavior.CanRequestUserInput:
-            print(f"La mise à jour {unitary_windows_update.Title} requiert une interaction utilisateur. Ignorée.")
-        else:
-            print(f"Installation de la mise à jour {unitary_windows_update.Title}...")
-            updates_to_install.Add(unitary_windows_update)
+        logging.info(f"Update {update.Title} is available.")
 
     if updates_to_install.Count == 0:
-        print("Aucune mise à jour automatique à installer.")
+        logging.info("No automatic updates found.")
         return
 
     installer = wua.CreateUpdateInstaller()
@@ -44,14 +41,14 @@ def update_windows():
     installation_result = installer.Install()
 
     if installation_result.ResultCode == 2:
-        print("Mises à jour installées avec succès.")
+        logging.info("Updates installed successfully.")
     else:
-        print(f"Échec de l'installation des mises à jour. Code d'erreur: {installation_result.ResultCode}")
+        logging.error(f"Error, could not install updates. Error code: {installation_result.ResultCode}")
 
 
 def start_client_update():
     if is_admin():
         update_windows()
     else:
-        print("Exécutez ce script en tant qu'administrateur pour mettre à jour Windows.")
+        logging.error("Please, execute this script in administrator to update the windows pc.")
         sys.exit(1)

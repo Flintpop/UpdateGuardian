@@ -23,7 +23,7 @@ def generate_dict(n: int) -> dict:
     return {
         "remote_user": users,
         "remote_host": hosts,
-        "remote_password": passwords,
+        "remote_passwords": passwords,
         "max_computers_per_iteration": max_computers_per_iteration,
         "subnet_mask": subnet_mask,
         "taken_ips": taken_ips
@@ -43,7 +43,7 @@ def generate_flawed_dict(n: int) -> dict:
     return {
         "remote_user": users,
         "remote_host": hosts,
-        "remote_password": passwords,
+        "remote_passwords": passwords,
         "max_computers_per_iteration": max_computers_per_iteration,
         "subnet_mask": subnet_mask,
         "taken_ips": taken_ips
