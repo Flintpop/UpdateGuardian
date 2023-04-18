@@ -4,9 +4,6 @@ import logging
 
 import win32com.client
 
-logging.basicConfig(level=logging.INFO, filename="update_windows.log", filemode="a",
-                    format="%(asctime)s - %(levelname)s - %(message)s")
-
 
 def is_admin():
     try:

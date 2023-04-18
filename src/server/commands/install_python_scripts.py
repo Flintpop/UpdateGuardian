@@ -32,11 +32,8 @@ def check_all_files_exists(ssh: paramiko.SSHClient):
 def check_python_script_installed(client_folder_path: str, ssh: paramiko.SSHClient) -> bool:
     """
     Checks if the python script is installed on the remote computer.
-    Being implemented
     :return: True if the script is installed, False otherwise.
     """
-    import os
-
     install_exists: bool = does_path_exists_ssh(ssh, client_folder_path)
 
     if not install_exists:
@@ -68,7 +65,7 @@ def install_python_script(data: Data, ssh: paramiko.SSHClient, i: int) -> bool:
     print("Opened sftp communication to install the scripts and requirements")
 
     try:
-        files_to_upload: list[str] = ["main.py", "requirements_client.txt", "update_windows.py"]
+        files_to_upload: list[str] = [os.path.basename(file) for file in list_files_recursive(find_directory("client"))]
 
         for file in files_to_upload:
             file_path = find_file(file)

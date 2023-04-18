@@ -41,16 +41,16 @@ def check_python_installed(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
 
 
 def check_python_in_path(ssh) -> bool:
-    print("Checking if python is installed...")
+    print("Checking if python is path again...")
 
     # Check if 'python' command is available
     stdout, stderr = stdout_err_execute_ssh_command(ssh, "where python")
 
     if not stderr and "python" in stdout:
-        print("Python is installed")
+        print("Python is path.")
         return True
     else:
-        print("Python is not installed")
+        print("Python is not installed.")
         return False
 
 
@@ -95,7 +95,7 @@ def send_python_installer(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
     installer_path: str = Data.get_server_python_installer_path()
     does_file_exists: bool = check_file_exists(installer_path)
     if not does_file_exists:
-        print("Error, the python installer does not exist.")
+        print("Error, the python installer does not exist on the server. Please check the path, or if it exists.")
         return False
     send_file_ssh(ssh, installer_path, data.get_python_script_path(i))
     print("Python installer sent.")
@@ -108,16 +108,25 @@ def add_python_to_path(ssh: paramiko.SSHClient) -> bool:
     # Get the current PATH from the registry
     get_path_command = 'reg query "HKCU\\Environment" /v Path'
     stdout, stderr = stdout_err_execute_ssh_command(ssh, get_path_command)
-    current_path = stdout.split("REG_SZ")[-1].strip()
+
+    if "REG_SZ" in stdout:
+        current_path = stdout.split("REG_SZ")[-1].strip()
+    else:
+        current_path = ""
 
     # Get the current USERPROFILE
     stdout, stderr = stdout_err_execute_ssh_command(ssh, 'echo %USERPROFILE%')
     user_profile = stdout.strip()
 
     # Construct the new PATH
-    python_path = f'{user_profile}\\AppData\\Local\\Programs\\{Data.python_folder_name}'
-    scripts_path = f'{python_path}\\Scripts'
-    new_path = f'{current_path};{python_path};{scripts_path}'
+    python_path_var = f'{user_profile}\\AppData\\Local\\Programs\\{Data.python_folder_name}'
+    scripts_path = f'{python_path_var}\\Scripts'
+    if current_path:
+        if current_path[-1] == ';':
+            current_path = current_path[:-1]
+        new_path = f'{current_path};{python_path_var};{scripts_path}'
+    else:
+        new_path = f'{python_path_var};{scripts_path}'
 
     # Set the new PATH using reg command
     path_add_command = f'reg add "HKCU\\Environment" /v Path /t REG_SZ /d "{new_path}" /f'
@@ -151,11 +160,17 @@ def check_python_path_set(ssh) -> bool:
     # Check if 'python' command is available
     stdout2, stderr2 = stdout_err_execute_ssh_command(ssh, "where python")
 
-    if not stderr and not stderr2 and "python" in stdout2.lower():
+    if not stderr2 and "python" in stdout2.lower():
         print("Python is installed and in path")
-        return True
+        print("Checking pip...")
+        stdout3, stderr3 = stdout_err_execute_ssh_command(ssh, "pip --version")
+        if stdout3:
+            print("Pip is installed")
+            return True
+        print("Error, pip is not installed : " + stderr3)
+        return False
     else:
-        print("Python is not set correctly in path, because it may be there despite the fact that it is not installed.")
+        print("Python is not set correctly in path, because it may be there despite the fact that it is installed.")
         return False
 
 
@@ -185,7 +200,7 @@ def install_python(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
     print("\nInstalling Python...")
 
     # Get the path to the python script that will install python
-    path_update_guardian: str = data.get_python_script_path()
+    path_update_guardian: str = data.get_python_script_path(i)
     python_installer_filename: str = os.path.basename(Data.get_server_python_installer_path())
     parameters: str = "/quiet InstallAllUsers=0 TargetDir=%USERPROFILE%\\AppData\\Local\\Programs\\" + \
                       Data.python_folder_name + " " r"Include_launcher=0 Include_test=0 Include_dev=0 Include_doc=0 " \
@@ -196,6 +211,8 @@ def install_python(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
 
     if stderr:
         print("Error, could not install python : " + stderr)
+        print("command : " + command)
+        print("Python update guardian variable : " + path_update_guardian)
         return False
 
     if stdout:
@@ -233,11 +250,20 @@ def wait_for_ssh_shutdown(ipaddress: str) -> None:
 
 
 def refresh_env_variables(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
+    print("Rebooting remote computer...")
     reboot_remote_pc(ssh)
     ipaddress, remote_user, remote_password = data.get_client_info(i)
     wait_for_ssh_shutdown(ipaddress)
 
-    return wait_and_reconnect(ssh, ipaddress, remote_user, remote_password)
+    if not wait_and_reconnect(ssh, ipaddress, remote_user, remote_password):
+        print("Failed to reconnect to remote computer.")
+        return False
+
+    if not check_python_in_path(ssh):
+        print("Failed to add python to path.")
+        return False
+
+    return True
 
 
 def python_scripts(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
@@ -251,6 +277,9 @@ def python_scripts(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
         if not installed_python_scripts_success:
             print("Error, could not install scripts.")
             return False
+
+    print("Checking if scripts are up to date...")
+
     return True
 
 
@@ -272,10 +301,6 @@ def python_path(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
 
     if python_path_set:
         print("Python is in path.")
-        refresh_env: bool = refresh_env_variables(ssh, data, i)
-        if not refresh_env:
-            print("Error, could not refresh environment variables. Failed to reboot the pc.")
-            return False
     else:
         added_to_path: bool = add_python_to_path(ssh)
         if not added_to_path:
@@ -307,12 +332,15 @@ def check_and_install_client_setup(ssh: paramiko.SSHClient, data: Data, i: int) 
     if not python_scripts(ssh, data, i):
         return False
 
+    print()
     if not python_installation(ssh, data, i):
         return False
 
+    print()
     if not python_path(ssh, data, i):
         return False
 
+    print()
     if not python_packages(ssh, data, i):
         return False
 

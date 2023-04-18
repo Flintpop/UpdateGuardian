@@ -2,8 +2,19 @@ import ipaddress
 import os
 import re
 import json
+import socket
 
 from src.server.commands.path_functions import find_file
+
+
+def get_local_ipv4() -> str:
+    """
+    Get the IP address of the server computer.
+    :return: The IP address of the server computer.
+    """
+    hostname = socket.gethostname()
+    local_ipv4 = socket.gethostbyname(hostname)
+    return local_ipv4
 
 
 class Data:
@@ -16,6 +27,7 @@ class Data:
     python_version = "3.11"
     python_folder_name = f"Python{python_version.replace('.', '')}"
     python_precise_version = "3.11.3"
+    server_ip_address: str = get_local_ipv4()
     data_json: dict = {}
 
     def __init__(self, filename: str = find_file("computers_informations.json"), json_data: dict = None):

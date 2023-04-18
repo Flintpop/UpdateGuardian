@@ -42,7 +42,7 @@ def is_ssh_server_available(ip: str, port: int = 22, timeout: float = 5.0) -> bo
             return False
 
 
-def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, password: str, timeout: int = 300,
+def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, password: str, timeout: int = 600,
                        retry_interval: int = 10) -> bool:
     ssh.close()
     start_time = time.time()
@@ -52,7 +52,7 @@ def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, password
         try:
             ssh.connect(ip, username=username, password=password, timeout=timeout)
             connected = True
-        except paramiko.ssh_exception.NoValidConnectionsError:
+        except (paramiko.ssh_exception.NoValidConnectionsError, socket.timeout):
             time.sleep(retry_interval)
 
     return connected

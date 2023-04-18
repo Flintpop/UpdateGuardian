@@ -1,7 +1,10 @@
+# Make sure that scripts can run on the pc, if not, run the following command in powershell:
+# Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser -confirm:$false -Force
+
 # Ensure the script is running with administrative privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator"))
 {
-    Write-Warning "This script needs to be run as an Administrator."
+    Start-Process powershell.exe "-File",('"{0}"' -f $MyInvocation.MyCommand.Path) -Verb RunAs
     exit
 }
 
@@ -24,3 +27,5 @@ else
 {
     Write-Output "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."
 }
+Write-Output ""
+Read-Host "Press any keys to close this window..."

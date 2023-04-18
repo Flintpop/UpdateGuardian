@@ -12,13 +12,23 @@ from src.server.ssh.ssh_connect import ssh_connect
 from src.server.wake_on_lan.wake_on_lan_utils import send_wol
 
 
+def generate_port_list(max_computers_per_iteration: int) -> list[int]:
+    port_list: list[int] = []
+    start_port: int = 12346
+    for i in range(0, max_computers_per_iteration):
+        port_list.append(start_port + i)
+    return port_list
+
+
 def install_windows_update_all_pc(data: Data) -> None:
     max_computers_per_iteration = data.get_max_computers_per_iteration()
     threads: list[threading.Thread] = []
+    port_list: list[int] = generate_port_list(max_computers_per_iteration)
 
     for i in range(0, max_computers_per_iteration):
+        print("Starting thread " + str(i + 1) + "...")
         threads.append(
-            threading.Thread(target=install_windows_update, args=(data, i)))
+            threading.Thread(target=install_windows_update, args=(data, i, port_list[i])))
 
     for thread in threads:
         thread.start()
@@ -34,12 +44,13 @@ def ssh_connexion_via_index(data: Data, i: int) -> paramiko.SSHClient | None:
         remote_host = data.get_data_json().get("remote_host")[i]
         return ssh_connect(remote_user=remote_user, remote_passwords=remote_passwords, remote_host=remote_host)
     except TimeoutError:
-        print("Timeout error, the pc is probably off, trying to wake it up...")
-        try:
-            wake_up_pc(data.get_data_json().get("remote_host")[i])
-        except TimeoutError:
-            print("Error, IP address or password are probably not valid.")
-            return None
+        pass
+        # print("Timeout error, the pc is probably off, trying to wake it up...")
+        # try:
+        #     wake_up_pc(data.get_data_json().get("remote_host")[i])
+        # except TimeoutError:
+        #     print("Error, IP address or password are probably not valid.")
+        #     return None
 
 
 def wake_up_pc(ip_address: str) -> None:
@@ -61,10 +72,14 @@ def connect_to_remote_computer() -> socket.socket:
     return server
 
 
-def start_python_scripts(ssh: paramiko.SSHClient, python_main_script_path: str) -> None:
+def start_python_scripts(ssh: paramiko.SSHClient, python_main_script_path: str,
+                         server_ip_address: str, port: int) -> None:
     print("Starting the python script...")
-    command: str = "cd " + Data.project_name + " && python " + python_main_script_path
+    command: str = "cd " + Data.project_name + " && python " + python_main_script_path + " " + \
+                   server_ip_address + " " + str(port)
+
     stdout, stderr = stdout_err_execute_ssh_command(ssh, command)
+
     print("Python script started.")
 
     if stderr:
@@ -75,9 +90,19 @@ def start_python_scripts(ssh: paramiko.SSHClient, python_main_script_path: str) 
         print(stdout)
 
 
-def install_windows_update(data: Data, i: int):
+def create_socket_server(server_ip_address: str, port: int) -> socket.socket:
+    server: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((server_ip_address, port))
+    server.listen(1)
+
+    print("Server listening on port " + str(port))
+    return server
+
+
+def install_windows_update(data: Data, i: int, port: int):
     n_computers = data.get_number_of_computers()
     max_computers_per_iteration = data.get_max_computers_per_iteration()
+
     for j in range(i, n_computers, max_computers_per_iteration):
         client_number = j + 1
         print("Installing Windows Update on pc " + str(j) + "...")
@@ -88,7 +113,7 @@ def install_windows_update(data: Data, i: int):
         ssh = ssh_connexion_via_index(data, j)
 
         if ssh is None:
-            print("Connection failed")
+            print(f"Connection failed on pc {client_number} of ip address {data.get_ip_address(i)}")
             continue
 
         print("Connected to pc '" + str(client_number) + "' of ip address '" + data.get_ip_address(i) + "'")
@@ -98,14 +123,18 @@ def install_windows_update(data: Data, i: int):
             print(f"Client setup {client_number} failed")
             continue
 
-        main_path: str = os.path.join(data.get_python_script_path(), "main.py")
-        start_python_scripts(ssh, main_path)
+        main_path: str = os.path.join(data.get_python_script_path(), "main_client.py")
+
+        # server: socket.socket = create_socket_server(Data.server_ip_address, port)
+        start_python_scripts(ssh, main_path, Data.server_ip_address, port)
+        # server.accept()
+        # TODO: Manage updates infos transfer via sockets
 
         print("Windows Update installed successfully on pc " + str(client_number))
 
 
 if __name__ == '__main__':
     data_test: Data = Data(find_file("computers_informations.json"))
-    install_windows_update(data_test, 0)
+    install_windows_update(data_test, 0, 12345)
 
     # send_wol("c8-60-00-38-64-79")
