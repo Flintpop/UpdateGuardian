@@ -2,12 +2,11 @@ import os
 
 import paramiko
 
-from src.server.commands.install_update_win_util import check_python_script_installed, install_python_script
+from src.server.commands.install_python_scripts import check_python_script_installed, install_python_script
 from src.server.commands.path_functions import find_file
 from src.server.data.local_network_data import Data
 from src.server.ssh.ssh_commands import stdout_err_execute_ssh_command, send_file_ssh, does_path_exists_ssh, \
-    reboot_remote_pc, wait_and_reconnect
-
+    reboot_remote_pc, wait_and_reconnect, is_ssh_server_available
 
 STDOUT_MESSAGE = "STDOUT: \n"
 
@@ -225,15 +224,23 @@ def install_python_packages(ssh: paramiko.SSHClient, requirements_file_path: str
     return True
 
 
+def wait_for_ssh_shutdown(ipaddress: str) -> None:
+    ssh_server_shutdown = False
+    print("Waiting for SSH server to be down...")
+    while not ssh_server_shutdown:
+        ssh_server_shutdown = not is_ssh_server_available(ipaddress)
+    print("SSH server is down, waiting for it to be up again...")
+
+
 def refresh_env_variables(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
     reboot_remote_pc(ssh)
     ipaddress, remote_user, remote_password = data.get_client_info(i)
+    wait_for_ssh_shutdown(ipaddress)
 
     return wait_and_reconnect(ssh, ipaddress, remote_user, remote_password)
 
 
-def check_and_install_client_setup(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
-    print()
+def python_scripts(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
     installed: bool = check_python_script_installed(data.get_python_script_path(i), ssh)
 
     if installed:
@@ -244,7 +251,10 @@ def check_and_install_client_setup(ssh: paramiko.SSHClient, data: Data, i: int) 
         if not installed_python_scripts_success:
             print("Error, could not install scripts.")
             return False
+    return True
 
+
+def python_installation(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
     python_installed: bool = check_python_installed(ssh, data, i)
 
     if python_installed:
@@ -254,11 +264,18 @@ def check_and_install_client_setup(ssh: paramiko.SSHClient, data: Data, i: int) 
         if not installed_success:
             print("Error, could not install python.")
             return False
+    return True
 
+
+def python_path(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
     python_path_set: bool = check_python_path_set(ssh)
 
     if python_path_set:
         print("Python is in path.")
+        refresh_env: bool = refresh_env_variables(ssh, data, i)
+        if not refresh_env:
+            print("Error, could not refresh environment variables. Failed to reboot the pc.")
+            return False
     else:
         added_to_path: bool = add_python_to_path(ssh)
         if not added_to_path:
@@ -268,7 +285,10 @@ def check_and_install_client_setup(ssh: paramiko.SSHClient, data: Data, i: int) 
         if not refresh_env:
             print("Error, could not refresh environment variables. Failed to reboot the pc.")
             return False
+    return True
 
+
+def python_packages(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
     # Get the path to the requirements_client.txt file in the server computer
     local_requirements_path = find_file("requirements_client.txt")
     python_packages_installed: bool = check_python_packages_installed(ssh, local_requirements_path)
@@ -278,4 +298,22 @@ def check_and_install_client_setup(ssh: paramiko.SSHClient, data: Data, i: int) 
         if not installed_packages_success:
             print("Error, could not install python packages.")
             return False
+    return True
+
+
+def check_and_install_client_setup(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
+    print()
+
+    if not python_scripts(ssh, data, i):
+        return False
+
+    if not python_installation(ssh, data, i):
+        return False
+
+    if not python_path(ssh, data, i):
+        return False
+
+    if not python_packages(ssh, data, i):
+        return False
+
     return True

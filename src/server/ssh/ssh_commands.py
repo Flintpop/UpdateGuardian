@@ -1,4 +1,5 @@
 import os
+import socket
 import time
 
 import paramiko
@@ -31,6 +32,16 @@ def reboot_remote_pc(ssh: paramiko.SSHClient) -> None:
     ssh.exec_command(reboot_command)
 
 
+def is_ssh_server_available(ip: str, port: int = 22, timeout: float = 5.0) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(timeout)
+        try:
+            sock.connect((ip, port))
+            return True
+        except (socket.timeout, OSError):
+            return False
+
+
 def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, password: str, timeout: int = 300,
                        retry_interval: int = 10) -> bool:
     ssh.close()
@@ -39,7 +50,7 @@ def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, password
 
     while not connected and time.time() - start_time < timeout:
         try:
-            ssh.connect(ip, username=username, password=password)
+            ssh.connect(ip, username=username, password=password, timeout=timeout)
             connected = True
         except paramiko.ssh_exception.NoValidConnectionsError:
             time.sleep(retry_interval)
