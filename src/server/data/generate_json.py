@@ -26,7 +26,8 @@ def generate_dict(n: int) -> dict:
         "remote_passwords": passwords,
         "max_computers_per_iteration": max_computers_per_iteration,
         "subnet_mask": subnet_mask,
-        "taken_ips": taken_ips
+        "taken_ips": taken_ips,
+        "python_client_script_path": ""
     }
 
 
@@ -46,7 +47,8 @@ def generate_flawed_dict(n: int) -> dict:
         "remote_passwords": passwords,
         "max_computers_per_iteration": max_computers_per_iteration,
         "subnet_mask": subnet_mask,
-        "taken_ips": taken_ips
+        "taken_ips": taken_ips,
+        "python_client_script_path": ""
     }
 
 

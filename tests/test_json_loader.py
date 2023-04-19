@@ -4,9 +4,12 @@ import unittest
 
 from src.server.data.generate_json import generate_dict
 from src.server.data.local_network_data import Data
+from src.server.commands.path_functions import find_file
 
 JSON_TEST_FILENAME = 'test.json'
-JSON_FILE_PATH = '../tests/' + JSON_TEST_FILENAME
+with open(JSON_TEST_FILENAME, 'w') as file_created:
+    file_created.write("{}")
+JSON_FILE_PATH = find_file(JSON_TEST_FILENAME)
 
 
 class TestLoadJson(unittest.TestCase):
@@ -19,7 +22,8 @@ class TestLoadJson(unittest.TestCase):
             "remote_passwords": ["password154554", "password2"],
             "max_computers_per_iteration": 2,
             "subnet_mask": "1",
-            "taken_ips": ["192.168.1.1"]
+            "taken_ips": ["192.168.1.1"],
+            "python_client_script_path": "C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python39\\python.exe"
         }
 
         with open(JSON_TEST_FILENAME, 'w') as file:
@@ -76,17 +80,22 @@ class TestCheminFichier(unittest.TestCase):
     json_test_dict: dict = generate_dict(13)
     data: Data = Data(JSON_FILE_PATH, json_test_dict)
 
-    def test_valid_path(self):
-        valid_path = self.data.is_path_valid
-        windows_path = "C:/Users/utilisateur/Documents/mon_fichier.py"
-        linux_path = "/home/utilisateur/Documents/mon_fichier.py"
-        invalid_windows_path = "C:/Users/utilisateur/Documents/mon_fichier.txt"
-        invalid_windows_path2 = "C:Users/utilisateur/Documents/mon_fichier.py"
+    def setUp(self) -> None:
+        if os.name == "nt":
+            self.valid_path = "C:\\Users\\utilisateur\\Documents\\mon_fichier.py"
+            self.invalid_path = "C:\\Users\\utilisateur\\Documents\\mon_fichier.txt"
+            self.invalid_path2 = "C:Users/utilisateur/Documents/mon_fichier.py"
+        else:
+            self.valid_path = "/home/utilisateur/Documents/mon_fichier.py"
+            self.invalid_path = "/home/utilisateur/Documents/mon_fichier.txt"
+            self.invalid_path2 = "/home/utilisateur/Documents\\mon_fichier.py"
 
-        self.assertTrue(valid_path(windows_path), "Windows path should be valid.")
-        self.assertTrue(valid_path(linux_path), "Linux path should be valid.")
-        self.assertFalse(valid_path(invalid_windows_path), "Windows path should not be valid.")
-        self.assertFalse(valid_path(invalid_windows_path2), "Windows path should not be valid (lacks '/').")
+    def test_valid_path(self):
+        is_path_valid = self.data.is_path_valid
+
+        self.assertTrue(is_path_valid(self.valid_path), "Path should be valid.")
+        self.assertFalse(is_path_valid(self.invalid_path), "Path should not be valid.")
+        self.assertFalse(is_path_valid(self.invalid_path2), "Path should not be valid.")
 
     def test_fichier_existe(self):
         does_file_exists = self.data.does_file_exists
@@ -102,3 +111,14 @@ class TestCheminFichier(unittest.TestCase):
         self.assertFalse(does_file_exists(file_not_exists_path), "Le fichier ne devrait pas exister.")
 
         os.remove(file_exists_name)
+        
+        
+class TestIPMacAddress(unittest.TestCase):
+    def test_is_valid_mac_address(self):
+        self.assertTrue(Data.is_valid_mac_address("00:11:22:33:44:55"))
+        self.assertTrue(Data.is_valid_mac_address("00-11-22-33-44-55"))
+        self.assertFalse(Data.is_valid_mac_address("00:11:22:33:44:GG"))
+        self.assertFalse(Data.is_valid_mac_address("00:11:22:33:44"))
+        self.assertFalse(Data.is_valid_mac_address("00:11:22:33:44:55:66"))
+        self.assertFalse(Data.is_valid_mac_address("0011.2233.4455"))
+        self.assertFalse(Data.is_valid_mac_address("00:11:22-33:44:55"))

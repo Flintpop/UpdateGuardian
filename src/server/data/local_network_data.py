@@ -5,6 +5,7 @@ import json
 import socket
 
 from src.server.commands.path_functions import find_file
+from src.server.config import Infos
 
 
 def get_local_ipv4() -> str:
@@ -23,12 +24,12 @@ class Data:
     Getters are used to access the data.
     Checks are made to ensure the integrity of the JSON file.
     """
-    project_name = "UpdateGuardian"
     python_version = "3.11"
     python_folder_name = f"Python{python_version.replace('.', '')}"
     python_precise_version = "3.11.3"
     server_ip_address: str = get_local_ipv4()
     data_json: dict = {}
+    ipaddresses: dict = {}
 
     def __init__(self, filename: str = find_file("computers_informations.json"), json_data: dict = None):
         if json_data is None:
@@ -134,10 +135,10 @@ class Data:
         """
         path_chose_by_user: str = self.data_json.get("python_client_script_path")
         if path_chose_by_user == "":
-            return os.path.join(r'C:\Users', self.data_json.get("remote_user")[user_index], Data.project_name)
+            return os.path.join(r'C:\Users', self.data_json.get("remote_user")[user_index], Infos.project_name)
 
         return os.path.join(self.data_json.get("python_client_script_path"),
-                            self.data_json.get("remote_user")[user_index], Data.project_name)
+                            self.data_json.get("remote_user")[user_index], Infos.project_name)
 
     def is_path_valid(self, path="") -> bool:
         # TODO: A tester
@@ -192,3 +193,45 @@ class Data:
         """
         return self.data_json.get("remote_host")[i], self.data_json.get("remote_user")[i], \
             self.data_json.get("remote_passwords")[i]
+
+    def get_mac_address(self, ip_address) -> str | None:
+        """
+        Return the MAC address of the computer with the given IP address.
+        :param ip_address: IP address of the computer.
+        :return: MAC address of the computer.
+        """
+
+        if not self.__is_valid_ipv4_address(ip_address):
+            raise ValueError("L'adresse IP n'est pas valide.")
+
+        if ip_address not in self.ipaddresses:
+            return None
+
+        if self.ipaddresses[ip_address] == "" or self.ipaddresses[ip_address] == "00:00:00:00:00:00":
+            return None
+
+        return self.ipaddresses[ip_address]
+
+    def add_mac_address(self, mac_address: str, ip_address: str) -> None:
+        if not self.__is_valid_ipv4_address(ip_address):
+            raise ValueError("L'adresse IP n'est pas valide.")
+
+        if not self.is_valid_mac_address(mac_address):
+            raise ValueError("L'adresse MAC n'est pas valide.")
+
+        if ip_address in self.ipaddresses:
+            print("IP address already in dictionary, overwriting it.")
+        self.ipaddresses[ip_address] = mac_address
+
+    @staticmethod
+    def is_valid_mac_address(mac_address):
+        """
+        Return True if the given MAC address is valid, False otherwise.
+        :param mac_address: MAC address to validate.
+        :return: True if the given MAC address is valid, False otherwise.
+        """
+        # noinspection RegExpSuspiciousBackref
+        mac_regex = re.compile(
+            r'^([0-9A-Fa-f]{2}([:-]))(?:[0-9A-Fa-f]{2}\2){4}[0-9A-Fa-f]{2}$'
+        )
+        return bool(mac_regex.match(mac_address))

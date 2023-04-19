@@ -6,6 +6,7 @@ import paramiko
 
 from src.server.commands.install_client_files_and_dependencies import check_and_install_client_setup
 from src.server.commands.path_functions import find_file
+from src.server.config import Infos
 from src.server.data.local_network_data import Data
 from src.server.ssh.ssh_commands import stdout_err_execute_ssh_command
 from src.server.ssh.ssh_connect import ssh_connect
@@ -75,7 +76,7 @@ def connect_to_remote_computer() -> socket.socket:
 def start_python_scripts(ssh: paramiko.SSHClient, python_main_script_path: str,
                          server_ip_address: str, port: int) -> None:
     print("Starting the python script...")
-    command: str = "cd " + Data.project_name + " && python " + python_main_script_path + " " + \
+    command: str = "cd " + Infos.project_name + " && python " + python_main_script_path + " " + \
                    server_ip_address + " " + str(port)
 
     stdout, stderr = stdout_err_execute_ssh_command(ssh, command)

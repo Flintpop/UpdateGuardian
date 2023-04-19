@@ -3,6 +3,8 @@ import platform
 import re
 import subprocess
 
+from src.server.data.local_network_data import Data
+
 
 def is_secureon_password_valid(secureon_password: str) -> bool:
     # Vérifier que le mot de passe SecureOn a 12 caractères hexadécimaux et les sépare par des deux-points
@@ -26,10 +28,13 @@ def send_wol_with_secureon(mac_address: str, secureon_password: str) -> None:
     send_magic_packet(f"{mac_address}/{secureon_password}")
 
 
-def send_wol(ip_address: str) -> None:
-    # TODO: Change that because test
+def send_wol(ip_address: str) -> bool:
     mac_address: str = get_mac_address(ip_address)
-    send_magic_packet(mac_address)
+    if mac_address is None:
+        print("Cannot send WOL packet because the computer is off and mac address is unknown.")
+        return False
+    send_magic_packet(mac_address, ip_address=ip_address, port=9)
+    return True
 
 
 def ping_ip(ip_address: str) -> bool:
@@ -48,6 +53,7 @@ def ping_ip(ip_address: str) -> bool:
 
 
 def get_mac_address(ip_address: str) -> str | None:
+    Data.get_mac_address(ip_address)
     if not ping_ip(ip_address):
         print("Impossible de récupérer l'adresse MAC car l'ordinateur est éteint.")
         return None
@@ -107,10 +113,15 @@ def get_router_ip():
 # Exemple d'utilisation
 if __name__ == "__main__":
     print()
-    print("Adresse du routeur : ", get_router_ip())
-    print()
-    ip_list = ["192.168.7.227"]
-    mac_list = get_mac_addresses(ip_list)
+    # print("Adresse du routeur : ", get_router_ip())
+    # print()
+    # ip_list = ["192.168.7.227"]
+    # mac_list = get_mac_addresses(ip_list)
+    #
+    # for ip, mac in mac_list.items():
+    #     print(f"{ip} -> {mac}")
 
-    for ip, mac in mac_list.items():
-        print(f"{ip} -> {mac}")
+    # send_wol("192.168.7.227")
+    # ssh = paramiko.SSHClient()
+    # ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    # ssh.connect("
