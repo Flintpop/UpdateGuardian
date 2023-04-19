@@ -1,4 +1,5 @@
 import os
+import hashlib
 import socket
 import time
 
@@ -64,7 +65,7 @@ def create_folder_ssh(ssh: paramiko.SSHClient, folder_path: str) -> bool:
     if stderr:
         if "exist" in stderr:
             print(f"Folder {folder_path} already exists")
-            return False
+            return True
         print(f"Error while creating the folder {folder_path}: {stderr}")
         return False
 
@@ -132,3 +133,38 @@ def manage_stdout_stderr_output(stdout: str, stderr: str) -> bool:
         print(f"Stdout : {stdout}")
 
     return True
+
+
+def sha256(file):
+    hasher = hashlib.sha256()
+    with open(file, 'rb') as f:
+        buf = f.read()
+        hasher.update(buf)
+    return hasher.hexdigest()
+
+
+def is_client_file_different(ssh: paramiko.SSHClient, remote_file_path: str, local_file_path: str) -> bool:
+    # Créer une session SFTP en utilisant la session SSH existante
+    sftp = ssh.open_sftp()
+
+    try:
+        # Récupérer le contenu du fichier distant
+        with sftp.open(remote_file_path, 'rb') as remote_file:
+            contenu_distant = remote_file.read()
+
+        # Calculer le résumé cryptographique du fichier distant
+        hachage_distant = hashlib.sha256(contenu_distant).hexdigest()
+
+        # Calculer le résumé cryptographique du fichier local
+        hachage_local = sha256(local_file_path)
+
+        # Comparer les résumés cryptographiques
+        return hachage_distant == hachage_local
+
+    except FileNotFoundError:
+        print(f"Fichier non trouvé : {remote_file_path} ou {local_file_path}")
+        return False
+
+    finally:
+        # Fermer la session SFTP
+        sftp.close()

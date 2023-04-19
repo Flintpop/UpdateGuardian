@@ -3,10 +3,10 @@ import os
 import paramiko
 
 from src.server.commands.install_python_scripts import check_python_script_installed, install_python_script
-from src.server.commands.path_functions import find_file
+from src.server.commands.path_functions import find_file, list_files_recursive, find_directory
 from src.server.data.local_network_data import Data
 from src.server.ssh.ssh_commands import stdout_err_execute_ssh_command, send_file_ssh, does_path_exists_ssh, \
-    reboot_remote_pc, wait_and_reconnect, is_ssh_server_available
+    reboot_remote_pc, wait_and_reconnect, is_ssh_server_available, is_client_file_different
 
 STDOUT_MESSAGE = "STDOUT: \n"
 
@@ -266,6 +266,22 @@ def refresh_env_variables(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
     return True
 
 
+def check_python_script_up_to_date(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
+    files: list[str] = list_files_recursive(find_directory("client"))
+    remote_root_path: str = data.get_python_script_path(i)
+
+    files_to_update: list[str] = []
+    for file in files:
+        remote_file: str = os.path.join(remote_root_path, os.path.basename(file))
+        if not is_client_file_different(ssh, remote_file, file):
+            print(f"File {file} is not up to date.")
+            files_to_update.append(file)
+
+    if len(files_to_update) > 0:
+        return False
+    return True
+
+
 def python_scripts(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
     installed: bool = check_python_script_installed(data.get_python_script_path(i), ssh)
 
@@ -279,6 +295,15 @@ def python_scripts(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
             return False
 
     print("Checking if scripts are up to date...")
+    up_to_date: bool = check_python_script_up_to_date(data.get_python_script_path(i), ssh)
+    if up_to_date:
+        print("Scripts are up to date.")
+    else:
+        print("Scripts are not up to date, updating them...")
+        updated_python_scripts_success: bool = install_python_script(data, ssh, i)
+        if not updated_python_scripts_success:
+            print("Error, could not update scripts.")
+            return False
 
     return True
 

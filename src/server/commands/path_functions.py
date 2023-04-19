@@ -74,7 +74,7 @@ def find_file(filename: str, root_folder='.', already_called=False) -> str:
                                 f" and its subdirectories.")
 
     change_directory_to_root_folder(filename, root_folder)
-    find_file(filename, root_folder, True)
+    return find_file(filename, root_folder, True)
 
 
 def find_directory(directory_name: str, root_folder='.') -> str:
