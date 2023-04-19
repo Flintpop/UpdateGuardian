@@ -1,7 +1,7 @@
 import unittest
 
-from src.wake_on_lan.wake_on_lan_password import generate_secureon_password
-from src.wake_on_lan.wake_on_lan_utils import is_secureon_password_valid, send_wol_with_secureon
+from src.server.wake_on_lan.wake_on_lan_password import generate_secureon_password
+from src.server.wake_on_lan.wake_on_lan_utils import is_secureon_password_valid, send_wol_with_secureon
 
 
 class TestWakeOnLan(unittest.TestCase):

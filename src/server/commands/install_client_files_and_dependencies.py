@@ -288,14 +288,14 @@ def python_scripts(ssh: paramiko.SSHClient, data: Data, i: int) -> bool:
     if installed:
         print("Scripts are installed.")
     else:
-        print("Scripts are not installed, installing them...")
+        print("Scripts are not installed or not up to date, installing / updating them...")
         installed_python_scripts_success: bool = install_python_script(data, ssh, i)
         if not installed_python_scripts_success:
             print("Error, could not install scripts.")
             return False
 
     print("Checking if scripts are up to date...")
-    up_to_date: bool = check_python_script_up_to_date(data.get_python_script_path(i), ssh)
+    up_to_date: bool = check_python_script_up_to_date(ssh, data, i)
     if up_to_date:
         print("Scripts are up to date.")
     else:

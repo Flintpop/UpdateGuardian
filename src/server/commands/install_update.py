@@ -4,11 +4,12 @@ import socket
 
 import paramiko
 
-from src.server.commands.install_client_files_and_dependencies import check_and_install_client_setup
+from src.server.commands.install_client_files_and_dependencies import check_and_install_client_setup, \
+    wait_for_ssh_shutdown
 from src.server.commands.path_functions import find_file
 from src.server.config import Infos
 from src.server.data.local_network_data import Data
-from src.server.ssh.ssh_commands import stdout_err_execute_ssh_command
+from src.server.ssh.ssh_commands import stdout_err_execute_ssh_command, wait_and_reconnect
 from src.server.ssh.ssh_connect import ssh_connect
 from src.server.wake_on_lan.wake_on_lan_utils import send_wol
 
@@ -74,7 +75,7 @@ def connect_to_remote_computer() -> socket.socket:
 
 
 def start_python_scripts(ssh: paramiko.SSHClient, python_main_script_path: str,
-                         server_ip_address: str, port: int) -> None:
+                         server_ip_address: str, port: int) -> None | str:
     print("Starting the python script...")
     command: str = "cd " + Infos.project_name + " && python " + python_main_script_path + " " + \
                    server_ip_address + " " + str(port)
@@ -86,9 +87,11 @@ def start_python_scripts(ssh: paramiko.SSHClient, python_main_script_path: str,
     if stderr:
         print("Stderr:")
         print(stderr)
+        return None
     if stdout:
         print("Stdout:")
         print(stdout)
+    return stdout
 
 
 def create_socket_server(server_ip_address: str, port: int) -> socket.socket:
@@ -126,12 +129,18 @@ def install_windows_update(data: Data, i: int, port: int):
 
         main_path: str = os.path.join(data.get_python_script_path(), "main_client.py")
 
-        # server: socket.socket = create_socket_server(Data.server_ip_address, port)
-        start_python_scripts(ssh, main_path, Data.server_ip_address, port)
-        # server.accept()
-        # TODO: Manage updates infos transfer via sockets
+        stdout = start_python_scripts(ssh, main_path, Data.server_ip_address, port)
 
-        print("Windows Update installed successfully on pc " + str(client_number))
+        if stdout is not None and "reboot" in stdout:
+            ssh.close()
+            ipaddress, remote_user, remote_password = data.get_client_info(i)
+            wait_for_ssh_shutdown(ipaddress)
+            reconnected: bool = wait_and_reconnect(ssh, ipaddress, remote_user, remote_password)
+            if reconnected:
+                print("Windows Update installed successfully on pc " + str(client_number))
+            else:
+                print("Error while trying to reconnect to the pc " + str(client_number))
+                print("Updates may or may not have been installed.")
 
 
 if __name__ == '__main__':

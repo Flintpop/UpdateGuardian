@@ -28,4 +28,29 @@ else
     Write-Output "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."
 }
 Write-Output ""
+
+# Wol firewall rule on remote PC on port 7 and 9 and on windows 10
+$RuleName = "Wake-on-LAN"
+$LocalPorts = "7,9"
+$Protocol = "UDP"
+$Profiles = "Domain,Private,Public"
+$Action = "Allow"
+$LocalIPAddress = "192.168.1.100" # Replace with the desired local IP address
+
+# Check if the rule already exists
+$ExistingRule = Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue
+
+if (-not $ExistingRule) {
+    # Create a new inbound rule for Wake-on-LAN
+    $NewRule = New-NetFirewallRule -DisplayName $RuleName -Direction Inbound -Protocol $Protocol `
+        -LocalPort $LocalPorts -Action $Action -Profile $Profiles.Split(",") `
+        -Enabled True -Description "Rule for allowing Wake-on-LAN magic packets from a specific local IP address"
+    Write-Host "Wake-on-LAN rule created successfully."
+
+    # Set the rule to allow traffic only from the specified local IP address
+    Set-NetFirewallRule -Name $NewRule.Name -RemoteAddress $LocalIPAddress
+} else {
+    Write-Host "Wake-on-LAN rule already exists."
+}
+
 Read-Host "Press any keys to close this window..."

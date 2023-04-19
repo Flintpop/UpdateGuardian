@@ -16,13 +16,15 @@ def check_file_exists(ssh: paramiko.SSHClient, file_path: str) -> bool:
     file_exists: bool = does_path_exists_ssh(ssh, file_path)
 
     if not file_exists:
-        print(f"The {file_path} is not a valid path or does not exists.")
+        print(f"The file path : '{file_path}' is not a valid path or does not exists.")
 
     return file_exists
 
 
 def check_all_files_exists(ssh: paramiko.SSHClient):
-    files: list[str] = list_files_recursive(find_directory("client"))
+    files: list[str] = [file for file in list_files_recursive(find_directory("client")) if file.endswith(".py")
+                        or file.endswith(".txt")]
+
     for file in files:
         if not check_file_exists(ssh, file):
             return False
@@ -37,7 +39,7 @@ def check_python_script_installed(client_folder_path: str, ssh: paramiko.SSHClie
     install_exists: bool = does_path_exists_ssh(ssh, client_folder_path)
 
     if not install_exists:
-        print(f"The {client_folder_path} is not a valid path or does not exists.")
+        print(f"The client folder path : '{client_folder_path}' is not a valid path or does not exists.")
         return install_exists
 
     return check_all_files_exists(ssh)
