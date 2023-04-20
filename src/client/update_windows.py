@@ -44,7 +44,7 @@ def reboot():
     print_and_log("A system reboot is required to complete the update installation.", "warning")
     print_and_log("Rebooting...")
     print("reboot")  # This lines allows the server to know that the client needs to reboot
-    os.system("shutdown /r /g /t 1")
+    os.system("shutdown /g /t 1")
 
 
 def install_updates(wua, updates_to_install) -> tuple:
