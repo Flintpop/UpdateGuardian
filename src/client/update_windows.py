@@ -6,16 +6,29 @@ import logging
 import win32com.client
 
 
-def print_and_log(message: str, level: str = "info") -> None:
-    print(message)
-    if level == "info":
-        logging.info(message)
-    elif level == "error":
-        logging.error(message)
-    elif level == "warning":
-        logging.warning(message)
+def update_windows():
+    wua = win32com.client.Dispatch("Microsoft.Update.Session")
+    searcher = wua.CreateUpdateSearcher()
+    print_and_log("Searching for new updates...")
+
+    # Search for updates
+    updates_to_install = search_for_updates(searcher)
+
+    # Download updates
+    download_updates(wua, updates_to_install)
+
+    # Install updates
+    installer, installation_result = install_updates(wua, updates_to_install)
+
+    process_updates(installation_result, updates_to_install)
+
+
+def start_client_update():
+    if is_admin():
+        update_windows()
     else:
-        logging.info(message)
+        logging.error("Please, execute this script in administrator to update the windows pc.")
+        sys.exit(1)
 
 
 def is_admin():
@@ -27,16 +40,37 @@ def is_admin():
         return False
 
 
-def update_windows():
-    wua = win32com.client.Dispatch("Microsoft.Update.Session")
-    searcher = wua.CreateUpdateSearcher()
-    print_and_log("Searching for new updates...")
+def reboot():
+    print_and_log("A system reboot is required to complete the update installation.", "warning")
+    print_and_log("Rebooting...")
+    print("reboot")  # This lines allows the server to know that the client needs to reboot
+    os.system("shutdown /r /g /t 1")
+
+
+def install_updates(wua, updates_to_install) -> tuple:
+    installer = wua.CreateUpdateInstaller()
+    installer.Updates = updates_to_install
+    installation_result = installer.Install()
+    return installer, installation_result
+
+
+def download_updates(wua, updates_to_install) -> None:
+    downloader = wua.CreateUpdateDownloader()
+    downloader.Updates = updates_to_install
+    download_result = downloader.Download()
+
+    if download_result.ResultCode != 2:
+        print_and_log("Error downloading updates.", "error")
+        sys.exit(1)
+
+
+def search_for_updates(searcher):
     search_result = searcher.Search("IsInstalled=0 and Type='Software'")
     updates_to_install = win32com.client.Dispatch("Microsoft.Update.UpdateColl")
 
     if search_result.Updates.Count == 0:
         print_and_log("No updates found.")
-        return
+        sys.exit(0)
     else:
         print_and_log(f"{search_result.Updates.Count} update(s) found.")
 
@@ -46,40 +80,35 @@ def update_windows():
 
     if updates_to_install.Count == 0:
         print_and_log("No updates found.")
-        return
+        sys.exit(0)
+    return updates_to_install
 
-    # Download updates
-    downloader = wua.CreateUpdateDownloader()
-    downloader.Updates = updates_to_install
-    download_result = downloader.Download()
 
-    if download_result.ResultCode != 2:
-        logging.error("Error downloading updates.")
-        return
-
-    installer = wua.CreateUpdateInstaller()
-    installer.Updates = updates_to_install
-    installation_result = installer.Install()
-
+def process_updates(installation_result, updates_to_install) -> None:
     if installation_result.ResultCode == 2:
         print_and_log("Updates installed successfully.")
         if installation_result.RebootRequired:
-            print_and_log("A system reboot is required to complete the update installation.", "warning")
-            print_and_log("Rebooting...")
-            print("reboot")  # This lines allows the server to know that the client needs to reboot
-            os.system("shutdown /r /g /t 1")
+            reboot()
     else:
-        hresult = installation_result.HResult
-        for i in range(updates_to_install.Count):
-            update_result = installation_result.GetUpdateResult(i)
-            update = updates_to_install.Item(i)
-            print_and_log(f"Error installing update {update.Title}. Error code: {update_result.ResultCode}, HRESULT: "
-                          f"{hresult}", "error")
+        process_update_error(installation_result, updates_to_install)
 
 
-def start_client_update():
-    if is_admin():
-        update_windows()
+def process_update_error(installation_result, updates_to_install) -> None:
+    hresult = installation_result.HResult
+    for i in range(updates_to_install.Count):
+        update_result = installation_result.GetUpdateResult(i)
+        update = updates_to_install.Item(i)
+        print_and_log(f"Error installing update {update.Title}. Error code: {update_result.ResultCode}, HRESULT: "
+                      f"{hresult}", "error")
+
+
+def print_and_log(message: str, level: str = "info") -> None:
+    print(message)
+    if level == "info":
+        logging.info(message)
+    elif level == "error":
+        logging.error(message)
+    elif level == "warning":
+        logging.warning(message)
     else:
-        logging.error("Please, execute this script in administrator to update the windows pc.")
-        sys.exit(1)
+        logging.info(message)
