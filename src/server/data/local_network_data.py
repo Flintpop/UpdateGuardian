@@ -4,6 +4,7 @@ import re
 import json
 import socket
 
+from src.server.commands.find_all_pc import generate_ip_range
 from src.server.commands.path_functions import find_file
 from src.server.config import Infos
 
@@ -29,7 +30,9 @@ class Data:
     python_precise_version = "3.11.3"
     server_ip_address: str = get_local_ipv4()
     data_json: dict = {}
+    computers_data: dict = {}
     ipaddresses: dict = {}
+    json_computers_database_filename: str = "computers_database.json"
 
     def __init__(self, filename: str = find_file("computers_informations.json"), json_data: dict = None):
         if json_data is None:
@@ -70,26 +73,20 @@ class Data:
         except ipaddress.AddressValueError:
             return False
 
+    def load_computer_data(self):
+        computers_data_json_file = find_file(self.json_computers_database_filename)
+        if computers_data_json_file is None:
+            raise FileNotFoundError("Cannot find the file 'computers_database.json'. It should have been created at the"
+                                    "setup phase. Please check the setup process, and restart the program.")
+
+        with open(computers_data_json_file, 'r', encoding='utf-8') as fichier:
+            self.computers_data: dict = json.load(fichier)
+
     def __check_json_integrity(self) -> bool:
-        # Vérifier la présence des champs requis
-        required_fields = ["remote_user", "remote_host", "remote_passwords", "max_computers_per_iteration",
-                           "subnet_mask", "taken_ips", "python_client_script_path"]
-
-        for field in required_fields:
-            if field not in self.data_json:
-                print(f"Champ manquant : {field}")
-                return False
-
-        # Vérifier l'intégrité des longueurs des listes
-        if not (len(self.data_json["remote_user"]) == len(self.data_json["remote_host"]) == len(
-                self.data_json["remote_passwords"])):
-            print("Les longueurs des listes 'remote_user', 'remote_host' et 'remote_passwords' ne correspondent pas.")
-            print("Vous avez probablement oublié de mettre à jour l'un des trois champs. Il doit manquer un mot "
-                  "de passe, un nom d'utilisateur ou une adresse IP.")
+        if not self.check_fields_required():
             return False
 
-        if len(self.data_json["remote_user"]) == 0:
-            print("Aucun ordinateur n'a été ajouté.")
+        if not self.check_fields_length():
             return False
 
         # Vérifier l'intégrité des adresses IP
@@ -113,18 +110,48 @@ class Data:
                 print(f"L'adresse IP {host} est déjà prise.")
                 return False
 
+        ip_pool: list[str] = self.data_json["ip_pool_range"]
+        cond: bool = len(ip_pool) == 2
+        cond = cond and self.__is_valid_ipv4_address(ip_pool[0])
+        cond = cond and self.__is_valid_ipv4_address(ip_pool[1])
+        cond = cond and int(ip_pool[0].split(".")[3]) < int(ip_pool[1].split(".")[3])
+
+        if not cond:
+            print("Please, enter a valid IP range. 2 IPv4 values are required in the 192.168 format.")
+            print("The first ip must be lower than the third.")
+            return False
+        return True
+
+    def check_fields_required(self):
+        # Vérifier la présence des champs requis
+        required_fields = ["remote_user", "remote_host", "remote_passwords", "max_computers_per_iteration",
+                           "subnet_mask", "taken_ips", "python_client_script_path", "ip_pool_range"]
+
+        for field in required_fields:
+            if field not in self.data_json:
+                print(f"Lacking field in the json file : {field}")
+                return False
+        return True
+
+    def check_fields_length(self) -> bool:
+        # Vérifier l'intégrité des longueurs des listes
+        if not (len(self.data_json["remote_user"]) == len(self.data_json["remote_host"]) == len(
+                self.data_json["remote_passwords"])):
+            print("Les longueurs des listes 'remote_user', 'remote_host' et 'remote_passwords' ne correspondent pas.")
+            print("Vous avez probablement oublié de mettre à jour l'un des trois champs. Il doit manquer un mot "
+                  "de passe, un nom d'utilisateur ou une adresse IP.")
+            return False
+
+        if len(self.data_json["remote_user"]) == 0:
+            print("Aucun ordinateur n'a été ajouté.")
+            return False
         return True
 
     def get_max_computers_per_iteration(self) -> int:
         return self.data_json.get("max_computers_per_iteration")
 
     def get_number_of_computers(self) -> int:
-        try:
-            return len(self.data_json.get("remote_user"))
-        except TypeError:
-            raise TypeError("The JSON file is empty.")
-        except AttributeError:
-            raise AttributeError("The JSON file wrongly formatted.")
+        return len(self.data_json.get("remote_user"))
 
     def get_python_script_path(self, user_index: int = 0) -> str:
         """
@@ -141,7 +168,6 @@ class Data:
                             self.data_json.get("remote_user")[user_index], Infos.project_name)
 
     def is_path_valid(self, path="") -> bool:
-        # TODO: A tester
         evaluate_path = self.get_python_script_path() if path == "" else path
 
         # Détecte l'OS actuel
@@ -235,3 +261,37 @@ class Data:
             r'^([0-9A-Fa-f]{2}([:-]))(?:[0-9A-Fa-f]{2}\2){4}[0-9A-Fa-f]{2}$'
         )
         return bool(mac_regex.match(mac_address))
+
+    def get_ip_range(self):
+        raw_ip_range: str = self.data_json.get("ip_pool_range")
+        return generate_ip_range(raw_ip_range[0], raw_ip_range[1])
+
+    def get_passwords_with_ip(self, ip_address: str) -> str | None:
+        for i in range(len(self.get_data_json()["remote_host"])):
+            if self.get_data_json()["remote_host"][i] == ip_address:
+                return self.get_data_json()["remote_passwords"][i]
+        return None
+
+    def get_computer_info(self, j) -> dict[str, str, str] | None:
+        i = 0
+        for computer in self.computers_data.values():
+            if i == j:
+                return computer
+            i += 1
+        return None
+
+    def save_computer_data(self) -> None:
+        """
+        Save the computers data in the computers_database.json file.
+        Creates a backup of the file before saving, just in case.
+        :return: Nothing.
+        """
+        with open(find_file(self.json_computers_database_filename), 'w') as file:
+            json.dump("computers_database_backup.json", file, indent=4)
+        with open(find_file(self.json_computers_database_filename), "w") as f:
+            json.dump(self.computers_data, f, indent=4)
+
+    def get_username_per_ip(self, ip_address: str):
+        for ip in self.data_json["remote_host"]:
+            if ip == ip_address:
+                return self.data_json["remote_user"][self.data_json["remote_host"].index(ip)]

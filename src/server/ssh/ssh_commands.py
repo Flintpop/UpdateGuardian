@@ -135,7 +135,7 @@ def manage_stdout_stderr_output(stdout: str, stderr: str) -> bool:
     return True
 
 
-def sha256(file):
+def sha256(file: str) -> str:
     hasher = hashlib.sha256()
     with open(file, 'rb') as f:
         buf = f.read()

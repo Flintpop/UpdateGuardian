@@ -131,3 +131,5 @@ dmypy.json
 .idea/sonarlint/
 *.pb
 /passwords.txt
+/computers_database.json
+/launch_time.json

@@ -1,15 +1,15 @@
 import os
 import threading
-import socket
 
 import paramiko
 
+from src.server.commands.find_all_pc import generate_ip_range, scan_network
 from src.server.commands.install_client_files_and_dependencies import check_and_install_client_setup, \
     wait_for_ssh_shutdown
 from src.server.commands.path_functions import find_file
 from src.server.config import Infos
 from src.server.data.local_network_data import Data
-from src.server.ssh.ssh_commands import stdout_err_execute_ssh_command, wait_and_reconnect
+from src.server.ssh.ssh_commands import stdout_err_execute_ssh_command, wait_and_reconnect, is_ssh_server_available
 from src.server.ssh.ssh_connect import ssh_connect
 from src.server.wake_on_lan.wake_on_lan_utils import send_wol
 
@@ -22,7 +22,23 @@ def generate_port_list(max_computers_per_iteration: int) -> list[int]:
     return port_list
 
 
+def refresh_ip_addresses_database(data: Data):
+    ip_range_test = generate_ip_range("192.168.7.220", "192.168.7.253")
+
+    hosts_refreshed = scan_network(ip_range_test)
+    old_hosts = data.computers_data
+    for host in hosts_refreshed.keys():
+        if host in old_hosts:
+            old_hosts[host]["ip"] = hosts_refreshed[host]["ip"]
+
+    data.save_computer_data()
+
+
 def install_windows_update_all_pc(data: Data) -> None:
+    print("Updating ip addresses database...")
+    refresh_ip_addresses_database(data)
+    print("Checking for updates on all pc...")
+
     max_computers_per_iteration = data.get_max_computers_per_iteration()
     threads: list[threading.Thread] = []
     port_list: list[int] = generate_port_list(max_computers_per_iteration)
@@ -41,13 +57,14 @@ def install_windows_update_all_pc(data: Data) -> None:
 
 def ssh_connexion_via_index(data: Data, i: int) -> paramiko.SSHClient | None:
     try:
-        remote_user = data.get_data_json().get("remote_user")[i]
-        remote_passwords = data.get_data_json().get("remote_passwords")[i]
-        remote_host = data.get_data_json().get("remote_host")[i]
+        computer_connexion_data = data.get_computer_info(i)
+        remote_user = computer_connexion_data.get("username")
+        remote_passwords = computer_connexion_data.get("password")
+        remote_host = computer_connexion_data.get("ip")
         return ssh_connect(remote_user=remote_user, remote_passwords=remote_passwords, remote_host=remote_host)
     except TimeoutError:
-        pass
-        # print("Timeout error, the pc is probably off, trying to wake it up...")
+        print("Timeout error, the pc is probably off")
+        return None
         # try:
         #     wake_up_pc(data.get_data_json().get("remote_host")[i])
         # except TimeoutError:
@@ -55,23 +72,23 @@ def ssh_connexion_via_index(data: Data, i: int) -> paramiko.SSHClient | None:
         #     return None
 
 
-def wake_up_pc(ip_address: str) -> None:
+def wake_up_pc(computer_info: dict[str, str, str, str]) -> bool:
     """
     Turn on the pc to update windows.
-    :return: Void
+    :return: True if the pc is on, False otherwise.
     """
     print("Waking up the pc...")
-    send_wol(ip_address)
-    print("The pc is now awake.")
 
+    mac_address: str = computer_info.get("mac_address")
+    send_wol(mac_address)
 
-def connect_to_remote_computer() -> socket.socket:
-    server: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(('0.0.0.0', 12345))
-    server.listen(5)
+    print("The pc should be awake...")
 
-    print("Serveur en écoute sur le port 12345")
-    return server
+    # TODO: Not tested timeout
+    if not is_ssh_server_available(computer_info.get("ip"), timeout=60):
+        print("Error, the pc is still off.")
+        return False
+    return True
 
 
 def start_python_scripts(ssh: paramiko.SSHClient, python_main_script_path: str,
@@ -94,13 +111,8 @@ def start_python_scripts(ssh: paramiko.SSHClient, python_main_script_path: str,
     return stdout
 
 
-def create_socket_server(server_ip_address: str, port: int) -> socket.socket:
-    server: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((server_ip_address, port))
-    server.listen(1)
-
-    print("Server listening on port " + str(port))
-    return server
+def check_pc_is_on(computer_info: dict[str, str, str]):
+    return is_ssh_server_available(computer_info.get("ip"))
 
 
 def install_windows_update(data: Data, i: int, port: int):
@@ -108,10 +120,18 @@ def install_windows_update(data: Data, i: int, port: int):
     max_computers_per_iteration = data.get_max_computers_per_iteration()
 
     for j in range(i, n_computers, max_computers_per_iteration):
+        current_computer_info: dict = data.get_computer_info(j)
+        
+        if current_computer_info is None:
+            print("Error, could not find computer info for pc " + str(j) + ".")
+            continue
+            
         client_number = j + 1
         print("Installing Windows Update on pc " + str(j) + "...")
-        # TODO: Building so remove mac address later
-        # wake_up_pc("c8-60-00-38-64-79")
+
+        if not check_pc_is_on(current_computer_info):
+            print(f"Client {client_number} is off, trying to wake it up...")
+            wake_up_pc(current_computer_info.get("mac"))
 
         print("Connecting to pc '" + str(client_number) + "' of ip address '" + data.get_ip_address(i) + "'")
         ssh = ssh_connexion_via_index(data, j)
@@ -146,5 +166,3 @@ def install_windows_update(data: Data, i: int, port: int):
 if __name__ == '__main__':
     data_test: Data = Data(find_file("computers_informations.json"))
     install_windows_update(data_test, 0, 12345)
-
-    # send_wol("c8-60-00-38-64-79")
