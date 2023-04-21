@@ -85,6 +85,8 @@ Type the command :
 Next : 
 ```python main.py```
 
+Fill in the json file "computer_informations.json" with every ip, passwords, username of the pc you want to update automatically.
+
 The server will prompt you instructions and informations.
 
 When you are ready for the setup process to be completed, press "y".
