@@ -79,15 +79,14 @@ def wake_up_pc(computer_info: dict[str, str, str, str]) -> bool:
     """
     print("Waking up the pc...")
 
-    mac_address: str = computer_info.get("mac_address")
-    send_wol(mac_address)
+    mac_address: str = computer_info.get("mac")
+    send_wol(mac_address=mac_address, ip_address=computer_info.get("ip"))
 
-    print("The pc should be awake...")
-
-    # TODO: Not tested timeout
-    if not is_ssh_server_available(computer_info.get("ip"), timeout=60):
+    if not is_ssh_server_available(computer_info.get("ip"), timeout=180):
         print("Error, the pc is still off.")
         return False
+
+    print("The pc should be awake...")
     return True
 
 
@@ -115,23 +114,40 @@ def check_pc_is_on(computer_info: dict[str, str, str]):
     return is_ssh_server_available(computer_info.get("ip"))
 
 
+def shut_down_pc(ssh: paramiko.SSHClient) -> None:
+    print("Shutting down the pc...")
+    stdout, stderr = stdout_err_execute_ssh_command(ssh, "shutdown /s /t 0")
+    print("Shutdown command sent.")
+
+    if stderr:
+        print("Stderr:")
+        print(stderr)
+    if stdout:
+        print("Stdout:")
+        print(stdout)
+
+
 def install_windows_update(data: Data, i: int, port: int):
     n_computers = data.get_number_of_computers()
     max_computers_per_iteration = data.get_max_computers_per_iteration()
 
     for j in range(i, n_computers, max_computers_per_iteration):
         current_computer_info: dict = data.get_computer_info(j)
-        
-        if current_computer_info is None:
-            print("Error, could not find computer info for pc " + str(j) + ".")
-            continue
-            
         client_number = j + 1
-        print("Installing Windows Update on pc " + str(j) + "...")
+
+        if current_computer_info is None:
+            print("Error, could not find computer info for pc " + str(client_number) + ".")
+            continue
+
+        print("Installing Windows Update on pc " + str(client_number) + "...")
 
         if not check_pc_is_on(current_computer_info):
             print(f"Client {client_number} is off, trying to wake it up...")
-            wake_up_pc(current_computer_info.get("mac"))
+            if not wake_up_pc(current_computer_info):
+                print("Error, could not wake up pc " + str(client_number) + ".")
+                print("Skipping pc " + str(client_number) + " of ip '" + current_computer_info.get("ip") +
+                      "' and username '" + current_computer_info.get("username") + "'.")
+                continue
 
         print("Connecting to pc '" + str(client_number) + "' of ip address '" + data.get_ip_address(i) + "'")
         ssh = ssh_connexion_via_index(data, j)
@@ -161,6 +177,8 @@ def install_windows_update(data: Data, i: int, port: int):
             else:
                 print("Error while trying to reconnect to the pc " + str(client_number))
                 print("Updates may or may not have been installed.")
+
+        shut_down_pc(ssh)
 
 
 if __name__ == '__main__':

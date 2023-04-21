@@ -3,6 +3,8 @@ import socket
 from scapy.layers.l2 import ARP, Ether
 from scapy.sendrecv import srp
 
+from src.server.data.logs import print_and_log
+
 
 def scan_network(ip_range) -> dict:
     arp_request = ARP(pdst=ip_range)
@@ -17,7 +19,7 @@ def scan_network(ip_range) -> dict:
         if hostname not in hosts:
             hosts[hostname] = {'ip': received.psrc, 'mac': received.hwsrc}
         else:
-            print("Error, two hosts have the same hostname. Please check your network configuration.")
+            print_and_log("Error, two hosts have the same hostname. Please check your network configuration.", "error")
             hosts[received.hwsrc] = {'ip': received.psrc, 'mac': received.hwsrc, 'hostname': hostname}
 
     return hosts

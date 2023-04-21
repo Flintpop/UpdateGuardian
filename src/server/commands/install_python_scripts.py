@@ -67,7 +67,8 @@ def install_python_script(data: Data, ssh: paramiko.SSHClient, i: int) -> bool:
     print("Opened sftp communication to install the scripts and requirements")
 
     try:
-        files_to_upload: list[str] = [os.path.basename(file) for file in list_files_recursive(find_directory("client"))]
+        files_to_upload: list[str] = [os.path.basename(file) for file in list_files_recursive(find_directory("client"))
+                                      if not file.endswith(".log")]
 
         for file in files_to_upload:
             file_path = find_file(file)

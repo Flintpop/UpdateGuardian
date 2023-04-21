@@ -34,13 +34,25 @@ def reboot_remote_pc(ssh: paramiko.SSHClient) -> None:
 
 
 def is_ssh_server_available(ip: str, port: int = 22, timeout: float = 5.0) -> bool:
+    start = time.time()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(timeout)
-        try:
-            sock.connect((ip, port))
-            return True
-        except (socket.timeout, OSError):
-            return False
+        while time.time() - start < timeout:
+            try:
+                sock.connect((ip, port))
+                return True
+            except socket.timeout:
+                time.sleep(0.1)
+                time_left = timeout - (time.time() - start).__round__(2)
+
+                if time_left <= 0:
+                    print("Timeout")
+                    break
+
+                print(f"Trying again, timeout left is {timeout - (time.time() - start).__round__(2)}")
+            except OSError as e:
+                print(f"OSError occurred: {e}")
+                return False
 
 
 def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, password: str, timeout: int = 600,

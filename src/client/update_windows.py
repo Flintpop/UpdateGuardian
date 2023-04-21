@@ -48,6 +48,7 @@ def reboot():
 
 
 def install_updates(wua, updates_to_install) -> tuple:
+    print_and_log("Installing updates...")
     installer = wua.CreateUpdateInstaller()
     installer.Updates = updates_to_install
     installation_result = installer.Install()
@@ -55,6 +56,7 @@ def install_updates(wua, updates_to_install) -> tuple:
 
 
 def download_updates(wua, updates_to_install) -> None:
+    print_and_log("Downloading updates...")
     downloader = wua.CreateUpdateDownloader()
     downloader.Updates = updates_to_install
     download_result = downloader.Download()
@@ -62,6 +64,7 @@ def download_updates(wua, updates_to_install) -> None:
     if download_result.ResultCode != 2:
         print_and_log("Error downloading updates.", "error")
         sys.exit(1)
+    print_and_log("Updates downloaded successfully.")
 
 
 def search_for_updates(searcher):

@@ -5,6 +5,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from src.server.commands.install_update import install_windows_update_all_pc
 from src.server.data.local_network_data import Data
+from src.server.data.logs import add_spaces_logging_file
 from src.server.data.setup import server_setup, get_launch_time
 
 function_executed: bool = False
@@ -13,16 +14,16 @@ function_executed: bool = False
 def execute_job(data: Data):
     print("Executing scheduled task...")
     # print(data.get_data_json().values())
+    add_spaces_logging_file(server_setup=False)
     install_windows_update_all_pc(data)
 
 
 def launch_software(data: Data) -> None:
+    add_spaces_logging_file(server_setup=True)
     server_setup(data)
 
     data.load_computer_data()
 
-    execute_job(data)
-    return
     scheduled_time = get_launch_time()
 
     day, hour = scheduled_time['day'], scheduled_time['hour']

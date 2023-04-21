@@ -28,12 +28,8 @@ def send_wol_with_secureon(mac_address: str, secureon_password: str) -> None:
     send_magic_packet(f"{mac_address}/{secureon_password}")
 
 
-def send_wol(ip_address: str) -> bool:
-    mac_address: str = get_mac_address(ip_address)
-    if mac_address is None:
-        print("Cannot send WOL packet because the computer is off and mac address is unknown.")
-        return False
-    send_magic_packet(mac_address, ip_address=ip_address, port=9)
+def send_wol(mac_address: str, ip_address: str, port: int=9) -> bool:
+    send_magic_packet(mac_address, ip_address=ip_address, port=port)
     return True
 
 
@@ -52,8 +48,8 @@ def ping_ip(ip_address: str) -> bool:
     return True
 
 
-def get_mac_address(ip_address: str) -> str | None:
-    Data.get_mac_address(ip_address)
+def get_mac_address(data: Data, ip_address: str) -> str | None:
+    data.get_mac_address(ip_address)
     if not ping_ip(ip_address):
         print("Impossible de récupérer l'adresse MAC car l'ordinateur est éteint.")
         return None
@@ -75,10 +71,10 @@ def get_mac_address(ip_address: str) -> str | None:
     return mac_address
 
 
-def get_mac_addresses(ip_addresses: list[str]) -> dict:
+def get_mac_addresses(data: Data, ip_addresses: list[str]) -> dict:
     mac_addresses = {}
     for current_ip in ip_addresses:
-        current_mac = get_mac_address(current_ip)
+        current_mac = get_mac_address(data, current_ip)
         if current_mac:
             mac_addresses[current_ip] = current_mac
 
@@ -113,15 +109,3 @@ def get_router_ip():
 # Exemple d'utilisation
 if __name__ == "__main__":
     print()
-    # print("Adresse du routeur : ", get_router_ip())
-    # print()
-    # ip_list = ["192.168.7.227"]
-    # mac_list = get_mac_addresses(ip_list)
-    #
-    # for ip, mac in mac_list.items():
-    #     print(f"{ip} -> {mac}")
-
-    # send_wol("192.168.7.227")
-    # ssh = paramiko.SSHClient()
-    # ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    # ssh.connect("

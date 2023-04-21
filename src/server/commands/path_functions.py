@@ -90,13 +90,19 @@ def find_file(filename: str, root_folder='.', already_called=False, show_print=T
     return find_file(filename, root_folder, True, show_print=show_print)
 
 
-def find_directory(directory_name: str, root_folder='.') -> str:
+def find_directory(directory_name: str, root_folder='.', already_called=False) -> str:
+    if os.getcwd().endswith(Infos.project_name) and directory_name == Infos.project_name:
+        root_folder = os.getcwd()
+        return root_folder
     for root, dirs, files in os.walk(root_folder):
         for directory in dirs:
             if directory == directory_name:
                 return os.path.join(root, directory)
-    raise FileNotFoundError(f"Directory '{directory_name}' not found in the root folder '{root_folder}'"
-                            f" and its subdirectories.")
+    if already_called:
+        raise FileNotFoundError(f"Directory '{directory_name}' not found in the root folder '{root_folder}'"
+                                f" and its subdirectories.")
+    change_directory_to_root_folder()
+    return find_directory(directory_name, root_folder, True)
 
 
 def list_files_recursive(directory: str) -> list[str]:
@@ -104,11 +110,21 @@ def list_files_recursive(directory: str) -> list[str]:
     #     raise ValueError(f"Path {directory} is not valid")
 
     all_files = []
+    dir_exceptions = ["__pycache__", ".git", ".idea", ".vscode", "venv", ".gitignore", "__init__.py"]
 
     for root, _, files in os.walk(directory):
         for file in files:
-            file_path = os.path.join(root, file)
-            all_files.append(file_path)
+            if file not in all_files:
+                file_path = os.path.join(root, file)
+                add_var = True
+
+                for exception in dir_exceptions:
+                    if file_path.__contains__(exception):
+                        add_var = False
+                        break
+
+                if add_var:
+                    all_files.append(file_path)
 
     return all_files
 
