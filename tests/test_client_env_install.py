@@ -12,9 +12,14 @@ from src.server.data.computer import Computer
 
 
 def load_password_test():
-    path = find_file("password_test.txt")
-    with open(path, "r") as file:
-        return file.read()
+    try:
+        path = find_file("password_test.txt")
+        with open(path, "r") as file:
+            return file.read()
+    except FileNotFoundError:
+        print("Error, could not find the password_test.txt file in the tests_data folder.")
+        print("Please, create a file called password_test.txt in the tests/tests_data folder.")
+        raise FileNotFoundError
 
 
 def get_mac_address():
