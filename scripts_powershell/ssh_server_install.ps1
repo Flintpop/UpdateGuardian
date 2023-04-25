@@ -4,8 +4,28 @@
 # Ensure the script is running with administrative privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator"))
 {
-    Start-Process powershell.exe "-File",('"{0}"' -f $MyInvocation.MyCommand.Path) -Verb RunAs
-    exit
+    Write-Host "Running script without administrative privileges. Attempting to restart with admin rights..."
+
+    Read-Host "Press any keys to close this window..."
+
+    $ScriptPath = $MyInvocation.MyCommand.Path
+    $CurrentDirectory = (Get-Item -Path ".\").FullName
+
+    Write-Host "Script Path: $ScriptPath"
+    Write-Host "Current Directory: $CurrentDirectory"
+
+    Read-Host "Press any keys to close this window..."
+    $AdminProcess = Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -Verb RunAs -PassThru -WorkingDirectory $CurrentDirectory
+    $AdminProcess.WaitForExit()
+    $ExitCode = $AdminProcess.ExitCode
+
+    Read-Host "Press any keys to close this window..."
+    Write-Host "Admin process exit code: $ExitCode"
+    exit $ExitCode
+}
+else
+{
+    Write-Host "Script is running with administrative privileges."
 }
 
 # Enable OpenSSH feature

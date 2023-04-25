@@ -9,7 +9,7 @@ import win32com.client
 def update_windows():
     wua = win32com.client.Dispatch("Microsoft.Update.Session")
     searcher = wua.CreateUpdateSearcher()
-    print_and_log("Searching for new updates...")
+    print_and_log_client("Searching for new updates...")
 
     # Search for updates
     updates_to_install = search_for_updates(searcher)
@@ -41,14 +41,14 @@ def is_admin():
 
 
 def reboot():
-    print_and_log("A system reboot is required to complete the update installation.", "warning")
-    print_and_log("Rebooting...")
+    print_and_log_client("A system reboot is required to complete the update installation.", "warning")
+    print_and_log_client("Rebooting...")
     print("reboot")  # This lines allows the server to know that the client needs to reboot
     os.system("shutdown /g /t 1")
 
 
 def install_updates(wua, updates_to_install) -> tuple:
-    print_and_log("Installing updates...")
+    print_and_log_client("Installing updates...")
     installer = wua.CreateUpdateInstaller()
     installer.Updates = updates_to_install
     installation_result = installer.Install()
@@ -56,15 +56,15 @@ def install_updates(wua, updates_to_install) -> tuple:
 
 
 def download_updates(wua, updates_to_install) -> None:
-    print_and_log("Downloading updates...")
+    print_and_log_client("Downloading updates...")
     downloader = wua.CreateUpdateDownloader()
     downloader.Updates = updates_to_install
     download_result = downloader.Download()
 
     if download_result.ResultCode != 2:
-        print_and_log("Error downloading updates.", "error")
+        print_and_log_client("Error downloading updates.", "error")
         sys.exit(1)
-    print_and_log("Updates downloaded successfully.")
+    print_and_log_client("Updates downloaded successfully.")
 
 
 def search_for_updates(searcher):
@@ -72,24 +72,24 @@ def search_for_updates(searcher):
     updates_to_install = win32com.client.Dispatch("Microsoft.Update.UpdateColl")
 
     if search_result.Updates.Count == 0:
-        print_and_log("No updates found.")
+        print_and_log_client("No updates found.")
         sys.exit(0)
     else:
-        print_and_log(f"{search_result.Updates.Count} update(s) found.")
+        print_and_log_client(f"{search_result.Updates.Count} update(s) found.")
 
     for update in search_result.Updates:
-        print_and_log(f"Update {update.Title} is available.")
+        print_and_log_client(f"Update {update.Title} is available.")
         updates_to_install.Add(update)
 
     if updates_to_install.Count == 0:
-        print_and_log("No updates found.")
+        print_and_log_client("No updates found.")
         sys.exit(0)
     return updates_to_install
 
 
 def process_updates(installation_result, updates_to_install) -> None:
     if installation_result.ResultCode == 2:
-        print_and_log("Updates installed successfully.")
+        print_and_log_client("Updates installed successfully.")
         if installation_result.RebootRequired:
             reboot()
     else:
@@ -101,11 +101,11 @@ def process_update_error(installation_result, updates_to_install) -> None:
     for i in range(updates_to_install.Count):
         update_result = installation_result.GetUpdateResult(i)
         update = updates_to_install.Item(i)
-        print_and_log(f"Error installing update {update.Title}. Error code: {update_result.ResultCode}, HRESULT: "
-                      f"{hresult}", "error")
+        print_and_log_client(f"Error installing update {update.Title}. Error code: {update_result.ResultCode},"
+                             f" HRESULT: {hresult}", "error")
 
 
-def print_and_log(message: str, level: str = "info") -> None:
+def print_and_log_client(message: str, level: str = "info") -> None:
     print(message)
     if level == "info":
         logging.info(message)

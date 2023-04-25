@@ -1,19 +1,20 @@
 import logging
 
-from update_windows import start_client_update, print_and_log
+from update_windows import start_client_update
 
-logging.basicConfig(level=logging.INFO, filename="update_windows.log", filemode="a",
+LOGS_FILENAME: str = "update_windows.log"
+logging.basicConfig(level=logging.INFO, filename=LOGS_FILENAME, filemode="a",
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def add_spaces_logging_file() -> None:
     write_spaces: bool = False
-    with open("update_windows.log", "r") as f:
+    with open(LOGS_FILENAME, "r") as f:
         if len(f.readline()) > 1:
             write_spaces = True
 
     if write_spaces:
-        with open("update_windows.log", "a") as f:
+        with open(LOGS_FILENAME, "a") as f:
             f.write("\n\n")
 
 
@@ -22,23 +23,8 @@ def main_loop() -> None:
     add_spaces_logging_file()
 
     logging.info("Starting client update script...")
-    # if len(sys.argv) != 3:
-    #     print_and_log("Please, enter the server ip and the server port.", "error")
-    #     print_and_log("Example: python main_client.py", "error")
-    #     sys.exit(1)
-
-    # Se connecter au serveur
-    # server_ip: str = sys.argv[1]
-    # server_port: int = int(sys.argv[2])
-    # print_and_log(f"Connecting to server {server_ip}:{server_port}...")
-    # client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # client.connect((server_ip, server_port))
-
-    print_and_log("Connected to server.")
 
     start_client_update()
-
-    # client.close()
 
 
 if __name__ == '__main__':

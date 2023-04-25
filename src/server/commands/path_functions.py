@@ -46,19 +46,19 @@ def go_back_n_dir(path: str, n: int) -> str:
 
 def change_directory_to_root_folder() -> None:
     current_directory: str = os.getcwd()
-    if current_directory.endswith(Infos.project_name):
+    if current_directory.endswith(Infos.PROJECT_NAME):
         return
     if os.name == 'nt':
-        cond = "\\" + Infos.project_name + "\\" not in os.getcwd()
+        cond = "\\" + Infos.PROJECT_NAME + "\\" not in os.getcwd()
     else:
-        cond = "/" + Infos.project_name + "/" not in os.getcwd()
+        cond = "/" + Infos.PROJECT_NAME + "/" not in os.getcwd()
     if cond:
         print("Name of the project not found in the current nested directory. Please change directory to the "
               "root folder containing the name of the project.")
         raise EnvironmentError("Name of the project not found in the current nested directory.")
 
     print("Changing directory to the root folder...")
-    project_directory = os.path.join(current_directory.split(Infos.project_name)[0], Infos.project_name)
+    project_directory = os.path.join(current_directory.split(Infos.PROJECT_NAME)[0], Infos.PROJECT_NAME)
 
     # Change the working directory to the project_directory
     os.chdir(project_directory)
@@ -91,7 +91,7 @@ def find_file(filename: str, root_folder='.', already_called=False, show_print=T
 
 
 def find_directory(directory_name: str, root_folder='.', already_called=False) -> str:
-    if os.getcwd().endswith(Infos.project_name) and directory_name == Infos.project_name:
+    if os.getcwd().endswith(Infos.PROJECT_NAME) and directory_name == Infos.PROJECT_NAME:
         root_folder = os.getcwd()
         return root_folder
     for root, dirs, files in os.walk(root_folder):
@@ -110,23 +110,27 @@ def list_files_recursive(directory: str) -> list[str]:
     #     raise ValueError(f"Path {directory} is not valid")
 
     all_files = []
-    dir_exceptions = ["__pycache__", ".git", ".idea", ".vscode", "venv", ".gitignore", "__init__.py"]
 
     for root, _, files in os.walk(directory):
         for file in files:
-            if file not in all_files:
-                file_path = os.path.join(root, file)
-                add_var = True
-
-                for exception in dir_exceptions:
-                    if file_path.__contains__(exception):
-                        add_var = False
-                        break
-
-                if add_var:
-                    all_files.append(file_path)
+            add_file(all_files, file, root)
 
     return all_files
+
+
+def add_file(all_files: list[str], file: str, root: str) -> None:
+    dir_exceptions = ["__pycache__", ".git", ".idea", ".vscode", "venv", ".gitignore", "__init__.py"]
+    if file not in all_files:
+        file_path = os.path.join(root, file)
+        add_var = True
+
+        for exception in dir_exceptions:
+            if file_path.__contains__(exception):
+                add_var = False
+                break
+
+        if add_var:
+            all_files.append(file_path)
 
 
 def get_root_project_dir():

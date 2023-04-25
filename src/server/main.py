@@ -3,19 +3,21 @@ import time
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from src.server.commands.install_update import install_windows_update_all_pc
+from src.server.commands.install_update import update_all_computer
+from src.server.data.computer_database import ComputerDatabase
 from src.server.data.local_network_data import Data
-from src.server.data.logs import add_spaces_logging_file
+from src.server.data.logs import add_spaces_logging_file, print_and_log
 from src.server.data.setup import server_setup, get_launch_time
 
 function_executed: bool = False
 
 
-def execute_job(data: Data):
+def execute_job():
     print("Executing scheduled task...")
-    # print(data.get_data_json().values())
+
     add_spaces_logging_file(server_setup=False)
-    install_windows_update_all_pc(data)
+    computer_database = ComputerDatabase()
+    update_all_computer(computer_database)
 
 
 def launch_software(data: Data) -> None:
@@ -36,7 +38,7 @@ def launch_software(data: Data) -> None:
 
     scheduler.start()
 
-    print(f"The program is scheduled to launch on {day} at {hour} o'clock.")
+    print_and_log(f"The program is scheduled to launch on {day} at {hour} o'clock.")
 
     try:
         while True:

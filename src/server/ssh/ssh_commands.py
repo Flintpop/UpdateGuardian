@@ -5,6 +5,11 @@ import time
 
 import paramiko
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.server.data.computer import Computer
+
 from src.server.ssh.ssh_connect import decode_stream
 
 
@@ -33,29 +38,48 @@ def reboot_remote_pc(ssh: paramiko.SSHClient) -> None:
     ssh.exec_command(reboot_command)
 
 
-def is_ssh_server_available(ip: str, port: int = 22, timeout: float = 5.0) -> bool:
+def manage_ssh_output(stdout: str, stderr: str) -> str | None:
+    """
+    Prints the stdout and stderr and returns the stdout if there is no stderr.
+    :param stdout: A string containing the stdout of an ssh command.
+    :param stderr: A string containing the stderr of an ssh command.
+    :return: None if there is an error, stdout otherwise.
+    """
+    if stderr:
+        print("Stderr:")
+        print(stderr)
+        return None
+    if stdout:
+        print("Stdout:")
+        print(stdout)
+    return stdout
+
+
+def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float = 5.0) -> bool:
+    ip: str = computer.ipv4
     start = time.time()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(timeout)
         while time.time() - start < timeout:
             try:
                 sock.connect((ip, port))
+                computer.log(f"Connected to {ip} of {computer.hostname}")
                 return True
             except socket.timeout:
                 time.sleep(0.1)
                 time_left = timeout - (time.time() - start).__round__(2)
 
                 if time_left <= 0:
-                    print("Timeout")
+                    computer.log("Timeout")
                     break
 
-                print(f"Trying again, timeout left is {timeout - (time.time() - start).__round__(2)}")
+                computer.log(f"Trying again, timeout left is {timeout - (time.time() - start).__round__(2)}")
             except OSError as e:
-                print(f"OSError occurred: {e}")
+                computer.log_error(f"OSError occurred: {e}")
                 return False
 
 
-def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, password: str, timeout: int = 600,
+def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, password: str, timeout: int = 300,
                        retry_interval: int = 10) -> bool:
     ssh.close()
     start_time = time.time()

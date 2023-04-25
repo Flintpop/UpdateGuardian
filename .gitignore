@@ -133,3 +133,4 @@ dmypy.json
 /passwords.txt
 /computers_database.json
 /launch_time.json
+/tests/tests_data/password_test.txt

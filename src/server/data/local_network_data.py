@@ -25,9 +25,6 @@ class Data:
     Getters are used to access the data.
     Checks are made to ensure the integrity of the JSON file.
     """
-    python_version = "3.11"
-    python_folder_name = f"Python{python_version.replace('.', '')}"
-    python_precise_version = "3.11.3"
     server_ip_address: str = get_local_ipv4()
     data_json: dict = {}
     computers_data: dict = {}
@@ -147,7 +144,7 @@ class Data:
             return False
         return True
 
-    def get_max_computers_per_iteration(self) -> int:
+    def get_max_number_of_simultaneous_updates(self) -> int:
         return self.data_json.get("max_computers_per_iteration")
 
     def get_number_of_computers(self) -> int:
@@ -162,14 +159,13 @@ class Data:
         """
         path_chose_by_user: str = self.data_json.get("python_client_script_path")
         if path_chose_by_user == "":
-            return os.path.join(r'C:\Users', self.data_json.get("remote_user")[user_index], Infos.project_name)
+            return os.path.join(r'C:\Users', self.data_json.get("remote_user")[user_index], Infos.PROJECT_NAME)
 
         return os.path.join(self.data_json.get("python_client_script_path"),
-                            self.data_json.get("remote_user")[user_index], Infos.project_name)
+                            self.data_json.get("remote_user")[user_index], Infos.PROJECT_NAME)
 
-    def is_path_valid(self, path="") -> bool:
-        evaluate_path = self.get_python_script_path() if path == "" else path
-
+    @staticmethod
+    def is_path_valid(path: str) -> bool:
         # Détecte l'OS actuel
         current_os = os.name
 
@@ -185,69 +181,15 @@ class Data:
 
         # Vérifie si le chemin est valide pour l'OS actuel
         if current_os == 'nt':  # Windows
-            return bool(windows_regex.match(evaluate_path))
+            return bool(windows_regex.match(path))
         elif current_os == 'posix':  # Linux
-            return bool(linux_regex.match(evaluate_path))
+            return bool(linux_regex.match(path))
         else:
             return False
 
     def does_file_exists(self, path="") -> bool:
         evaluate_path: str = self.get_python_script_path() if path == "" else path
         return os.path.isfile(evaluate_path) and path.endswith('.py')
-
-    def get_ip_address(self, i: int):
-        return self.data_json.get("remote_host")[i]
-
-    def get_python_requirements_path(self, i: int):
-        return os.path.join(self.get_python_script_path(i), "requirements_client.txt")
-
-    @staticmethod
-    def get_server_python_installer_path() -> str:
-        current_file_path: str = os.path.dirname(os.path.abspath(__file__))
-        installer_path = os.path.join(current_file_path, "..", "..", "..", "python_3.11.3.exe")
-        return os.path.abspath(installer_path)
-
-    @staticmethod
-    def get_installer_name() -> str:
-        return "python_" + Data.python_precise_version + ".exe"
-
-    def get_client_info(self, i: int) -> tuple[str, str, str]:
-        """
-        Return the tuple (ip_address, username, password) of the client computer at index i.
-        :param i: Client index.
-        :return: Tuple (ip_address, username, password)
-        """
-        return self.data_json.get("remote_host")[i], self.data_json.get("remote_user")[i], \
-            self.data_json.get("remote_passwords")[i]
-
-    def get_mac_address(self, ip_address) -> str | None:
-        """
-        Return the MAC address of the computer with the given IP address.
-        :param ip_address: IP address of the computer.
-        :return: MAC address of the computer.
-        """
-
-        if not self.__is_valid_ipv4_address(ip_address):
-            raise ValueError("L'adresse IP n'est pas valide.")
-
-        if ip_address not in self.ipaddresses:
-            return None
-
-        if self.ipaddresses[ip_address] == "" or self.ipaddresses[ip_address] == "00:00:00:00:00:00":
-            return None
-
-        return self.ipaddresses[ip_address]
-
-    def add_mac_address(self, mac_address: str, ip_address: str) -> None:
-        if not self.__is_valid_ipv4_address(ip_address):
-            raise ValueError("L'adresse IP n'est pas valide.")
-
-        if not self.is_valid_mac_address(mac_address):
-            raise ValueError("L'adresse MAC n'est pas valide.")
-
-        if ip_address in self.ipaddresses:
-            print("IP address already in dictionary, overwriting it.")
-        self.ipaddresses[ip_address] = mac_address
 
     @staticmethod
     def is_valid_mac_address(mac_address):
@@ -270,14 +212,6 @@ class Data:
         for i in range(len(self.get_data_json()["remote_host"])):
             if self.get_data_json()["remote_host"][i] == ip_address:
                 return self.get_data_json()["remote_passwords"][i]
-        return None
-
-    def get_computer_info(self, j) -> dict[str, str, str] | None:
-        i = 0
-        for computer in self.computers_data.values():
-            if i == j:
-                return computer
-            i += 1
         return None
 
     def save_computer_data(self) -> None:

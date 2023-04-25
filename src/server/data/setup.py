@@ -121,7 +121,7 @@ def check_all_files_integrity():
                 print_and_log("File 2  : " + files[j])
                 print_and_log()
                 print_and_log(
-                    f"The software, due to how it works, cannot have duplicated files in {Infos.project_name} "
+                    f"The software, due to how it works, cannot have duplicated files in {Infos.PROJECT_NAME} "
                     f"directory, and subdirectories.")
                 sys.exit(1)
 
