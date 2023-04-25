@@ -6,7 +6,7 @@ import paramiko
 
 from src.server.commands.install_client_files_and_dependencies import python_scripts, python_installation, \
     python_path, python_packages, wait_for_ssh_shutdown
-from src.server.commands.path_functions import list_files_recursive, find_directory
+from src.server.commands.path_functions import list_files_recursive, find_directory, change_directory_to_root_folder
 from src.server.config import Infos
 from src.server.ssh.ssh_commands import is_ssh_server_available, stdout_err_execute_ssh_command, manage_ssh_output, \
     wait_and_reconnect
@@ -50,6 +50,7 @@ class Computer:
         self.client_project_folder: str = os.path.join(self.get_project_directory_on_client(), self.username,
                                                        Infos.PROJECT_NAME)
 
+        change_directory_to_root_folder()
         self.logs_filename = "logs"
         self.logs_filename = os.path.join(self.logs_filename,
                                           f"{self.hostname}-{Computer._id_counter}.log")

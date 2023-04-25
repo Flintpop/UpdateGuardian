@@ -179,8 +179,9 @@ def sha256(file: str) -> str:
     return hasher.hexdigest()
 
 
-def is_client_file_different(ssh: paramiko.SSHClient, remote_file_path: str, local_file_path: str) -> bool:
+def is_client_file_different(computer: 'Computer', remote_file_path: str, local_file_path: str) -> bool:
     # Créer une session SFTP en utilisant la session SSH existante
+    ssh: paramiko.SSHClient = computer.ssh_session
     sftp = ssh.open_sftp()
 
     try:
@@ -198,9 +199,7 @@ def is_client_file_different(ssh: paramiko.SSHClient, remote_file_path: str, loc
         return hachage_distant == hachage_local
 
     except FileNotFoundError:
-        print(f"Fichier non trouvé : {remote_file_path} ou {local_file_path}")
+        computer.log(f"File not found : {remote_file_path} or {local_file_path}", level="warning")
         return False
-
     finally:
-        # Fermer la session SFTP
         sftp.close()

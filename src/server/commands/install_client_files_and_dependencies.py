@@ -312,14 +312,13 @@ def refresh_env_variables(computer: 'Computer') -> bool:
 
 
 def check_python_script_up_to_date(computer: 'Computer') -> bool:
-    files: list[str] = list_files_recursive(find_directory("client"))
+    files: list[str] = computer.get_list_client_files_to_send()
     remote_root_path: str = computer.get_project_directory_on_client()
-    ssh: paramiko.SSHClient = computer.ssh_session
 
     files_to_update: list[str] = []
     for file in files:
         remote_file: str = os.path.join(remote_root_path, os.path.basename(file))
-        if not is_client_file_different(ssh, remote_file, file):
+        if not is_client_file_different(computer, remote_file, file):
             computer.log(f"File {file} is not up to date.")
             files_to_update.append(file)
 

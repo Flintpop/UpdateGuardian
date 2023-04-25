@@ -1,10 +1,14 @@
 import getpass
-# import os
+import os
 import shutil
 import unittest
 import uuid
 
-from src.server.commands.install_client_files_and_dependencies import *
+from src.server.commands.install_client_files_and_dependencies import check_python_script_up_to_date
+from src.server.commands.install_python_scripts import check_python_script_installed, install_python_script
+from src.server.commands.path_functions import find_file
+from src.server.config import Infos
+from src.server.data.computer import Computer
 
 
 def load_password_test():
@@ -61,21 +65,28 @@ class TestClientEnvInstall(unittest.TestCase):
             self.assertTrue(path_to_check)
 
     def test_scripts_up_to_date(self):
-        # TODO: Fix this, last stop here 11:33 25/04/2023
+        # Upload scripts
         installed_python_scripts_success: bool = install_python_script(self.computer)
         self.assertTrue(installed_python_scripts_success)
+        # Should be OK
+        self.assertTrue(check_python_script_up_to_date(self.computer))
 
+        # Get list of files to send to client, and change them so that they are not up-to-date
         files: list[str] = self.computer.get_list_client_files_to_send()
         files = list(map(lambda x: os.path.basename(x), files))
 
+        # Upload scripts, but change them
         for file in files:
             with open(os.path.join(self.project_path, file), "w") as f:
                 f.write("test")
 
+        # Should not be OK, files not like the files in the server
         self.assertFalse(check_python_script_up_to_date(self.computer))
 
+        # Upload scripts again
         install_python_script(self.computer)
 
+        # Should be OK
         self.assertTrue(check_python_script_up_to_date(self.computer))
 
     def test_scripts_installed_overall(self):

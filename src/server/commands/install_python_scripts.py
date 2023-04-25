@@ -84,7 +84,7 @@ def install_python_script(computer: 'Computer') -> bool:
     sftp = ssh.open_sftp()
     computer.log("Opened sftp communication to install the scripts and requirements")
 
-    # TODO: Simplifier le code pour avoir les fichiers à upload
+    # TODO : Simplifier le code pour avoir les fichiers à upload
     files_to_upload: list[str] = [os.path.basename(file) for file in list_files_recursive(find_directory("client"))
                                   if not file.endswith(".log")]
     try:
