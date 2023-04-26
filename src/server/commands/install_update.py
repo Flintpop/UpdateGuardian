@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from src.server.data.computer import Computer
 from src.server.data.computer_database import ComputerDatabase
 
-from src.server.data.server_logs import log
+from src.server.environnement.server_logs import log, log_error
 
 
 def update_all_computer(database: ComputerDatabase) -> None:
@@ -25,4 +25,9 @@ def update_all_computer(database: ComputerDatabase) -> None:
 
 def update_computer(computer: Computer):
     log(message="Updating computer " + computer.hostname + "...")
-    computer.update()
+    if not computer.update():
+        log_error("Error while updating computer " + computer.hostname)
+        log_error("Skipping this computer...")
+        return
+
+    log("Computer " + computer.hostname + " updated successfully!")

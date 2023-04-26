@@ -3,10 +3,11 @@ import os
 import paramiko
 
 from src.server.commands.install_python_scripts import check_python_script_installed, install_python_script
-from src.server.commands.path_functions import find_file, list_files_recursive, find_directory
+from src.server.commands.path_functions import find_file
 from src.server.config import Infos
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from src.server.data.computer import Computer
 
@@ -88,7 +89,7 @@ def check_python_packages_installed(computer: 'Computer') -> bool:
     :return: True if packages are installed, False if at least one is lacking
     """
     ssh: paramiko.SSHClient = computer.ssh_session
-    requirements_file_path: str = computer.get_requirements_path()
+    requirements_file_path: str = find_file(os.path.basename(computer.get_requirements_path()))
     computer.log("Checking if requirements_client.txt packages are installed...")
 
     with open(requirements_file_path, 'r') as file:
@@ -135,7 +136,6 @@ def send_python_installer(computer: 'Computer') -> bool:
 
 
 def add_python_to_path(computer: 'Computer') -> bool:
-
     ssh: paramiko.SSHClient = computer.ssh_session
     computer.log("Adding python to path...")
 
@@ -174,37 +174,39 @@ def add_python_to_path(computer: 'Computer') -> bool:
     return True
 
 
-def check_python_path_set(ssh: paramiko.SSHClient) -> bool:
-    print("Checking if python is in path...")
+def check_python_path_set(computer: 'Computer') -> bool:
+    ssh: paramiko.SSHClient = computer.ssh_session
+    computer.log("Checking if python is in path...")
 
     path_check_command: str = r'echo %PATH%'
 
     stdout, stderr = stdout_err_execute_ssh_command(ssh, path_check_command)
 
     if stderr:
-        print("Error, path command failed : " + stderr)
+        computer.log_error("Error, path command failed : " + stderr)
         return False
 
     if "python" not in stdout.lower():
-        print("Python is not in path")
+        computer.log_error("Python is not in path")
         return False
 
-    print("Python seems to be in path. Checking if python executable is launchable...")
+    computer.log("Python seems to be in path. Checking if python executable is launchable...")
 
     # Check if 'python' command is available
     stdout2, stderr2 = stdout_err_execute_ssh_command(ssh, "where python")
 
     if not stderr2 and "python" in stdout2.lower():
-        print("Python is installed and in path")
-        print("Checking pip...")
+        computer.log("Python is installed and in path")
+        computer.log("Checking pip...")
         stdout3, stderr3 = stdout_err_execute_ssh_command(ssh, "pip --version")
         if stdout3:
-            print("Pip is installed")
+            computer.log("Pip is installed")
             return True
-        print("Error, pip is not installed : " + stderr3)
+        computer.log_error("Error, pip is not installed : " + stderr3)
         return False
     else:
-        print("Python is not set correctly in path, because it may be there despite the fact that it is installed.")
+        computer.log_error("Python is not set correctly in path, because it may be there despite the fact that it is"
+                           " installed.")
         return False
 
 
@@ -262,21 +264,23 @@ def install_python(computer: 'Computer') -> bool:
     return True
 
 
-def install_python_packages(ssh: paramiko.SSHClient, requirements_file_path: str) -> bool:
+def install_python_packages(computer: 'Computer', requirements_file_path: str) -> bool:
+    ssh: paramiko.SSHClient = computer.ssh_session
     command: str = "pip install -r " + requirements_file_path
     stdout, stderr = stdout_err_execute_ssh_command(ssh, command)
 
     if stderr and "error" in stderr.lower() or "erreur" in stderr.lower():
-        print("Error, could not install python packages : " + stderr)
+        computer.log_error("Error, could not install python packages : " + stderr)
         return False
     if stderr and "warning" in stderr.lower():
-        print("Warning, but python packages installed")
+        computer.log("Warning, but python packages installed", level="warning")
         if "pip" in stderr.lower():
-            print("Pip should be updated.")
+            computer.log("Pip should be updated.")
         else:
-            print("Stderr : " + stderr)
+            computer.log_error("Stderr : " + stderr)
+            return False
     if stdout:
-        print(STDOUT_MESSAGE + stdout)
+        computer.log(STDOUT_MESSAGE + stdout)
     return True
 
 
@@ -367,7 +371,7 @@ def python_installation(computer: 'Computer') -> bool:
 
 
 def python_path(computer: 'Computer') -> bool:
-    python_path_set: bool = check_python_path_set(computer.ssh_session)
+    python_path_set: bool = check_python_path_set(computer)
 
     if python_path_set:
         computer.log("Python is in path.")
@@ -384,12 +388,10 @@ def python_path(computer: 'Computer') -> bool:
 
 
 def python_packages(computer: 'Computer') -> bool:
-    ssh: paramiko.SSHClient = computer.ssh_session
-
     python_packages_installed: bool = check_python_packages_installed(computer=computer)
 
     if not python_packages_installed:
-        installed_packages_success: bool = install_python_packages(ssh, computer.get_requirements_path())
+        installed_packages_success: bool = install_python_packages(computer, computer.get_requirements_path())
         if not installed_packages_success:
             computer.log_error("Error, could not install python packages.")
             return False

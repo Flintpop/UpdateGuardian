@@ -29,7 +29,6 @@ class Data:
     data_json: dict = {}
     computers_data: dict = {}
     ipaddresses: dict = {}
-    json_computers_database_filename: str = "computers_database.json"
 
     def __init__(self, filename: str = find_file("computers_informations.json"), json_data: dict = None):
         if json_data is None:
@@ -70,14 +69,6 @@ class Data:
         except ipaddress.AddressValueError:
             return False
 
-    def load_computer_data(self):
-        computers_data_json_file = find_file(self.json_computers_database_filename)
-        if computers_data_json_file is None:
-            raise FileNotFoundError("Cannot find the file 'computers_database.json'. It should have been created at the"
-                                    "setup phase. Please check the setup process, and restart the program.")
-
-        with open(computers_data_json_file, 'r', encoding='utf-8') as fichier:
-            self.computers_data: dict = json.load(fichier)
 
     def __check_json_integrity(self) -> bool:
         if not self.check_fields_required():
@@ -213,17 +204,6 @@ class Data:
             if self.get_data_json()["remote_host"][i] == ip_address:
                 return self.get_data_json()["remote_passwords"][i]
         return None
-
-    def save_computer_data(self) -> None:
-        """
-        Save the computers data in the computers_database.json file.
-        Creates a backup of the file before saving, just in case.
-        :return: Nothing.
-        """
-        with open(find_file(self.json_computers_database_filename), 'w') as file:
-            json.dump("computers_database_backup.json", file, indent=4)
-        with open(find_file(self.json_computers_database_filename), "w") as f:
-            json.dump(self.computers_data, f, indent=4)
 
     def get_username_per_ip(self, ip_address: str):
         for ip in self.data_json["remote_host"]:

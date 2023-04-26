@@ -3,7 +3,7 @@ import socket
 from scapy.layers.l2 import ARP, Ether
 from scapy.sendrecv import srp
 
-from src.server.data.server_logs import log_error
+from src.server.environnement.server_logs import log_error
 
 
 def scan_network(ip_range) -> dict:

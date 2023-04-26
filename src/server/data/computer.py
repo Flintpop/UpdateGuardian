@@ -1,6 +1,6 @@
 import logging
 import os
-import time
+import traceback
 
 import paramiko
 
@@ -61,8 +61,8 @@ class Computer:
         self.current_log_message: str = ""
 
     def update(self) -> bool:
+        # noinspection PyBroadException
         try:
-            time.sleep(5555555)
             self.log(f"Updating computer {self.hostname}... Checking if the PC is awake...")
             if not self.is_pc_awake():
                 self.log("Waking up the pc...")
@@ -75,7 +75,7 @@ class Computer:
 
             self.log_add_vertical_space()
             if not self.install_prerequisites_client():
-                return self.log_error("Could not install client... Cannot Update.")
+                return self.log_error("Could not install prerequisites on the client... Cannot Update.")
 
             self.log_add_vertical_space()
             if not self.install_update():
@@ -86,12 +86,13 @@ class Computer:
                 return self.log_error("Could not shutdown client.")
 
             return True
-        except Exception as e:
+        except Exception:
             self.log_add_vertical_space(2)
-            self.log_error(ComputerLogger.get_header_style_string("ERROR"))
+            self.log_raw("\n" + ComputerLogger.get_header_style_string("ERROR"))
             self.log_error(f"Unhandled error. Could not update computer {self.hostname}: ")
             self.log_add_vertical_space(1)
-            self.log_error(f"Here is the traceback:\n{e.__traceback__}")
+            trace_back_str: str = traceback.format_exc()
+            self.log_error(f"Here is the traceback:\n{trace_back_str}")
             # string: str = "Unhandled error. Could not update computer " + self.hostname
             # string += f"\nHere is the traceback:\n{e}"
             # send_mail("Unhandled error. Could not update computer " + self.hostname, string)
@@ -136,12 +137,13 @@ class Computer:
         return True
 
     def install_prerequisites_client(self):
-        self.log("Checking if pre-requisites are installed on the client...", new_lines=1)
+        self.log("Checking if pre-requisites are installed on the client...")
         if not self.prerequisites_installed():
             self.log_error("Pre-requisites not installed on the client, and could not be installed.")
             return False
 
         self.log("Pre-requisites installed on the client.")
+        return True
 
     def install_update(self) -> bool:
         self.log("Installing update on the client...")
@@ -156,7 +158,7 @@ class Computer:
 
     def __start_python_script(self):
         self.log("Starting the python script...")
-        command: str = "cd " + Infos.PROJECT_NAME + " && python " + Infos.python_main_script_path
+        command: str = "cd " + Infos.PROJECT_NAME + " && python " + self.get_main_script_path()
 
         stdout, stderr = stdout_err_execute_ssh_command(self.ssh_session, command)
 
@@ -180,24 +182,22 @@ class Computer:
         return True
 
     def prerequisites_installed(self):
-        self.log("Checking if prerequisites on the client are installed...", new_lines=1)
-
         if not python_scripts(computer=self):
             return False
 
-        self.add_log_memory()
+        self.log_add_vertical_space()
         if not python_installation(computer=self):
             return False
 
-        self.add_log_memory()
+        self.log_add_vertical_space()
         if not python_path(computer=self):
             return False
 
-        self.add_log_memory()
+        self.log_add_vertical_space()
         if not python_packages(computer=self):
             return False
 
-        self.log_from_memory()
+        self.log_add_vertical_space()
         return True
 
     def wait_for_pc_to_be_online_again(self) -> bool:
@@ -246,6 +246,13 @@ class Computer:
         requirements_path: str = os.path.join(self.get_project_directory_on_client(), "requirements_client.txt")
         return requirements_path
 
+    def get_main_script_path(self) -> str:
+        """
+        Get the path of the main script on the client.
+        :return: The path of the "main_client.py" script on the client.
+        """
+        return os.path.join(self.get_project_directory_on_client(), "main_client.py")
+
     def log_error(self, msg: str, new_lines=0) -> False:
         self.log(level="error", message=msg, new_lines=new_lines)
         return False
@@ -288,6 +295,9 @@ class Computer:
 
     def log_add_vertical_space(self, new_lines: int = 1):
         self.computer_logger.log_add_vertical_space(new_lines=new_lines)
+
+    def log_raw(self, param):
+        self.computer_logger.log_raw(param=param)
 
 
 class ComputerLogger:
@@ -362,3 +372,14 @@ class ComputerLogger:
         with open(self.logs_filename, "a", encoding="utf-8") as f:
             new_lines: str = "\n" * new_lines
             f.write(new_lines)
+
+        print(new_lines.split("\n").pop(0))
+
+    def log_raw(self, param):
+        """
+        Log a raw object, without the formatter.
+        :param param: The object to log.
+        :return: Nothing.
+        """
+        with open(self.logs_filename, "a", encoding="utf-8") as f:
+            f.write(str(param) + "\n")

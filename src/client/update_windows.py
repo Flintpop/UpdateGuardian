@@ -1,7 +1,9 @@
 import ctypes
+import subprocess
 import os
 import sys
 import logging
+import traceback
 
 import win32com.client
 
@@ -25,10 +27,37 @@ def update_windows():
 
 def start_client_update():
     if is_admin():
-        update_windows()
+        try:
+            update_windows()
+        except Exception as e:
+            traceback_str: str = traceback.format_exc()
+            print_and_log_client(f"Error occurred during Python update process:\n {e}", "error")
+            print_and_log_client(f"Traceback:\n {traceback_str}", "error")
+            print_and_log_client("Attempting to update using PowerShell script...", "warning")
+            run_powershell_script()
     else:
-        logging.error("Please, execute this script in administrator to update the windows pc.")
+        print_and_log_client("Please, execute this script in administrator to update the windows pc.", "error")
         sys.exit(1)
+
+
+def run_powershell_script():
+    try:
+        process = subprocess.Popen(
+            ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", "install_updates.ps1"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
+        output, error = process.communicate()
+
+        if process.returncode != 0:
+            print_and_log_client(f"Error occurred while running the PowerShell script:\n {error.decode('utf-8')}",
+                                 "error")
+        else:
+            print_and_log_client(f"PowerShell script output:\n {output.decode('utf-8')}")
+
+    except Exception as e:
+        print_and_log_client(f"Error occurred while executing the PowerShell script: \n{e}", "error")
 
 
 def is_admin():

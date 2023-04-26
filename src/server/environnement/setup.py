@@ -4,13 +4,13 @@ import socket
 import sys
 
 from src.server.commands.find_all_pc import scan_network
-from src.server.commands.path_functions import get_root_project_dir, find_file, list_files_recursive, find_directory
+from src.server.commands.path_functions import find_file, list_files_recursive, find_directory
 from src.server.config import Infos
+from src.server.data.computer_database import ComputerDatabase
 from src.server.data.load_pc_passwords import find_password
 from src.server.data.local_network_data import Data
 from src.server.wake_on_lan.wake_on_lan_utils import ping_ip
-from src.server.data.server_logs import log, log_error, log_new_lines
-
+from src.server.environnement.server_logs import log, log_error, log_new_lines
 
 launch_infos_filename: str = "launch_infos.json"
 
@@ -19,14 +19,6 @@ def add_encrypted_passwords(data: Data, hosts: dict):
     # TODO: Encrypt passwords
     for computer in hosts.values():
         computer['password'] = find_password(data, computer["ip"])
-
-
-def save_hosts(data: Data, hosts: dict):
-    path: str = get_root_project_dir()
-    file_save_host: str = os.path.join(path, "computers_database.json")
-    add_encrypted_passwords(data, hosts)
-    with open(file_save_host, 'w', encoding='utf-8') as fichier:
-        json.dump(hosts, fichier, indent=4)
 
 
 def get_local_ipv4_address():
@@ -126,42 +118,54 @@ def check_all_files_integrity():
                 sys.exit(1)
 
 
+def print_log_setup():
+    log_new_lines()
+    log(
+        "Welcome to the Windows Update Server Setup. This software will help you to install Windows Update on "
+        "all computers of your network.", print_formatted=False)
+
+    log_new_lines()
+
+    log("Please, make sure that all computers are connected to the same network.", print_formatted=False)
+    log("Also, make sure you installed the Powershell script on all computers, and that Wake-on-lan is activated "
+        "on each of them.", print_formatted=False)
+
+    log_new_lines()
+
+    log(
+        "To scan the network and register mac addresses and hostnames, please turn on all computers that you "
+        "wish to manage from this software. Be sure that all ipv4 addresses has been registered in "
+        "'computer_informations.json' folder.", print_formatted=False
+    )
+
+    log_new_lines()
+
+    log("Please, enter (y) when you are ready to start the setup, 'exit' to cancel.", print_formatted=False)
+    print()
+
+
 def server_setup(setup_data: Data):
     check_all_files_integrity()
     if not check_if_setup_needed():
         return
 
     log("Setting up server...")
-    setup_started: bool = False
 
-    while not setup_started:
-        log_new_lines()
-        log(
-            "Welcome to the Windows Update Server Setup. This software will help you to install Windows Update on "
-            "all computers of your network.")
+    print_log_setup()
 
-        log_new_lines()
+    usr_input: str = input("> ")
 
-        log("Please, make sure that all computers are connected to the same network.")
-        log("Also, make sure you installed the Powershell script on all computers, and that Wake-on-lan is "
-                      "activated on each of them.")
-
-        log_new_lines()
-
-        log(
-            "To scan the network and register mac addresses and hostnames, please turn on all computers that you "
-            "wish to manage from this software.")
-
-        log_new_lines()
-
-        log("Please, enter (y) when you are ready to start the setup.")
-        usr_input: str = input()
-        if usr_input == "y":
-            setup_started = True
+    while usr_input != "y":
+        usr_input: str = input("> ")
+        if usr_input == "exit":
+            log("Setup cancelled. Exiting...")
+            sys.exit(0)
+        if usr_input != "y":
+            log_error("Error: Invalid input. Please enter 'y' to continue, or 'exit' to cancel.", print_formatted=False)
 
     log_new_lines()
-    log("Starting setup...")
-    log("Scanning network...")
+    log("Starting setup...", print_formatted=False)
+    log("Scanning network...", print_formatted=False)
     ip_pool_range = setup_data.get_ip_range()
 
     hosts: dict = scan_network(ip_pool_range)
@@ -172,17 +176,21 @@ def server_setup(setup_data: Data):
         log_error("The following hosts are not reachable:")
         for host in list_invalid_hosts:
             log_error(host)
-        log_error("Please modify the list of hosts in the file 'remote_host.json' and try again.")
+        log_error("Please modify the list of hosts in the file 'computers_informations.json' and try again.")
         sys.exit(1)
 
-    log("Deleting unwanted hosts...")
+    log("Deleting unwanted hosts...", print_formatted=False)
     delete_unwanted_hosts(setup_data, hosts)
 
-    log("Adding usernames...")
+    log("Adding usernames...", print_formatted=False)
     if not add_usernames_hosts(setup_data, hosts):
         sys.exit(1)
 
-    save_hosts(setup_data, hosts)
+    log("Adding passwords...", print_formatted=False)
+    add_encrypted_passwords(setup_data, hosts)
+
+    log("Creating database...", print_formatted=False)
+    ComputerDatabase.save_computer_data(hosts)
     log_new_lines()
 
 

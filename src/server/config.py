@@ -1,5 +1,4 @@
 class Infos:
-    python_main_script_path = None
     PROJECT_NAME: str = "UpdateGuardian"
     python_version = "3.11"
     python_folder_name = f"Python{python_version.replace('.', '')}"
