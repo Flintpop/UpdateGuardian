@@ -134,3 +134,6 @@ dmypy.json
 /computers_database.json
 /launch_time.json
 /tests/tests_data/password_test.txt
+/.idea/workspace-DESKTOP-9FUERFE.xml
+/.idea/other.xml
+/launch_infos.json

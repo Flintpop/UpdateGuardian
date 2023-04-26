@@ -291,12 +291,12 @@ class Computer:
 
 
 class ComputerLogger:
-    def __init__(self, logs_filename: str):
+    def __init__(self, logs_filename: str, new_msg_header: str = "New computer session"):
         self.logs_filename = logs_filename
-        self.logger = self.setup_logger()
+        self.logger = self.setup_logger(new_msg_header=new_msg_header)
         self.current_log_message: str = ""
 
-    def setup_logger(self) -> logging.Logger:
+    def setup_logger(self, new_msg_header: str) -> logging.Logger:
         logger = logging.getLogger(self.logs_filename)
         logger.setLevel(logging.INFO)
 
@@ -306,7 +306,7 @@ class ComputerLogger:
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
 
-        self.setup_log_file()
+        self.setup_log_file(new_msg_header=new_msg_header)
 
         return logger
 
@@ -344,7 +344,7 @@ class ComputerLogger:
         header = f"╔{edge}╗\n║{padding}{header_txt.center(width - 6)}{padding}║\n╚{edge}╝"
         return header
 
-    def setup_log_file(self):
+    def setup_log_file(self, new_msg_header: str) -> None:
         write_lines: bool = False
         with open(self.logs_filename, "r", encoding="utf-8") as f:
             if len(f.read()) > 1:
@@ -356,7 +356,7 @@ class ComputerLogger:
 
         # Write the header
         with open(self.logs_filename, "a", encoding="utf-8") as f:
-            f.write(self.get_header_style_string(header_txt="New computer session") + "\n")
+            f.write(self.get_header_style_string(header_txt=new_msg_header) + "\n")
 
     def log_add_vertical_space(self, new_lines: int = 1):
         with open(self.logs_filename, "a", encoding="utf-8") as f:

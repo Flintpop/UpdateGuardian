@@ -2,7 +2,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 from src.server.data.computer import Computer
 from src.server.data.computer_database import ComputerDatabase
-from src.server.data.logs import print_and_log
+
+from src.server.data.server_logs import log
 
 
 def update_all_computer(database: ComputerDatabase) -> None:
@@ -11,9 +12,9 @@ def update_all_computer(database: ComputerDatabase) -> None:
     :param database: The database containing all the computers, and the data object.
     """
 
-    print_and_log("Updating ip addresses database...")
+    log("Updating ip addresses database...")
     database.refresh_ip_addresses()
-    print_and_log("Checking for updates on all pc...")
+    log("Checking for updates on all pc...")
 
     max_workers = database.data.get_max_number_of_simultaneous_updates()
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -23,5 +24,5 @@ def update_all_computer(database: ComputerDatabase) -> None:
 
 
 def update_computer(computer: Computer):
-    print_and_log(message="Updating computer " + computer.hostname + "...")
+    log(message="Updating computer " + computer.hostname + "...")
     computer.update()

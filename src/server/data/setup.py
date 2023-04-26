@@ -8,8 +8,8 @@ from src.server.commands.path_functions import get_root_project_dir, find_file, 
 from src.server.config import Infos
 from src.server.data.load_pc_passwords import find_password
 from src.server.data.local_network_data import Data
-from src.server.data.logs import print_and_log
 from src.server.wake_on_lan.wake_on_lan_utils import ping_ip
+from src.server.data.server_logs import log, log_error, log_new_lines
 
 
 launch_infos_filename: str = "launch_infos.json"
@@ -51,7 +51,7 @@ def delete_unwanted_hosts(data: Data, hosts: dict):
     current_ip = get_local_ipv4_address()
 
     if current_ip is None:
-        print_and_log("Error, could not get the local ip address.")
+        log_error("Error, could not get the local ip address.")
 
     taken_ips = data.get_data_json().get("taken_ips")
     if current_ip not in taken_ips:
@@ -70,7 +70,7 @@ def delete_unwanted_hosts(data: Data, hosts: dict):
 def check_all_hosts_are_valid(ips: list[str], return_invalid_hosts: list[str]):
     for ip in ips:
         if not ping_ip(ip):
-            print_and_log(f"Error: {ip} is not reachable.")
+            log_error(f"Error: {ip} is not reachable.")
             return_invalid_hosts.append(ip)
 
     if len(return_invalid_hosts) > 0:
@@ -83,7 +83,7 @@ def add_usernames_hosts(data: Data, hosts: dict) -> bool:
         host = hosts[hostname]
         username = data.get_username_per_ip(host["ip"])
         if username is None:
-            print_and_log(f"Error: could not find a username for {host['ip']}.")
+            log_error(f"Error: could not find a username for {host['ip']}.")
             return False
         host["username"] = username
     return True
@@ -115,75 +115,75 @@ def check_all_files_integrity():
             file1 = os.path.basename(file1)
             file2 = os.path.basename(files[j])
             if file1 == file2 and file1 not in exceptions:
-                print_and_log(f"Error: The file {file1} is duplicated in the server with file {file2}.")
-                print_and_log("Here is their path : ")
-                print_and_log("File 1  : " + files[i])
-                print_and_log("File 2  : " + files[j])
-                print_and_log()
-                print_and_log(
+                log_error(f"Error: The file {file1} is duplicated in the server with file {file2}.")
+                log_error("Here is their path : ")
+                log_error("File 1  : " + files[i])
+                log_error("File 2  : " + files[j])
+                log_new_lines()
+                log_error(
                     f"The software, due to how it works, cannot have duplicated files in {Infos.PROJECT_NAME} "
                     f"directory, and subdirectories.")
                 sys.exit(1)
 
 
-def server_setup(data: Data):
+def server_setup(setup_data: Data):
     check_all_files_integrity()
     if not check_if_setup_needed():
         return
 
-    print_and_log("Setting up server...")
+    log("Setting up server...")
     setup_started: bool = False
 
     while not setup_started:
-        print_and_log("")
-        print_and_log(
+        log_new_lines()
+        log(
             "Welcome to the Windows Update Server Setup. This software will help you to install Windows Update on "
             "all computers of your network.")
 
-        print_and_log()
+        log_new_lines()
 
-        print_and_log("Please, make sure that all computers are connected to the same network.")
-        print_and_log("Also, make sure you installed the Powershell script on all computers, and that Wake-on-lan is "
+        log("Please, make sure that all computers are connected to the same network.")
+        log("Also, make sure you installed the Powershell script on all computers, and that Wake-on-lan is "
                       "activated on each of them.")
 
-        print_and_log()
+        log_new_lines()
 
-        print_and_log(
+        log(
             "To scan the network and register mac addresses and hostnames, please turn on all computers that you "
             "wish to manage from this software.")
 
-        print_and_log()
+        log_new_lines()
 
-        print_and_log("Please, enter (y) when you are ready to start the setup.")
+        log("Please, enter (y) when you are ready to start the setup.")
         usr_input: str = input()
         if usr_input == "y":
             setup_started = True
 
-    print_and_log()
-    print_and_log("Starting setup...")
-    print_and_log("Scanning network...")
-    ip_pool_range = data.get_ip_range()
+    log_new_lines()
+    log("Starting setup...")
+    log("Scanning network...")
+    ip_pool_range = setup_data.get_ip_range()
 
     hosts: dict = scan_network(ip_pool_range)
 
     list_invalid_hosts: list = []
-    if not check_all_hosts_are_valid(data.get_data_json().get("remote_host"), list_invalid_hosts):
-        print_and_log("Error: Some hosts are not reachable. Please check your network and try again.")
-        print_and_log("The following hosts are not reachable:")
+    if not check_all_hosts_are_valid(setup_data.get_data_json().get("remote_host"), list_invalid_hosts):
+        log_error("Error: Some hosts are not reachable. Please check your network and try again.")
+        log_error("The following hosts are not reachable:")
         for host in list_invalid_hosts:
-            print_and_log(host)
-        print_and_log("Please modify the list of hosts in the file 'remote_host.json' and try again.")
+            log_error(host)
+        log_error("Please modify the list of hosts in the file 'remote_host.json' and try again.")
         sys.exit(1)
 
-    print_and_log("Deleting unwanted hosts...")
-    delete_unwanted_hosts(data, hosts)
+    log("Deleting unwanted hosts...")
+    delete_unwanted_hosts(setup_data, hosts)
 
-    print_and_log("Adding usernames...")
-    if not add_usernames_hosts(data, hosts):
+    log("Adding usernames...")
+    if not add_usernames_hosts(setup_data, hosts):
         sys.exit(1)
 
-    save_hosts(data, hosts)
-    print_and_log()
+    save_hosts(setup_data, hosts)
+    log_new_lines()
 
 
 def load_launch_time() -> dict:
@@ -204,7 +204,7 @@ def get_launch_time() -> dict[str, str]:
             if day not in days_of_week:
                 raise ValueError
         except ValueError:
-            print_and_log("Invalid day input. Please enter a valid day of the week.")
+            log_error("Invalid day input. Please enter a valid day of the week.")
         else:
             break
 
@@ -214,7 +214,7 @@ def get_launch_time() -> dict[str, str]:
             if hour < 0 or hour > 23:
                 raise ValueError
         except ValueError:
-            print_and_log("Invalid hour input. Please enter a valid hour between 0 and 23.")
+            log_error("Invalid hour input. Please enter a valid hour between 0 and 23.")
         else:
             break
 
