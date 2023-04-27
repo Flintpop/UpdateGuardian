@@ -5,6 +5,8 @@ import sys
 import logging
 import traceback
 
+import psutil
+import requests
 import win32com.client
 
 
@@ -25,22 +27,87 @@ def update_windows():
     process_updates(installation_result, updates_to_install)
 
 
+def reset_windows_update_components():
+    commands = [
+        "net stop wuauserv",
+        "net stop cryptSvc",
+        "net stop bits",
+        "net stop msiserver",
+        "ren C:\\Windows\\SoftwareDistribution SoftwareDistribution.old",
+        "ren C:\\Windows\\System32\\catroot2 catroot2.old",
+        "net start wuauserv",
+        "net start cryptSvc",
+        "net start bits",
+        "net start msiserver"
+    ]
+
+    for command in commands:
+        try:
+            subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print_and_log_client(f"Successfully executed command: {command}")
+        except subprocess.CalledProcessError as e:
+            print_and_log_client(f"Error occurred while executing command '{command}': {e.stderr.decode('utf-8')}",
+                                 "error")
+
+
+def check_internet_connection():
+    try:
+        response = requests.get("https://www.google.com", timeout=5)
+        if response.status_code != 200:
+            raise EnvironmentError("No internet connection")
+    except Exception as e:
+        print_and_log_client(f"Error occurred while checking internet connection: {e}", "error")
+        print_and_log_client(f"The traceback : \n{traceback.format_exc()}", "error")
+        raise EnvironmentError("No internet connection")
+
+
+def check_disk_space(disk_space_required: int = 5):
+    # Check for available disk space
+    hdd = psutil.disk_usage('/')
+    free_space_gb = hdd.free / (1024 ** 3)
+    if free_space_gb < disk_space_required:  # Adjust the value as needed
+        print_and_log_client(f"Not enough disk space available for the update, there is only {free_space_gb:.2f} GB."
+                             f"The program aimed at {disk_space_required} GB.", "error")
+        raise EnvironmentError("Not enough disk space available for the update.")
+
+
 def start_client_update():
     if is_admin():
         try:
+            check_disk_space(3)
+            check_internet_connection()
             update_windows()
         except Exception as e:
             traceback_str: str = traceback.format_exc()
             print_and_log_client(f"Error occurred during Python update process:\n {e}", "error")
             print_and_log_client(f"Traceback:\n {traceback_str}", "error")
             print_and_log_client("Attempting to update using PowerShell script...", "warning")
+            check_disk_space(20)
             run_powershell_script()
     else:
         print_and_log_client("Please, execute this script in administrator to update the windows pc.", "error")
         sys.exit(1)
 
 
-def run_powershell_script():
+def run_windows_update_troubleshooter():
+    process = subprocess.Popen(["msdt.exe", "/id", "WindowsUpdateDiagnostic", "/quiet"], stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    return_code = process.returncode
+    if return_code != 0:
+        print_and_log_client(f"Error running Windows Update Troubleshooter. Return code: {return_code}", "error")
+        if stderr:
+            print_and_log_client(f"Error details: {stderr.decode('utf-8')}", "error")
+    else:
+        print_and_log_client("Windows Update Troubleshooter ran successfully.")
+
+
+def troubleshoot():
+    reset_windows_update_components()
+    run_windows_update_troubleshooter()
+
+
+def run_powershell_script(troubleshooted=False):
     try:
         process = subprocess.Popen(
             ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", "install_updates.ps1"],
@@ -53,17 +120,22 @@ def run_powershell_script():
 
         if exit_code == 2:
             print_and_log_client("PowerShell script indicates a reboot is required.", "warning")
-            print("reboot")  # This line allows the server to know that the client needs to reboot
             reboot()
         elif exit_code == 3:
             print_and_log_client("Powershell script indicates that no updates were found.")
         elif exit_code != 0:
-            print_and_log_client(f"Error occurred while running the PowerShell script: {error.decode('utf-8')}", "error")
+            print_and_log_client(f"Error occurred while running the PowerShell script: {error.decode('utf-8')}",
+                                 "error")
         else:
             print_and_log_client(f"PowerShell script output: {output.decode('utf-8')}")
 
     except Exception as e:
         print_and_log_client(f"Error occurred while executing the PowerShell script: \n{e}", "error")
+        print_and_log_client(f"The traceback : \n{traceback.format_exc()}", "error")
+        print_and_log_client("Attempting to troubleshoot the problem...", "warning")
+        if not troubleshooted:
+            troubleshoot()
+            run_powershell_script(troubleshooted=True)
 
 
 def is_admin():
@@ -75,10 +147,10 @@ def is_admin():
         return False
 
 
-def reboot():
+def reboot(reboot_msg: str = "reboot"):
     print_and_log_client("A system reboot is required to complete the update installation.", "warning")
     print_and_log_client("Rebooting...")
-    print("reboot")  # This lines allows the server to know that the client needs to reboot
+    print(reboot_msg)  # This lines allows the server to know that the client needs to reboot
     os.system("shutdown /g /t 1")
 
 

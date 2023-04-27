@@ -6,3 +6,4 @@ scapy~=2.5.0
 cryptography~=39.0.1
 APScheduler~=3.6.3
 pytz~=2022.7.1
+psutil~=5.9.4
