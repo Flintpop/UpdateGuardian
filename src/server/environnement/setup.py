@@ -261,16 +261,16 @@ def set_static_ip(ip: str, adapter_name: str) -> None:
 
 def setup_static_ip() -> None:
     """
-    Setup a static local ipv4 ip for the running computer.
+    Set up a static local ipv4 ip for the running computer.
     :return: Nothing.
     """
     current_ip = get_local_ipv4_address()
-    print(f"Your current local IP address is: {current_ip}")
+    log(f"Your current local IP address is: {current_ip}")
 
     new_ip = input("Enter the new local IP address or press enter to keep the current IP address: ")
 
     if not new_ip:
-        print("Keeping the current IP address.")
+        log("Keeping the current IP address.")
         return
 
     adapter_name = input("Enter the name of the network adapter (e.g., 'Wi-Fi' or 'Ethernet'): ")
