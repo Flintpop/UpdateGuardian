@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 import traceback
 
 import paramiko
@@ -114,11 +115,24 @@ class Computer:
             return False
 
     def is_pc_awake(self) -> bool:
-        if not is_ssh_server_available(computer=self, timeout=180):
+        if not is_ssh_server_available(computer=self, timeout=15):
             self.log("The pc is off.")
             return False
         self.log("The pc is on.")
         return True
+
+    def waiting_pc_off(self, timeout=40) -> bool:
+        """
+        Wait for the pc to be off.
+        :param timeout: The number of seconds to wait that the pc is off.
+        :return: True if the pc is off, False otherwise.
+        """
+        start_time: float = time.time()
+        while start_time + timeout > time.time():
+            if not is_ssh_server_available(computer=self, timeout=3, print_log_connected=False):
+                self.log("The pc is off.")
+                return True
+        return False
 
     def awake_pc(self):
         """
@@ -177,7 +191,7 @@ class Computer:
         stdout, stderr = stdout_err_execute_ssh_command(self.ssh_session, command)
 
         self.log(level="info", message="The pc should be off...")
-        if manage_ssh_output(stdout, stderr) is None:
+        if not self.waiting_pc_off(timeout=60):
             return False
         return True
 
@@ -298,6 +312,9 @@ class Computer:
 
     def log_raw(self, param):
         self.computer_logger.log_raw(param=param)
+
+    def close_logger(self):
+        self.computer_logger.close_logger()
 
 
 class ComputerLogger:

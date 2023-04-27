@@ -55,7 +55,15 @@ def manage_ssh_output(stdout: str, stderr: str) -> str | None:
     return stdout
 
 
-def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float = 5.0) -> bool:
+def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float = 5.0,
+                            print_log_connected: bool = True) -> bool:
+    """
+    Give true if the ssh server is available on the computer.
+    :param computer: The computer to test the ssh server availability.
+    :param port: The port to test the ssh server availability.
+    :param timeout: The timeout to test the ssh server availability.
+    :return: True if the ssh server is available on the computer, False otherwise.
+    """
     ip: str = computer.ipv4
     start = time.time()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -63,7 +71,8 @@ def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float
         while time.time() - start < timeout:
             try:
                 sock.connect((ip, port))
-                computer.log(f"Connected to {ip} of {computer.hostname}")
+                if print_log_connected:
+                    computer.log(f"Connected to {ip} of {computer.hostname}")
                 return True
             except socket.timeout:
                 time.sleep(0.1)
@@ -95,14 +104,15 @@ def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, password
     return connected
 
 
-def create_folder_ssh(ssh: paramiko.SSHClient, folder_path: str) -> bool:
+def create_folder_ssh(computer: 'Computer', folder_path: str) -> bool:
+    ssh: paramiko.SSHClient = computer.ssh_session
     stdout, stderr = stdout_err_execute_ssh_command(ssh, f"mkdir {folder_path}")
 
     if stderr:
         if "exist" in stderr:
-            print(f"Folder {folder_path} already exists")
+            computer.log(f"Folder {folder_path} already exists")
             return True
-        print(f"Error while creating the folder {folder_path}: {stderr}")
+        computer.log_error(f"Error while creating the folder {folder_path}: {stderr}")
         return False
 
     if stdout:

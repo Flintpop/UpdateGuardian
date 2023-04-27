@@ -132,10 +132,12 @@ def run_powershell_script(troubleshooted=False):
     except Exception as e:
         print_and_log_client(f"Error occurred while executing the PowerShell script: \n{e}", "error")
         print_and_log_client(f"The traceback : \n{traceback.format_exc()}", "error")
-        print_and_log_client("Attempting to troubleshoot the problem...", "warning")
-        if not troubleshooted:
-            troubleshoot()
-            run_powershell_script(troubleshooted=True)
+        sys.exit(-1)
+        # TODO: Test this new troubleshooting method below
+        # print_and_log_client("Attempting to troubleshoot the problem...", "warning")
+        # if not troubleshooted:
+        #     troubleshoot()
+        #     run_powershell_script(troubleshooted=True)
 
 
 def is_admin():
