@@ -1,6 +1,7 @@
 import json
 import os
 import socket
+import subprocess
 import sys
 
 from src.server.commands.find_all_pc import scan_network
@@ -241,3 +242,37 @@ def check_if_setup_needed() -> bool:
     if find_file("computers_database.json", show_print=False) is None:
         return True
     return False
+
+
+def set_static_ip(ip: str, adapter_name: str) -> None:
+    """
+    Set a static local ipv4 ip for the running computer.
+    :param ip: The ip to set.
+    :param adapter_name: The name of the adapter to set the ip.
+    :return: Nothing.
+    """
+    try:
+        subprocess.run(f"netsh interface ipv4 set address {adapter_name} static {ip} 255.255.255.0", shell=True,
+                       check=True)
+        log(f"IP address set to {ip} successfully.")
+    except subprocess.CalledProcessError:
+        log_error("Failed to set IP address. Make sure you run this script with administrative privileges.")
+
+
+def setup_static_ip() -> None:
+    """
+    Setup a static local ipv4 ip for the running computer.
+    :return: Nothing.
+    """
+    current_ip = get_local_ipv4_address()
+    print(f"Your current local IP address is: {current_ip}")
+
+    new_ip = input("Enter the new local IP address or press enter to keep the current IP address: ")
+
+    if not new_ip:
+        print("Keeping the current IP address.")
+        return
+
+    adapter_name = input("Enter the name of the network adapter (e.g., 'Wi-Fi' or 'Ethernet'): ")
+
+    set_static_ip(new_ip, adapter_name)
