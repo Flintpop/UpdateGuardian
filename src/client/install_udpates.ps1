@@ -6,6 +6,7 @@ try {
 
     if ($Updates.Count -eq 0) {
         Write-Host "No updates available."
+        exit 3
     } else {
         Write-Host "Found $($Updates.Count) updates."
 
@@ -42,8 +43,14 @@ try {
             exit 1
         }
 
-        Write-Host "Installation Result: $($InstallationResult.ResultCode)"
-        Write-Host "Reboot required: $($InstallationResult.RebootRequired)"
+        if ($InstallationResult.RebootRequired) {
+            Write-Host "Reboot required."
+            exit 2
+        }
+        else {
+            Write-Host "Updates installed successfully."
+            exit 0
+        }
     }
 } catch {
     Write-Host "An error occurred: $($_.Exception.Message)"

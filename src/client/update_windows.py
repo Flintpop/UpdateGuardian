@@ -49,12 +49,18 @@ def run_powershell_script():
         )
 
         output, error = process.communicate()
+        exit_code: int = process.returncode
 
-        if process.returncode != 0:
-            print_and_log_client(f"Error occurred while running the PowerShell script:\n {error.decode('utf-8')}",
-                                 "error")
+        if exit_code == 2:
+            print_and_log_client("PowerShell script indicates a reboot is required.", "warning")
+            print("reboot")  # This line allows the server to know that the client needs to reboot
+            reboot()
+        elif exit_code == 3:
+            print_and_log_client("Powershell script indicates that no updates were found.")
+        elif exit_code != 0:
+            print_and_log_client(f"Error occurred while running the PowerShell script: {error.decode('utf-8')}", "error")
         else:
-            print_and_log_client(f"PowerShell script output:\n {output.decode('utf-8')}")
+            print_and_log_client(f"PowerShell script output: {output.decode('utf-8')}")
 
     except Exception as e:
         print_and_log_client(f"Error occurred while executing the PowerShell script: \n{e}", "error")
