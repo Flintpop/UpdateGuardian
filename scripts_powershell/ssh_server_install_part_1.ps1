@@ -92,23 +92,46 @@ Write-Output ""
 
 Write-Output "The OpenSSH Server has been installed and configured."
 
-# Enable Wake on LAN only for Ethernet adapters
-Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription -like "*Ethernet*" } | ForEach-Object {
+# Enable Wake on LAN for Ethernet adapters that support it
+Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription -match "Ethernet" } | ForEach-Object {
     $AdapterName = $_.Name
-    Write-Host "Enabling Wake on LAN for Ethernet adapter: $AdapterName"
-    try
+
+    if (Test-WoLSupport -AdapterName $AdapterName)
     {
-        $PowerManagement = Get-NetAdapterPowerManagement -NetworkAdapterName $AdapterName -ErrorAction Stop
-        if ($PowerManagement)
+        Write-Host "Enabling Wake on LAN for adapter: $AdapterName"
+        try
         {
-            Set-NetAdapterPowerManagement -Name $AdapterName -WakeOnMagicPacket $True -ErrorAction Stop
+            $PowerManagement = Get-PowerManagement -NetworkAdapterName $AdapterName -ErrorAction Stop
+            if ($PowerManagement)
+            {
+                Set-PowerManagement -NetworkAdapterName $AdapterName -WakeOnMagicPacket $True -ErrorAction Stop
+            }
+        }
+        catch
+        {
+            Write-Host "Failed to enable Wake on LAN for adapter: $AdapterName" -ForegroundColor Red
         }
     }
-    catch
+    else
     {
-        Write-Host "Failed to enable Wake on LAN for Ethernet adapter '$AdapterName': $( $_.Exception.Message )" -ForegroundColor Red
-        exit 1
+        Write-Host "Wake on LAN not supported by adapter: $AdapterName" -ForegroundColor Yellow
     }
+}
+
+$wolEnabled = $false
+
+# Check for enabled Ethernet adapters with WoL support
+Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription -match "Ethernet" } | ForEach-Object {
+    $AdapterName = $_.Name
+    if (Test-WoLSupport -AdapterName $AdapterName) {
+        $wolEnabled = $true
+    }
+}
+
+if (!$wolEnabled) {
+    Write-Host "No enabled Ethernet adapters with Wake on LAN support found." -ForegroundColor Yellow
+    Write-Host "If you have an Ethernet adapter that supports Wake on LAN, make sure it is enabled and run the script again." -ForegroundColor Yellow
+    exit 1
 }
 
 # Wol firewall rule on remote PC on port 7 and 9 and on windows 10
@@ -187,4 +210,22 @@ function Restart-ComputerAndRunScript
 
     # Reboot the computer
     Restart-Computer
+}
+
+# Function to check if a network adapter supports Wake-on-LAN
+function Test-WoLSupport
+{
+    param (
+        [string]$AdapterName
+    )
+
+    try
+    {
+        $PowerManagement = Get-PowerManagement -NetworkAdapterName $AdapterName -ErrorAction Stop
+        return $PowerManagement.SupportsWakeOnMagicPacket
+    }
+    catch
+    {
+        return $false
+    }
 }
