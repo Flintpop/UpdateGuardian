@@ -29,6 +29,7 @@ if (-not$InstalledCapability)
     if (-not$Capability)
     {
         Write-Host "Failed to install OpenSSH Server. Restart your computer and try running the script again." -ForegroundColor Red
+        Read-Host "Press any key to stop the program"
         exit 1
     }
     else
@@ -39,7 +40,7 @@ if (-not$InstalledCapability)
     {
         Write-Host "A system restart is pending. Restart your computer to complete the installation." -ForegroundColor Yellow
         Write-Host "Please DO NOT make the script unavailable, or change its path before the reboot process." -ForegroundColor Red
-        Read-Host "Press any key to continue"
+        Read-Host "Press any key to continue and reboot"
         Restart-ComputerAndRunScript
     }
 }
@@ -69,6 +70,7 @@ $SshdService = Get-Service sshd -ErrorAction SilentlyContinue
 if (-not$SshdService)
 {
     Write-Host "sshd service not found. Restart your computer to complete the installation of the OpenSSH server and run the script again." -ForegroundColor Yellow
+    Read-Host "Press any key to stop the program"
     exit 1
 }
 
@@ -131,6 +133,7 @@ Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription 
 if (!$wolEnabled) {
     Write-Host "No enabled Ethernet adapters with Wake on LAN support found." -ForegroundColor Yellow
     Write-Host "If you have an Ethernet adapter that supports Wake on LAN, make sure it is enabled and run the script again." -ForegroundColor Yellow
+    Read-Host "Press any key to stop the program"
     exit 1
 }
 
