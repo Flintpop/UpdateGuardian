@@ -245,7 +245,7 @@ class Computer:
     @staticmethod
     def get_list_client_files_to_send() -> list[str]:
         files: list[str] = list_files_recursive(find_directory("client"))
-        files = [file for file in files if file.endswith(".py") or file.endswith(".txt")]
+        files = [file for file in files if file.endswith(".py") or file.endswith(".txt") or file.endswith(".ps1")]
         return files
 
     def get_installer_path(self) -> str:
@@ -299,14 +299,6 @@ class Computer:
         if error:
             raise ValueError(error_message_list)
 
-    def __str__(self):
-        str_repr = f"Computer {self.hostname}:\n"
-        str_repr += "\tipv4: " + self.ipv4 + "\n"
-        str_repr += "\tmac_address: " + self.mac_address + "\n"
-        str_repr += "\tusername: " + self.username + "\n"
-        str_repr += "\tpassword: " + self.password + "\n"
-        return str_repr
-
     def log_add_vertical_space(self, new_lines: int = 1):
         self.computer_logger.log_add_vertical_space(new_lines=new_lines)
 
@@ -316,8 +308,20 @@ class Computer:
     def close_logger(self):
         self.computer_logger.close_logger()
 
+    def __str__(self):
+        str_repr = f"Computer {self.hostname}:\n"
+        str_repr += "\tipv4: " + self.ipv4 + "\n"
+        str_repr += "\tmac_address: " + self.mac_address + "\n"
+        str_repr += "\tusername: " + self.username + "\n"
+        str_repr += "\tpassword: " + self.password + "\n"
+        return str_repr
+
 
 class ComputerLogger:
+    """
+    Class to log messages from a computer.
+    It is used to log messages of a computer in a file, and to display them in the console.
+    """
     def __init__(self, logs_filename: str, new_msg_header: str = "New computer session"):
         self.logs_filename = logs_filename
         self.logger = self.setup_logger(new_msg_header=new_msg_header)
@@ -386,6 +390,11 @@ class ComputerLogger:
             f.write(self.get_header_style_string(header_txt=new_msg_header) + "\n")
 
     def log_add_vertical_space(self, new_lines: int = 1):
+        """
+        To make the logs more readable, add a vertical space in the logs file and in the console.
+        :param new_lines: The number of new lines to add.
+        :return: Nothing.
+        """
         with open(self.logs_filename, "a", encoding="utf-8") as f:
             new_lines: str = "\n" * new_lines
             f.write(new_lines)

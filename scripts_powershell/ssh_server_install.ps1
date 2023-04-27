@@ -1,6 +1,73 @@
 # Make sure that scripts can run on the pc, if not, run the following command in powershell:
 # Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser -confirm:$false -Force
 
+# Check for pending reboot
+function Test-PendingReboot
+{
+    $PendingRebootRegistryKeys = @(
+    'HKLM:\Software\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending',
+    'HKLM:\Software\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired',
+    'HKLM:\Software\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\PostRebootReporting',
+    'HKLM:\Software\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootInProgress'
+    )
+
+    foreach ($key in $PendingRebootRegistryKeys)
+    {
+        if (Test-Path -Path $key)
+        {
+            return $true
+        }
+    }
+
+    try
+    {
+        $CBSRebootState = [System.Management.Automation.PSObject].Assembly.GetType('Microsoft.PowerShell.Commands.ManagementHelper')::CbsGetRebootState()
+        if ($CBSRebootState)
+        {
+            return $true
+        }
+    }
+    catch
+    {
+    }
+
+    return $false
+}
+
+function Restart-ComputerAndRunScript
+{
+    $TaskName = "ssh_install_part2"
+    $ScriptPath = $MyInvocation.MyCommand.Path
+    $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File '$ScriptPath'"
+    $Trigger = New-ScheduledTaskTrigger -AtStartup
+    $Settings = New-ScheduledTaskSettingsSet -DontStopOnIdleEnd -RestartInterval (New-TimeSpan -Minutes 1) -RestartCount 3
+    $Principal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+    $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings -Principal $Principal
+    $Task | Register-ScheduledTask -TaskName $TaskName
+
+    # Reboot the computer
+    Restart-Computer
+}
+
+# Function to check if a network adapter supports Wake-on-LAN
+function Test-WoLSupport
+{
+    param (
+        [string]$AdapterName
+    )
+
+    try
+    {
+        $PowerManagement = Get-PowerManagement -NetworkAdapterName $AdapterName -ErrorAction Stop
+        return $PowerManagement.SupportsWakeOnMagicPacket
+    }
+    catch
+    {
+        return $false
+    }
+}
+
+
 # Ensure the script is running with administrative privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator"))
 {
@@ -166,69 +233,3 @@ else
 
 Read-Host "Press any keys to end this installation process..."
 
-
-# Check for pending reboot
-function Test-PendingReboot
-{
-    $PendingRebootRegistryKeys = @(
-    'HKLM:\Software\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending',
-    'HKLM:\Software\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired',
-    'HKLM:\Software\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\PostRebootReporting',
-    'HKLM:\Software\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootInProgress'
-    )
-
-    foreach ($key in $PendingRebootRegistryKeys)
-    {
-        if (Test-Path -Path $key)
-        {
-            return $true
-        }
-    }
-
-    try
-    {
-        $CBSRebootState = [System.Management.Automation.PSObject].Assembly.GetType('Microsoft.PowerShell.Commands.ManagementHelper')::CbsGetRebootState()
-        if ($CBSRebootState)
-        {
-            return $true
-        }
-    }
-    catch
-    {
-    }
-
-    return $false
-}
-
-function Restart-ComputerAndRunScript
-{
-    $TaskName = "ssh_install_part2"
-    $ScriptPath = $MyInvocation.MyCommand.Path
-    $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File '$ScriptPath'"
-    $Trigger = New-ScheduledTaskTrigger -AtStartup
-    $Settings = New-ScheduledTaskSettingsSet -DontStopOnIdleEnd -RestartInterval (New-TimeSpan -Minutes 1) -RestartCount 3
-    $Principal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-    $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings -Principal $Principal
-    $Task | Register-ScheduledTask -TaskName $TaskName
-
-    # Reboot the computer
-    Restart-Computer
-}
-
-# Function to check if a network adapter supports Wake-on-LAN
-function Test-WoLSupport
-{
-    param (
-        [string]$AdapterName
-    )
-
-    try
-    {
-        $PowerManagement = Get-PowerManagement -NetworkAdapterName $AdapterName -ErrorAction Stop
-        return $PowerManagement.SupportsWakeOnMagicPacket
-    }
-    catch
-    {
-        return $false
-    }
-}
