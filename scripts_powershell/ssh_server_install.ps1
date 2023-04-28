@@ -230,6 +230,32 @@ else
 {
     Write-Host "Wake-on-LAN rule already exists."
 }
+# Get the current admin username
+$admin_username = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+
+# Get the computer name
+$computer_name = (Get-WmiObject Win32_ComputerSystem).Name
+
+$ipv4_address = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias 'Ethernet' | Where-Object {$_.PrefixOrigin -eq 'Dhcp'}).IPAddress
+
+# Set the path to the CSV file
+$csv_path = "C:\path\to\csv\file.csv"
+
+# Create the CSV file if it doesn't exist
+if (-not (Test-Path $csv_path)) {
+    "AdminUsername,ComputerName" | Out-File $csv_path -Encoding utf8
+}
+
+# Create a PSObject with the admin username and computer name
+$csv_object = [pscustomobject]@{
+    AdminUsername = $admin_username
+    ComputerName = $computer_name
+    Ipv4Address = $ipv4_address
+}
+
+Write-Host "Saving the admin username and computer name to the CSV file..."
+# Append the PSObject to the CSV file
+$csv_object | Export-Csv $csv_path -Append -NoTypeInformation -Encoding utf8
 
 Read-Host "Press any keys to end this installation process..."
 
