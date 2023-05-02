@@ -11,8 +11,8 @@ from src.server.config import Infos
 
 def get_local_ipv4() -> str:
     """
-    Get the IP address of the server computer.
-    :return: The IP address of the server computer.
+    Get the IP address of the running computer.
+    :return: The IP address of the running computer.
     """
     hostname = socket.gethostname()
     local_ipv4 = socket.gethostbyname(hostname)
@@ -30,7 +30,7 @@ class Data:
     computers_data: dict = {}
     ipaddresses: dict = {}
 
-    def __init__(self, filename: str = find_file("computers_informations.json"), json_data: dict = None):
+    def __init__(self, filename: str = find_file("setup_informations.json"), json_data: dict = None):
         if json_data is None:
             self.__load_data(filename)
         else:
@@ -40,23 +40,11 @@ class Data:
         if not data_check:
             raise ValueError("Le fichier JSON est invalide.")
 
-    def __load_data(self, filename: str = find_file("computers_informations.json")):
+    def __load_data(self, filename: str = find_file("setup_informations.json")):
         # Ouvrir le fichier JSON en mode lecture
         with open(filename, 'r', encoding='utf-8') as fichier:
             # Charger le contenu du fichier JSON dans une variable
             self.data_json: dict = json.load(fichier)
-
-        if not self.data_json.get("remote_passwords"):
-            self.__load_passwords()
-
-    def __load_passwords(self):
-        with open(find_file("passwords.txt"), 'r', encoding='utf-8') as fichier:
-            passwords = fichier.readlines()
-
-            # Enlever les sauts de ligne et ignorer les lignes vides
-        cleaned_passwords = [pwd.strip() for pwd in passwords if pwd.strip()]
-
-        self.data_json['remote_passwords'] = cleaned_passwords
 
     def get_data_json(self) -> dict:
         return self.data_json
@@ -68,7 +56,6 @@ class Data:
             return True
         except ipaddress.AddressValueError:
             return False
-
 
     def __check_json_integrity(self) -> bool:
         if not self.check_fields_required():
@@ -90,12 +77,12 @@ class Data:
             ip_parts = host.split(".")
             if not (ip_parts[0] == "192" and ip_parts[1] == "168" and ip_parts[2] == subnet_mask and 1 <= int(
                     ip_parts[3]) <= 255):
-                print(f"L'adresse IP {host} n'est pas dans la plage autorisée.")
+                print(f"The ip address {host} is not in the authorized range. For now only 192.168.x.xxx work")
                 return False
 
             # Vérifier si l'adresse IP n'est pas déjà prise
             if host in taken_ips:
-                print(f"L'adresse IP {host} est déjà prise.")
+                print(f"IP address {host} is already taken.")
                 return False
 
         ip_pool: list[str] = self.data_json["ip_pool_range"]
@@ -112,7 +99,10 @@ class Data:
 
     def check_fields_required(self):
         # Vérifier la présence des champs requis
-        required_fields = ["remote_user", "remote_host", "remote_passwords", "max_computers_per_iteration",
+        # TODO: Enlever les champs inutiles :
+        #  - remote_user
+        #  - remote_host
+        required_fields = ["remote_user", "remote_host", "max_computers_per_iteration",
                            "subnet_mask", "taken_ips", "python_client_script_path", "ip_pool_range"]
 
         for field in required_fields:
@@ -123,15 +113,13 @@ class Data:
 
     def check_fields_length(self) -> bool:
         # Vérifier l'intégrité des longueurs des listes
-        if not (len(self.data_json["remote_user"]) == len(self.data_json["remote_host"]) == len(
-                self.data_json["remote_passwords"])):
-            print("Les longueurs des listes 'remote_user', 'remote_host' et 'remote_passwords' ne correspondent pas.")
-            print("Vous avez probablement oublié de mettre à jour l'un des trois champs. Il doit manquer un mot "
-                  "de passe, un nom d'utilisateur ou une adresse IP.")
+        if len(self.data_json["remote_user"]) != len(self.data_json["remote_host"]):
+            print("Length list of remote_user and remote_host are not equal.")
+            print("Please, enter the same number of remote_user and remote_host.")
             return False
 
         if len(self.data_json["remote_user"]) == 0:
-            print("Aucun ordinateur n'a été ajouté.")
+            print("No remote_user found. Please enter at least one remote_user.")
             return False
         return True
 
@@ -146,7 +134,7 @@ class Data:
         Return the path to the python scripts folder **on the client computer** via it's username index listed in the
         json file.
         :param user_index: Index of the username in the json file
-        :return: The string of the path of the
+        :return: The string path of the python scripts folder on the client computer
         """
         path_chose_by_user: str = self.data_json.get("python_client_script_path")
         if path_chose_by_user == "":

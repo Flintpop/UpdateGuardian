@@ -1,10 +1,12 @@
 import json
+import socket
 
-from src.server.commands.find_all_pc import generate_ip_range, scan_network
 from src.server.commands.path_functions import find_file, change_directory_to_root_folder
 from src.server.data.computer import Computer
 from src.server.data.local_network_data import Data
 from threading import Lock
+
+from src.server.ssh.ssh_keygen import gen_keys_and_save_them
 
 
 class ComputerDatabase:
@@ -26,11 +28,22 @@ class ComputerDatabase:
         self.__computers: list[Computer] = []
         self.computers_json: dict = {}
 
-        # TODO: Do thread lock here to maybe fix bug that erases all computers in database
-        #  ChatGPT has the explanation, look for it
-
     def add_computer(self, computer: Computer) -> None:
         self.__computers.append(computer)
+
+    def add_new_computer(self, dict_computer: dict) -> bool:
+        """
+        Add a new computer to the database and the self.computers_json property.
+        :param dict_computer: The computer to add in dictionary form.
+        :return: None
+        """
+        if dict_computer["hostname"] in self.computers_json:
+            return False
+        self.computers_json[dict_computer["hostname"]] = dict_computer
+        new_computer: Computer = Computer(dict_computer)
+        gen_keys_and_save_them(new_computer)
+        self.add_computer(new_computer)
+        return True
 
     def remove_computer(self, hostname: str) -> bool:
         for computer in self.__computers:
@@ -57,13 +70,9 @@ class ComputerDatabase:
         Refresh the local ip adresses of all the computers in the database.
         :return: None
         """
-        ip_range: list[str, str] = self.data.get_ip_range()
-        ip_range_test = generate_ip_range(ip_range[0], ip_range[1])
-
-        hosts_refreshed = scan_network(ip_range_test)
-
-        for host in hosts_refreshed.keys():
-            self.refresh_ip_address(host, hosts_refreshed)
+        # TODO: A tester ?
+        for computer in self.__computers:
+            computer.ipv4 = socket.gethostbyname(computer.hostname)
 
         self.save_computer_data()
 
@@ -78,6 +87,7 @@ class ComputerDatabase:
         Creates a backup of the file before saving, just in case.
         :return: Nothing.
         """
+
         # Read the current data from the file
         if hosts is not None:
             # Save the new data to the file
@@ -119,7 +129,7 @@ class ComputerDatabase:
         # Add all the computers to the database, using the Computer class.
         for computer_hostname in computer_database.computers_json:
             new_computer_dict = computer_database.computers_json[computer_hostname]
-            new_computer = Computer(new_computer_dict, computer_hostname)
+            new_computer = Computer(new_computer_dict)
             computer_database.add_computer(new_computer)
 
         return computer_database
@@ -131,6 +141,7 @@ class ComputerDatabase:
             string_representation += f"\tMAC  : \t{computer.mac_address}\n"
             string_representation += f"\tLOGS : \t{computer.logs_filename}\n"
             string_representation += f"\tIPv4 : \t{computer.ipv4}\n"
+            string_representation += f"\tUSER : \t{computer.username}\n"
         return string_representation
 
 

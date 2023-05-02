@@ -26,8 +26,11 @@ class ServerLogs(ComputerLogger):
             print(formatted_record)  # Print the message to the console
         else:
             print(record.message)
-        with open(self.logs_filename, 'a') as log_file:  # Write the message to the log file
-            log_file.write(formatted_record + '\n')
+        try:
+            with open(self.logs_filename, 'a') as log_file:  # Write the message to the log file
+                log_file.write(formatted_record + '\n')
+        except FileNotFoundError:
+            pass
 
     def log_error(self, message: str, print_formatted: bool = True) -> None:
         self.log(level="error", message=message, print_formatted=print_formatted)

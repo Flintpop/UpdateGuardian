@@ -1,9 +1,10 @@
 paramiko~=3.1.0
 wakeonlan~=3.0.0
 chardet~=5.1.0
-requests~=2.28.2
+requests==2.29.0
 scapy~=2.5.0
-cryptography~=39.0.1
-APScheduler~=3.6.3
-pytz~=2022.7.1
-psutil~=5.9.4
+cryptography==40.0.2
+APScheduler==3.10.1
+pytz==2023.3
+WMI~=1.5.1
+psutil~=5.9.5

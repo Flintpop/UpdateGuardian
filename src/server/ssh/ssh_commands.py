@@ -7,6 +7,8 @@ import paramiko
 
 from typing import TYPE_CHECKING
 
+from cryptography.hazmat.backends.openssl import ed25519
+
 if TYPE_CHECKING:
     from src.server.data.computer import Computer
 
@@ -88,15 +90,15 @@ def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float
                 return False
 
 
-def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, password: str, timeout: int = 300,
-                       retry_interval: int = 10) -> bool:
+def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, private_key: paramiko.pkey,
+                       timeout: int = 300, retry_interval: int = 10) -> bool:
     ssh.close()
     start_time = time.time()
     connected = False
 
     while not connected and time.time() - start_time < timeout:
         try:
-            ssh.connect(ip, username=username, password=password, timeout=timeout)
+            ssh.connect(ip, username=username, pkey=private_key, timeout=timeout)
             connected = True
         except (paramiko.ssh_exception.NoValidConnectionsError, socket.timeout):
             time.sleep(retry_interval)

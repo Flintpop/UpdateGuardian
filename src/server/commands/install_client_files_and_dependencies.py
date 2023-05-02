@@ -301,10 +301,10 @@ def refresh_env_variables(computer: 'Computer') -> bool:
     print("Rebooting remote computer...")
     ssh: paramiko.SSHClient = computer.ssh_session
     reboot_remote_pc(ssh)
-    ipaddress, remote_user, remote_password = computer.ipv4, computer.username, computer.password
+    ipaddress, remote_user, remote_computer_private_key = computer.ipv4, computer.username, computer.get_private_key()
     wait_for_ssh_shutdown(ipaddress)
 
-    if not wait_and_reconnect(ssh, ipaddress, remote_user, remote_password):
+    if not wait_and_reconnect(ssh, ipaddress, remote_user, remote_computer_private_key):
         computer.log_error("Failed to reconnect to remote computer.")
         return False
 

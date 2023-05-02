@@ -4,6 +4,7 @@ import time
 import traceback
 
 import paramiko
+from cryptography.hazmat.backends.openssl import ed25519
 
 from src.server.commands.install_client_files_and_dependencies import python_scripts, python_installation, \
     python_path, python_packages, wait_for_ssh_shutdown
@@ -22,29 +23,33 @@ class Computer:
     - ipv4\n
     - mac_address\n
     - username\n
-    - password\n
     - logger (logging.Logger, used to log the computer's activity in a file)\n
 
     Methods
     -------
     setup_logger()
         Sets up the logger for the computer.
-    log(level: str, message: str)
+    Log(level: str, message: str)
         Logs a message in the computer's log file.
-    close_logger()
+    Close_logger()
         Closes the logger for the computer.
     """
     _id_counter = 0
 
-    def __init__(self, computer_info: dict, hostname: str) -> None:
+    def __init__(self, computer_info: dict) -> None:
         Computer._id_counter += 1
         self.id = Computer._id_counter
 
-        self.hostname = hostname
-        self.ipv4 = computer_info.get("ip")
-        self.mac_address = computer_info.get("mac")
+        self.hostname = computer_info.get("hostname")
+        self.ipv4 = computer_info.get("ipv4")
+        self.mac_address = computer_info.get("mac_address")
         self.username = computer_info.get("username")
-        self.password = computer_info.get("password")
+
+        self.__private_key: paramiko.PKey | None = None
+        self.__public_key: ed25519.Ed25519PublicKey | None = None
+
+        self.private_key_filepath: str = os.path.join(find_directory("ssh_keys"), f"private_key_{self.hostname}.pem")
+        self.public_key_filepath: str = os.path.join(find_directory("ssh_keys"), f"public_key_{self.hostname}.pub")
 
         self.check_informations_integrity()
 
@@ -101,9 +106,14 @@ class Computer:
     def connect(self):
         self.log(message="Connecting to computer...")
         try:
+            self.__private_key = self.get_private_key()
+            if not self.__private_key:
+                self.log_error("Could not get private key... Cannot connect.")
+                return False
+
             self.ssh_session = paramiko.SSHClient()
             self.ssh_session.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            self.ssh_session.connect(self.ipv4, username=self.username, password=self.password)
+            self.ssh_session.connect(self.hostname, username=self.username, pkey=self.__private_key)
             self.log(f"Connected to computer {self.hostname}.")
             return True
         except paramiko.AuthenticationException as e:
@@ -119,8 +129,7 @@ class Computer:
             self.log_error(f"Here are some informations about the connection settings:"
                            f"\n\tip: {self.ipv4}"
                            f"\n\tmac: {self.mac_address}"
-                           f"\n\tusername: {self.username}"
-                           f"\n\tpassword: {self.password}\n")
+                           f"\n\tusername: {self.username}")
             return False
         except Exception as e:
             self.log_error(f"Unhandled error. Could not connect to {self.hostname}:\n " + str(e))
@@ -201,7 +210,7 @@ class Computer:
         self.log(level="info", message="Shutting down the pc...")
         command: str = "shutdown /s /t 0"
 
-        stdout, stderr = stdout_err_execute_ssh_command(self.ssh_session, command)
+        stdout_err_execute_ssh_command(self.ssh_session, command)
 
         self.log(level="info", message="The pc should be off...")
         if not self.waiting_pc_off(timeout=60):
@@ -233,9 +242,9 @@ class Computer:
         ssh: paramiko.SSHClient = self.ssh_session
         ipaddress: str = self.ipv4
         remote_user: str = self.username
-        remote_password: str = self.password
+        remote_private_key: paramiko.pkey = self.__private_key
 
-        if not wait_and_reconnect(ssh, ipaddress, remote_user, remote_password):
+        if not wait_and_reconnect(ssh, ipaddress, remote_user, remote_private_key):
             self.log_error("Failed to reconnect to remote computer.")
             return False
         return True
@@ -280,6 +289,37 @@ class Computer:
         """
         return os.path.join(self.get_project_directory_on_client(), "main_client.py")
 
+    def get_private_key(self) -> paramiko.PKey | None:
+        """
+        Get the private key of the computer.
+        :return: The private key of the computer.
+        """
+        if self.private_key_filepath is None:
+            self.log_error("Error, the private key filepath is not defined.")
+            return None
+
+        if self.__private_key is None:
+            self.__private_key = paramiko.RSAKey.from_private_key_file(self.private_key_filepath)
+        return self.__private_key
+
+    def get_public_key(self):
+        """
+        Get the public key of the computer.
+        :return: The public key of the computer.
+        """
+        if self.public_key_filepath is None:
+            self.log_error("Error, the public key filepath is not defined.")
+            return None
+
+        if self.__public_key is None:
+            try:
+                with open(self.public_key_filepath, "r") as file:
+                    self.__public_key = file.read()
+            except FileNotFoundError:
+                self.log_error("Error, the public key file does not exist.\nIt should have been generated at the setup "
+                               "phase.")
+        return self.__public_key
+
     def log_error(self, msg: str, new_lines=0) -> False:
         self.log(level="error", message=msg, new_lines=new_lines)
         return False
@@ -298,7 +338,6 @@ class Computer:
             'ipv4': "The ipv4 of the computer is not set.",
             'mac_address': "The mac address of the computer is not set.",
             'username': "The username of the computer is not set.",
-            'password': "The password of the computer is not set.",
             'hostname': "The hostname of the computer is not set.",
         }
 
@@ -326,8 +365,9 @@ class Computer:
         str_repr += "\tipv4: " + self.ipv4 + "\n"
         str_repr += "\tmac_address: " + self.mac_address + "\n"
         str_repr += "\tusername: " + self.username + "\n"
-        str_repr += "\tpassword: " + self.password + "\n"
         return str_repr
+
+
 
 
 class ComputerLogger:
@@ -335,6 +375,7 @@ class ComputerLogger:
     Class to log messages from a computer.
     It is used to log messages of a computer in a file, and to display them in the console.
     """
+
     def __init__(self, logs_filename: str, new_msg_header: str = "New computer session"):
         self.logs_filename = logs_filename
         self.logger = self.setup_logger(new_msg_header=new_msg_header)
@@ -404,7 +445,7 @@ class ComputerLogger:
 
     def log_add_vertical_space(self, new_lines: int = 1):
         """
-        To make the logs more readable, add a vertical space in the logs file and in the console.
+        To make the logs more readable, add a vertical space in the log file and in the console.
         :param new_lines: The number of new lines to add.
         :return: Nothing.
         """

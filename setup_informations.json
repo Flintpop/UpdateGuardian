@@ -1,0 +1,10 @@
+{
+  "remote_user" : ["pc-salon\\ronan"],
+  "remote_host" : ["192.168.1.19"],
+  "remote_passwords" : [],
+  "max_computers_per_iteration": 1,
+  "subnet_mask" : "1",
+  "taken_ips" : ["192.168.1.1"],
+  "python_client_script_path" : "",
+  "ip_pool_range" : ["192.168.1.2", "192.168.1.254"]
+}

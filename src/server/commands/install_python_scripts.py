@@ -75,7 +75,7 @@ def install_python_script(computer: 'Computer') -> bool:
     ssh: paramiko.SSHClient = computer.ssh_session
     python_script_path: str = computer.get_project_directory_on_client()
 
-    created = create_folder_ssh(ssh, python_script_path)
+    created = create_folder_ssh(computer, python_script_path)
 
     if not created:
         computer.log_error(f"Error while creating the folder {python_script_path}")

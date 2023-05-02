@@ -1,4 +1,39 @@
 # Make sure that scripts can run on the pc, if not, run the following command in powershell:
+function Check-And-Create-ICMPFirewallRule
+{
+    $RuleName = "Allow_ICMP"
+    $RuleExists = $false
+
+    try
+    {
+        $ExistingRules = Get-NetFirewallRule -DisplayName $RuleName -ErrorAction Stop
+        if ($ExistingRules)
+        {
+            $RuleExists = $true
+            Write-Host "Firewall rule '$RuleName' already exists."
+        }
+    }
+    catch
+    {
+        if ($_.Exception -is [System.Management.Automation.ActionPreferenceStopException])
+        {
+            Write-Host "Error occurred while checking the firewall rule: $( $_.Exception.InnerException.Message )"
+        }
+    }
+
+    if (-not$RuleExists)
+    {
+        try
+        {
+            New-NetFirewallRule -DisplayName $RuleName -Direction Inbound -Action Allow -Protocol ICMPv4 -ErrorAction Stop
+            Write-Host "Firewall rule '$RuleName' has been created."
+        }
+        catch
+        {
+            Write-Host "Error occurred while creating the firewall rule: $( $_.Exception.Message )"
+        }
+    }
+}
 # Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser -confirm:$false -Force
 
 # Check for pending reboot
@@ -67,6 +102,48 @@ function Test-WoLSupport
     }
 }
 
+function Get-InternetConnectedAdapterMacAddress
+{
+    try
+    {
+        $connectedAdapters = Get-NetAdapter -Physical -ErrorAction Stop | Where-Object { $_.Status -eq 'Up' }
+
+        if ($connectedAdapters -eq $null)
+        {
+            Write-Host "No physical network adapters with 'Up' status were found."
+            return $null
+        }
+
+        $internetConnectedAdapter = $null
+        foreach ($adapter in $connectedAdapters)
+        {
+            $ipConfiguration = Get-NetIPConfiguration -InterfaceIndex $adapter.InterfaceIndex
+            if ($ipConfiguration.IPv4DefaultGateway -ne $null)
+            {
+                $internetConnectedAdapter = $adapter
+                break
+            }
+        }
+
+        if ($internetConnectedAdapter -eq $null)
+        {
+            Write-Host "No network adapters with an IPv4 default gateway were found."
+            return $null
+        }
+
+        $macAddress = $internetConnectedAdapter.MacAddress
+        Write-Host "The MAC address of the Internet-connected adapter is: $macAddress"
+        return $macAddress
+    }
+    catch
+    {
+        Write-Host "An error occurred while executing the function: $( $_.Exception.Message )"
+        return $null
+    }
+}
+
+
+$server_ip = "192.168.2.80"
 
 # Ensure the script is running with administrative privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator"))
@@ -144,7 +221,7 @@ if (-not$SshdService)
 # Start the sshd service
 Start-Service sshd
 
-# OPTIONAL but recommended:
+# Start the service at each boot
 Set-Service -Name sshd -StartupType 'Automatic'
 
 # Confirm the Firewall rule is configured. It should be created automatically by setup. Run the following to verify
@@ -160,6 +237,56 @@ else
 Write-Output ""
 
 Write-Output "The OpenSSH Server has been installed and configured."
+
+# Check if rules for ping command are configured
+Check-And-Create-ICMPFirewallRule
+
+# Get the current admin username
+$admin_username = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+
+# Get the computer name
+$computer_name = (Get-WmiObject Win32_ComputerSystem).Name
+
+$adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
+$ipv4_address = (Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -PrefixOrigin Dhcp).IPAddress
+
+$mac = Get-InternetConnectedAdapterMacAddress
+
+$whoami = whoami
+
+# Prepare the data to send to the Python HTTP server
+$data = @{
+    "username" = $whoami;
+    "hostname"  = $computer_name;
+    "mac_address"   = $mac
+    "ipv4"  = $ipv4_address
+} | ConvertTo-Json
+
+$serverURL = "http://" + $server_ip + ":8000"
+
+Invoke-WebRequest -Uri $serverURL -Method POST -Body $data -ContentType "application/json"
+
+# Request the public key from the Python HTTP server
+$publicKeyURL = "http://"+ $server_ip +":8000/get_public_key/$computer_name"
+$publicKeyResponse = Invoke-WebRequest -Uri $publicKeyURL -Method GET
+
+# Save the received public key in the authorized_keys file
+$publicKey = $publicKeyResponse.Content
+
+Write-Host "Received public key from server: " + $publicKey
+Write-Host "Adding public key to authorized_keys file..."
+
+$sshDir = "$env:USERPROFILE\.ssh"
+if (-not(Test-Path $sshDir))
+{
+    New-Item -ItemType Directory -Path $sshDir
+}
+
+$authorizedKeysPath = Join-Path $sshDir "authorized_keys"
+Add-Content -Path $authorizedKeysPath -Value $publicKey
+
+Write-Host "Public key added to authorized_keys file."
+Write-Host "The server should be able to connect to this computer using SSH now."
 
 # Enable Wake on LAN for Ethernet adapters that support it
 Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription -match "Ethernet" } | ForEach-Object {
@@ -192,12 +319,14 @@ $wolEnabled = $false
 # Check for enabled Ethernet adapters with WoL support
 Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription -match "Ethernet" } | ForEach-Object {
     $AdapterName = $_.Name
-    if (Test-WoLSupport -AdapterName $AdapterName) {
+    if (Test-WoLSupport -AdapterName $AdapterName)
+    {
         $wolEnabled = $true
     }
 }
 
-if (!$wolEnabled) {
+if (!$wolEnabled)
+{
     Write-Host "No enabled Ethernet adapters with Wake on LAN support found." -ForegroundColor Yellow
     Write-Host "If you have an Ethernet adapter that supports Wake on LAN, make sure it is enabled and run the script again." -ForegroundColor Yellow
     Read-Host "Press any key to stop the program"
@@ -210,7 +339,7 @@ $LocalPorts = "7,9"
 $Protocol = "UDP"
 $Profiles = "Domain,Private,Public"
 $Action = "Allow"
-$LocalIPAddress = "192.168.1.100" # Replace with the desired local IP address
+$LocalIPAddress = $ipv4_address
 
 # Check if the rule already exists
 $ExistingRule = Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue
@@ -230,32 +359,6 @@ else
 {
     Write-Host "Wake-on-LAN rule already exists."
 }
-# Get the current admin username
-$admin_username = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-
-# Get the computer name
-$computer_name = (Get-WmiObject Win32_ComputerSystem).Name
-
-$ipv4_address = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias 'Ethernet' | Where-Object {$_.PrefixOrigin -eq 'Dhcp'}).IPAddress
-
-# Set the path to the CSV file
-$csv_path = "C:\path\to\csv\file.csv"
-
-# Create the CSV file if it doesn't exist
-if (-not (Test-Path $csv_path)) {
-    "AdminUsername,ComputerName" | Out-File $csv_path -Encoding utf8
-}
-
-# Create a PSObject with the admin username and computer name
-$csv_object = [pscustomobject]@{
-    AdminUsername = $admin_username
-    ComputerName = $computer_name
-    Ipv4Address = $ipv4_address
-}
-
-Write-Host "Saving the admin username and computer name to the CSV file..."
-# Append the PSObject to the CSV file
-$csv_object | Export-Csv $csv_path -Append -NoTypeInformation -Encoding utf8
 
 Read-Host "Press any keys to end this installation process..."
 

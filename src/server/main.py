@@ -63,9 +63,9 @@ def stop_code():
 
 
 def settings_thread() -> None:
-    global stopped
     log("Program started, settings loaded", print_formatted=False)
     log_new_lines()
+    global stopped
     while not stopped:
         scheduled_time = get_launch_time()
 
@@ -84,13 +84,15 @@ def settings_thread() -> None:
             switcher.get(usr_input, lambda: print("Invalid input."))()
         except KeyboardInterrupt:
             log("Program stopped.", print_formatted=False)
+            stop_code()
             break
 
 
 def main_loop() -> None:
     setup_data = Data()
 
-    server_setup(setup_data)
+    if not server_setup():
+        exit(1)
 
     get_launch_time()
 

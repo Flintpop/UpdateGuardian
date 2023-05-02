@@ -1,25 +1,15 @@
 import json
 import os
 import socket
-import subprocess
 import sys
 
-from src.server.commands.find_all_pc import scan_network
 from src.server.commands.path_functions import find_file, list_files_recursive, find_directory
 from src.server.config import Infos
-from src.server.data.computer_database import ComputerDatabase
-from src.server.data.load_pc_passwords import find_password
-from src.server.data.local_network_data import Data
-from src.server.wake_on_lan.wake_on_lan_utils import ping_ip
+from src.server.environnement.http_server_setup import run_server
+from src.server.environnement.setup_static_ip import is_static_ip, get_network_adapters, set_static_ip
 from src.server.environnement.server_logs import log, log_error, log_new_lines
 
 launch_infos_filename: str = "launch_infos.json"
-
-
-def add_encrypted_passwords(data: Data, hosts: dict):
-    # TODO: Encrypt passwords
-    for computer in hosts.values():
-        computer['password'] = find_password(data, computer["ip"])
 
 
 def get_local_ipv4_address():
@@ -37,49 +27,6 @@ def get_local_ipv4_address():
         return local_ipv4_address
     except OSError:
         return None
-
-
-def delete_unwanted_hosts(data: Data, hosts: dict):
-    items_to_delete: list = []
-    current_ip = get_local_ipv4_address()
-
-    if current_ip is None:
-        log_error("Error, could not get the local ip address.")
-
-    taken_ips = data.get_data_json().get("taken_ips")
-    if current_ip not in taken_ips:
-        taken_ips.append(current_ip)
-
-    for taken_ip in taken_ips:
-        for hostname in hosts.keys():
-            host = hosts[hostname]
-            if host["ip"] == taken_ip:
-                items_to_delete.append(hostname)
-
-    for item in items_to_delete:
-        hosts.pop(item)
-
-
-def check_all_hosts_are_valid(ips: list[str], return_invalid_hosts: list[str]):
-    for ip in ips:
-        if not ping_ip(ip):
-            log_error(f"Error: {ip} is not reachable.")
-            return_invalid_hosts.append(ip)
-
-    if len(return_invalid_hosts) > 0:
-        return False
-    return True
-
-
-def add_usernames_hosts(data: Data, hosts: dict) -> bool:
-    for hostname in hosts.keys():
-        host = hosts[hostname]
-        username = data.get_username_per_ip(host["ip"])
-        if username is None:
-            log_error(f"Error: could not find a username for {host['ip']}.")
-            return False
-        host["username"] = username
-    return True
 
 
 def get_all_files_from_server() -> list[str]:
@@ -128,16 +75,10 @@ def print_log_setup():
     log_new_lines()
 
     log("Please, make sure that all computers are connected to the same network.", print_formatted=False)
-    log("Also, make sure you installed the Powershell script on all computers, and that Wake-on-lan is activated "
-        "on each of them.", print_formatted=False)
+    log("The software will await you to install the client setup (powershell script) on each pc"
+        "you desire to automate the update on.", print_formatted=False)
 
-    log_new_lines()
-
-    log(
-        "To scan the network and register mac addresses and hostnames, please turn on all computers that you "
-        "wish to manage from this software. Be sure that all ipv4 addresses has been registered in "
-        "'computer_informations.json' folder.", print_formatted=False
-    )
+    log("A http server will be created temporarily to allow the client to send connexion data to the server.")
 
     log_new_lines()
 
@@ -145,12 +86,24 @@ def print_log_setup():
     print()
 
 
-def server_setup(setup_data: Data):
+def server_setup() -> bool:
     check_all_files_integrity()
     if not check_if_setup_needed():
-        return
+        return True
 
-    log("Setting up server...")
+    log("Setting up server...", print_formatted=False)
+
+    current_ip = get_local_ipv4_address()
+    update_powershell_client_script_ip(current_ip)
+
+    # log_new_lines()
+    # log("To ensure the program works properly, the computer that will work as the server will have a static IP "
+    #     "address.", print_formatted=False)
+    # log_new_lines()
+
+    # if not setup_static_ip():
+    #     log_error("Error: Could not setup static ip.")
+    #     sys.exit(1)
 
     print_log_setup()
 
@@ -160,39 +113,22 @@ def server_setup(setup_data: Data):
         usr_input: str = input("> ")
         if usr_input == "exit":
             log("Setup cancelled. Exiting...")
-            sys.exit(0)
+            exit(0)
         if usr_input != "y":
             log_error("Error: Invalid input. Please enter 'y' to continue, or 'exit' to cancel.", print_formatted=False)
 
     log_new_lines()
     log("Starting setup...", print_formatted=False)
-    log("Scanning network...", print_formatted=False)
-    ip_pool_range = setup_data.get_ip_range()
+    log("Scanning network... and setting up http server...", print_formatted=False)
 
-    hosts: dict = scan_network(ip_pool_range)
+    log("Please press ctrl+c to stop the http server and continue the setup process once all desired computers has "
+        "been registered...")
 
-    list_invalid_hosts: list = []
-    if not check_all_hosts_are_valid(setup_data.get_data_json().get("remote_host"), list_invalid_hosts):
-        log_error("Error: Some hosts are not reachable. Please check your network and try again.")
-        log_error("The following hosts are not reachable:")
-        for host in list_invalid_hosts:
-            log_error(host)
-        log_error("Please modify the list of hosts in the file 'computers_informations.json' and try again.")
-        sys.exit(1)
+    if not run_server():
+        log_error("Error with the http server. The database may be empty, or something else went wrong.")
+        return False
 
-    log("Deleting unwanted hosts...", print_formatted=False)
-    delete_unwanted_hosts(setup_data, hosts)
-
-    log("Adding usernames...", print_formatted=False)
-    if not add_usernames_hosts(setup_data, hosts):
-        sys.exit(1)
-
-    log("Adding passwords...", print_formatted=False)
-    add_encrypted_passwords(setup_data, hosts)
-
-    log("Creating database...", print_formatted=False)
-    ComputerDatabase.save_computer_data(hosts)
-    log_new_lines()
+    return True
 
 
 def load_launch_time() -> dict:
@@ -244,35 +180,77 @@ def check_if_setup_needed() -> bool:
     return False
 
 
-def set_static_ip(ip: str, adapter_name: str) -> None:
-    """
-    Set a static local ipv4 ip for the running computer.
-    :param ip: The ip to set.
-    :param adapter_name: The name of the adapter to set the ip.
-    :return: Nothing.
-    """
-    try:
-        subprocess.run(f"netsh interface ipv4 set address {adapter_name} static {ip} 255.255.255.0", shell=True,
-                       check=True)
-        log(f"IP address set to {ip} successfully.")
-    except subprocess.CalledProcessError:
-        log_error("Failed to set IP address. Make sure you run this script with administrative privileges.")
-
-
-def setup_static_ip() -> None:
+def setup_static_ip() -> bool:
     """
     Set up a static local ipv4 ip for the running computer.
     :return: Nothing.
     """
     current_ip = get_local_ipv4_address()
-    log(f"Your current local IP address is: {current_ip}")
+    log(f"Your current local IP address is: {current_ip}", print_formatted=False)
 
-    new_ip = input("Enter the new local IP address or press enter to keep the current IP address: ")
+    # check if the current IP address is already static
+    if is_static_ip(current_ip):
+        log("Your IP address is already set to a static IP address.", print_formatted=False)
+        return False
+
+    # get a list of network adapters and their IP addresses
+    adapters = get_network_adapters()
+    log("Available network adapters:", print_formatted=False)
+    for i, adapter in enumerate(adapters):
+        log(f"{i+1}: {adapter['name']} ({adapter['ip_address']})", print_formatted=False)
+
+    # ask the user which adapter to set the static IP address for
+    selected_adapter = input("Enter the number of the adapter to set the static IP address for: ")
+    try:
+        selected_index = int(selected_adapter) - 1
+        if selected_index < 0 or selected_index >= len(adapters):
+            raise ValueError
+    except ValueError:
+        log_error("Invalid input. Setting up static IP address cancelled.", print_formatted=False)
+        return False
+
+    selected_adapter_name = adapters[selected_index]['name']
+    selected_adapter_ip = adapters[selected_index]['ip_address']
+
+    # ask the user for the new IP address
+    new_ip = input(f"Enter the new local IP address for {selected_adapter_name} "
+                   f"or press enter to keep the current IP address ({selected_adapter_ip}): ")
 
     if not new_ip:
-        log("Keeping the current IP address.")
-        return
+        log(f"Keeping the current IP address ({selected_adapter_ip}).", print_formatted=False)
+        new_ip = selected_adapter_ip
 
-    adapter_name = input("Enter the name of the network adapter (e.g., 'Wi-Fi' or 'Ethernet'): ")
+    # set the new static IP address for the selected adapter
+    if not set_static_ip(new_ip, selected_adapter_name):
+        log_error("Error: Failed to set static IP address. Please try again.")
+        return False
 
-    set_static_ip(new_ip, adapter_name)
+    update_powershell_client_script_ip(new_ip)
+
+    log(f"Static IP address set for {selected_adapter_name}.", print_formatted=False)
+    return True
+
+
+def update_powershell_client_script_ip(ip: str):
+    """
+    Updates the ip variable in the powershell script.
+    :param ip: The ip to update
+    :return: Nothing.
+    """
+
+    try:
+        powershell_file = find_file(Infos.powershell_client_script_installer_name)
+        with open(powershell_file, "r") as f:
+            powershell_script: str = f.read()
+
+        powershell_script = powershell_script.replace("$server_ip = \"\"", f"$server_ip = \"{ip}\"")
+
+        with open(powershell_file, "w") as f:
+            f.write(powershell_script)
+
+        log(f"Powershell script updated successfully with the {ip} ip address as server.", print_formatted=False)
+    except FileNotFoundError:
+        log_error("Failed to update the powershell script. Make sure you run this script with administrative "
+                  "privileges.\nFurthermore, make sure that the powershell script name "
+                  f"{Infos.powershell_client_script_installer_name} exists in the {Infos.PROJECT_NAME} root " "folder.")
+        raise FileNotFoundError

@@ -6,21 +6,27 @@ from scapy.sendrecv import srp
 from src.server.environnement.server_logs import log_error
 
 
-def scan_network(ip_range) -> dict:
+def scan_network(ip_range) -> dict | None:
+    # TODO: Bug here. Find nothing in my local network.
     arp_request = ARP(pdst=ip_range)
     broadcast = Ether(dst="ff:ff:ff:ff:ff:ff")
     arp_request_broadcast = broadcast / arp_request
-    answered_list = srp(arp_request_broadcast, timeout=1, verbose=False)[0]
+    answered_list = srp(arp_request_broadcast, timeout=5, verbose=False)[0]
 
     hosts = {}
 
     for sent, received in answered_list:
         hostname = get_hostname(received.psrc)
+        print(f"Hostname: {hostname}")
         if hostname not in hosts:
             hosts[hostname] = {'ip': received.psrc, 'mac': received.hwsrc}
         else:
             log_error("Error, two hosts have the same hostname. Please check your network configuration.")
             hosts[received.hwsrc] = {'ip': received.psrc, 'mac': received.hwsrc, 'hostname': hostname}
+
+    if hosts == {}:
+        log_error("Error, no hosts found. Please check your network configuration.")
+        return None
 
     return hosts
 

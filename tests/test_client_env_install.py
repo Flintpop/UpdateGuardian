@@ -28,10 +28,11 @@ def get_mac_address():
     return formatted_mac_address
 
 
-class TestClientEnvInstall(unittest.TestCase):
-    def setUp(self) -> None:
+class LoadLocalEnvironment:
+    def __init__(self):
         # For this test to work, please create a file called password_test.txt in the tests/tests_data folder.
-        # This file should contain the password of your computer. Make sure you have openssh server installed.
+        # This file should contain the password of your computer.
+        # Make sure you have openssh server installed.
         computer_info: dict = {
             "ip": "localhost",
             "mac": get_mac_address(),
@@ -41,6 +42,15 @@ class TestClientEnvInstall(unittest.TestCase):
         self.computer = Computer(computer_info, "test")
         self.project_path = self.computer.get_project_directory_on_client()
 
+
+class TestClientEnvInstall(unittest.TestCase, LoadLocalEnvironment):
+    def __init__(self):
+        super().__init__()
+        LoadLocalEnvironment.__init__(self)
+
+    def setUp(self) -> None:
+        # For this test to work, please create a file called password_test.txt in the tests/tests_data folder.
+        # This file should contain the password of your computer. Make sure you have openssh server installed.
         self.computer.connect()
         self.computer.log_add_vertical_space()
         self.delete_test_folder()
@@ -76,7 +86,7 @@ class TestClientEnvInstall(unittest.TestCase):
         # Should be OK
         self.assertTrue(check_python_script_up_to_date(self.computer))
 
-        # Get list of files to send to client, and change them so that they are not up-to-date
+        # Get a list of files to send to a client, and change them so that they are not up-to-date
         files: list[str] = self.computer.get_list_client_files_to_send()
         files = list(map(lambda x: os.path.basename(x), files))
 

@@ -46,7 +46,7 @@ def ping_ip(ip_address: str) -> bool:
     return True
 
 
-def get_router_ip():
+def get_gateway_ip():
     router_ip = None
 
     try:
@@ -69,8 +69,3 @@ def get_router_ip():
         print("Impossible de trouver l'adresse IP du routeur.")
 
     return router_ip
-
-
-# Exemple d'utilisation
-if __name__ == "__main__":
-    print()
