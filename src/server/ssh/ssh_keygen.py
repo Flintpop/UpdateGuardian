@@ -6,19 +6,16 @@
 # -----------------------------------------------------------
 import os
 
-import paramiko
-from cryptography.hazmat.primitives.asymmetric import ed25519
-from cryptography.hazmat.primitives.serialization import Encoding
-from cryptography.hazmat.primitives.serialization import PrivateFormat
-from cryptography.hazmat.primitives.serialization import NoEncryption
-from cryptography.hazmat.primitives.serialization import PublicFormat
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa, ed25519
+from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
 
 from typing import TYPE_CHECKING
 
-from src.server.commands.path_functions import find_directory
+from nacl import public, encoding
 
-if TYPE_CHECKING:
-    from src.server.data.computer import Computer
+# if TYPE_CHECKING:
+from src.server.data.computer import Computer
 
 from src.server.environnement.server_logs import log
 
@@ -28,35 +25,49 @@ def gen_keys_and_save_them(computer: 'Computer') -> None:
     Generate and saves a new ED25519 private key and its public key.
     :return:
     """
-
-    # Generate a new ED25519 private key
+    # Generate an RSA private key
     private_key = ed25519.Ed25519PrivateKey.generate()
+    # private_key = rsa.generate_private_key(
+    #     public_exponent=65537,
+    #     key_size=4096,
+    # )
+
     private_key_file: str = computer.private_key_filepath
     public_key_file: str = computer.public_key_filepath
 
-    # Serialize the private key to PEM format
-    private_pem = private_key.private_bytes(
+    # Serialize the private key to OpenSSH format
+    private_openssh = private_key.private_bytes(
         encoding=Encoding.PEM,
-        format=PrivateFormat.PKCS8,
-        encryption_algorithm=NoEncryption()
+        format=serialization.PrivateFormat.OpenSSH,
+        encryption_algorithm=NoEncryption(),
     )
 
-    # Save the private key to a file
+    # Save the private key to a file in OpenSSH format
     with open(private_key_file, "wb") as f:
-        f.write(private_pem)
+        f.write(private_openssh)
 
     # Get the public key from the private key
-    public_key: ed25519.Ed25519PublicKey = private_key.public_key()
+    public_key = private_key.public_key()
 
     # Serialize the public key to PEM format
     public_pem = public_key.public_bytes(
         encoding=Encoding.OpenSSH,
-        format=PublicFormat.OpenSSH
+        format=PublicFormat.OpenSSH,
     )
 
     # Save the public key to a file
     with open(public_key_file, "wb") as f:
         f.write(public_pem)
 
-    log(f"Private and public keys have been generated and saved to files for computer {computer.hostname}.",
+    log(f"Private and public RSA keys have been generated and saved to files for computer {computer.hostname}.",
         print_formatted=False)
+
+
+if __name__ == '__main__':
+    dict_computer = {
+        "username": "pc-pret-02\\administrateur",
+        "mac_address": "C8-60-00-38-64-79",
+        "hostname": "PC-PRET-02",
+        "ipv4": "192.168.7.227"
+    }
+    gen_keys_and_save_them(Computer(dict_computer))

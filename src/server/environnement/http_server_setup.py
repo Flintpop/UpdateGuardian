@@ -6,6 +6,7 @@
 # This server is used to receive the whoami command and send the SSH public keys to the clients.
 # -----------------------------------------------------------
 import os
+import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
     from src.server.data.computer import Computer
 
 from src.server.data.computer_database import ComputerDatabase
-from src.server.environnement.server_logs import log, log_error
+from src.server.environnement.server_logs import log, log_error, log_new_lines
 
 authorized_keys_filename = "authorized_keys.json"
 authorized_keys_file = os.path.join(find_directory("ssh_keys"), authorized_keys_filename)
@@ -31,6 +32,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
     # noinspection PyPep8Naming
     def do_POST(self):
+        log_new_lines()
         content_length = int(self.headers.get('Content-Length', 0))
         if content_length <= 0:
             log_error("Received an empty request, or without 'Content-Length' parameter.")
@@ -45,6 +47,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             log_error("Received data is not a valid JSON.")
             self.send_error(400, "Received data is not a valid JSON.")
             return
+
+        received_data["mac_address"] = received_data["mac_address"].replace("-", ":")
 
         if not self.computer_database.add_new_computer(received_data):
             log_error("Could not add the new computer to the database. It is probably already in the database.")
@@ -62,6 +66,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
     # noinspection PyPep8Naming
     def do_GET(self):
+        log_new_lines()
         if "/get_public_key" not in self.path:
             self.send_response(404, "Page not found.")
             return
@@ -84,18 +89,20 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
 keep_running = True
 
+
 def stop_server():
     global keep_running
     keep_running = False
 
-import threading
 
 def wait_for_stop(httpd):
     while True:
-        cmd = input('Press "stop" to stop the server\n')
+        log("Press 'stop' to stop the server", print_formatted=False)
+        cmd = input('> ')
         if cmd.lower() == "stop":
             httpd.shutdown()
             break
+
 
 def run_server(server_class=HTTPServer, handler_class=MyRequestHandler, port=8000) -> bool:
     server_address = ("", port)

@@ -1,5 +1,7 @@
 # Make sure that scripts can run on the pc, if not, run the following command in powershell:
-function Check-And-Create-ICMPFirewallRule
+# Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser -confirm:$false -Force
+
+function Check-AndCreateICMPRule
 {
     $RuleName = "Allow_ICMP"
     $RuleExists = $false
@@ -34,7 +36,6 @@ function Check-And-Create-ICMPFirewallRule
         }
     }
 }
-# Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser -confirm:$false -Force
 
 # Check for pending reboot
 function Test-PendingReboot
@@ -132,7 +133,6 @@ function Get-InternetConnectedAdapterMacAddress
         }
 
         $macAddress = $internetConnectedAdapter.MacAddress
-        Write-Host "The MAC address of the Internet-connected adapter is: $macAddress"
         return $macAddress
     }
     catch
@@ -142,8 +142,133 @@ function Get-InternetConnectedAdapterMacAddress
     }
 }
 
+function Test-IsPublicKeyValid($publicKey)
+{
+    if ($null -eq $publicKey -or $publicKey -eq "")
+    {
+        return $false
+    }
 
-$server_ip = "192.168.2.80"
+    #    $keyParts = $publicKey -split '\s+'
+    #    if ($keyParts.Count -lt 2 -or $keyParts[0] -notmatch "^ssh-(rsa|dss|ed25519)") {
+    #        return $false
+    #    }
+
+    return $true
+}
+
+
+function Configure-OpenSSHServer
+{
+    $sshdConfigPath = "C:\ProgramData\ssh\sshd_config"
+
+    # Check if the file exists
+    if (-not(Test-Path -Path $sshdConfigPath))
+    {
+        Write-Error "The sshd_config file does not exist at the specified path: $sshdConfigPath"
+        Read-Host -Prompt "Press Enter to exit"
+        exit 1
+    }
+
+    # Read the file content into a variable
+    $sshdConfig = Get-Content -Path $sshdConfigPath -ErrorAction Stop
+
+    # Modify the content
+    $modifiedSshdConfig = $sshdConfig -replace '#PubkeyAuthentication yes', 'PubkeyAuthentication yes' -replace '#PasswordAuthentication yes', 'PasswordAuthentication no'
+
+    # Match "Match Group administrators" block and comment it out
+    $inAdminGroupBlock = $false
+    for ($i = 0; $i -lt $modifiedSshdConfig.Count; $i++) {
+        if ($modifiedSshdConfig[$i] -match 'Match Group administrators')
+        {
+            $inAdminGroupBlock = $true
+        }
+        if ($inAdminGroupBlock -and -not($modifiedSshdConfig[$i] -match '^#'))
+        {
+            $modifiedSshdConfig[$i] = "# " + $modifiedSshdConfig[$i]
+        }
+        if ($modifiedSshdConfig[$i] -match '^#\s+AuthorizedKeysFile')
+        {
+            $inAdminGroupBlock = $false
+        }
+    }
+
+    # Write the modified content back to the file
+    try
+    {
+        Set-Content -Path $sshdConfigPath -Value $modifiedSshdConfig -ErrorAction Stop
+        Write-Host "The sshd_config file has been successfully modified."
+    }
+    catch
+    {
+        Write-Error "An error occurred while writing the modified content to the sshd_config file: $_"
+        exit 1
+    }
+}
+
+function Set-RightsSSHServerFiles
+{
+    try
+    {
+        $homeDir = [System.Environment]::GetFolderPath('UserProfile')
+        $authorizedKeysPath = Join-Path -Path $homeDir -ChildPath ".ssh\authorized_keys"
+        $sshFolderPath = Join-Path -Path $homeDir -ChildPath ".ssh"
+
+        if (-not(Test-Path -Path $sshFolderPath))
+        {
+            try {
+                New-Item -ItemType Directory -Path $sshFolderPath -ErrorAction Stop
+                Write-Host "Created .ssh folder at the specified path: $sshFolderPath"
+            } catch {
+                Write-Error "Failed to create the .ssh folder at the specified path: $sshFolderPath"
+                Read-Host "Press enter to stop the program"
+                exit 1
+            }
+        }
+
+        if (-not(Test-Path -Path $authorizedKeysPath))
+        {
+            try {
+                New-Item -ItemType File -Path $authorizedKeysPath -ErrorAction Stop
+                Write-Host "Created authorized_keys file at the specified path: $authorizedKeysPath"
+            } catch {
+                Write-Error "Failed to create the authorized_keys file at the specified path: $authorizedKeysPath"
+                Read-Host "Press enter to stop the program"
+                exit 1
+            }
+        }
+
+        Write-Host "Setting permissions for the .ssh folder..."
+        $sshFolderAcl = Get-Acl -Path $sshFolderPath
+        $sshFolderAcl.SetAccessRuleProtection($true, $false)
+        $sshFolderRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+        $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+        $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+        $allowance = [System.Security.AccessControl.AccessControlType]::Allow
+
+        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+        $sshFolderAcl.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($currentUser, $sshFolderRights, $inheritanceFlags, $propagationFlags, $allowance)))
+        $sshFolderAcl.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM", $sshFolderRights, $inheritanceFlags, $propagationFlags, $allowance)))
+        Set-Acl -Path $sshFolderPath -AclObject $sshFolderAcl
+
+        Write-Host "Setting permissions for the authorized_keys file..."
+        $authorizedKeysAcl = Get-Acl -Path $authorizedKeysPath
+        $authorizedKeysAcl.SetAccessRuleProtection($true, $false)
+
+        $authorizedKeysAcl.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($currentUser, $sshFolderRights, $inheritanceFlags, $propagationFlags, $allowance)))
+        $authorizedKeysAcl.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM", $sshFolderRights, $inheritanceFlags, $propagationFlags, $allowance)))
+        Set-Acl -Path $authorizedKeysPath -AclObject $authorizedKeysAcl
+
+        Write-Host "Permissions have been set successfully."
+    }
+    catch
+    {
+        Write-Error "An error occurred while setting permissions: $_"
+        exit 1
+    }
+}
+
+$server_ip = "192.168.7.225"
 
 # Ensure the script is running with administrative privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator"))
@@ -168,7 +293,8 @@ $InstalledCapability = Get-WindowsCapability -Online -Name OpenSSH.Server* | Whe
 
 if (-not$InstalledCapability)
 {
-    # Install OpenSSH feature if not already installed
+    # Install OpenSSH feature
+    Write-Host "Installing OpenSSH Server..."
     $Capability = Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0 -ErrorAction SilentlyContinue
     if (-not$Capability)
     {
@@ -209,19 +335,35 @@ else
     Write-Host "Scheduled task '$TaskName' not found. No action taken." -ForegroundColor Yellow
 }
 
-# Check if sshd service exists
+# Check if shd service exists
 $SshdService = Get-Service sshd -ErrorAction SilentlyContinue
 if (-not$SshdService)
 {
     Write-Host "sshd service not found. Restart your computer to complete the installation of the OpenSSH server and run the script again." -ForegroundColor Yellow
+    Write-Host "There may be a problem installing the service. If the problem persists, try running the script again." -ForegroundColor Red
     Read-Host "Press any key to stop the program"
     exit 1
 }
 
+
 # Start the sshd service
+Write-Host "Starting for the first time the sshd service..."
+Start-Service sshd
+
+Write-Host "Stopping the sshd service..."
+Stop-Service sshd
+
+Write-Host "Configuring OpenSSH Server..."
+Configure-OpenSSHServer
+Write-Host "OpenSSH Server has been configured successfully." -ForegroundColor Green
+Write-Host "Setting up the corrects rights for pubkey ssh authentification..."
+Set-RightsSSHServerFiles
+
+Write-Host "Restarting the sshd service..."
 Start-Service sshd
 
 # Start the service at each boot
+Write-Host "Setting the sshd service to start automatically at each boot..."
 Set-Service -Name sshd -StartupType 'Automatic'
 
 # Confirm the Firewall rule is configured. It should be created automatically by setup. Run the following to verify
@@ -238,55 +380,98 @@ Write-Output ""
 
 Write-Output "The OpenSSH Server has been installed and configured."
 
-# Check if rules for ping command are configured
-Check-And-Create-ICMPFirewallRule
-
-# Get the current admin username
-$admin_username = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-
 # Get the computer name
-$computer_name = (Get-WmiObject Win32_ComputerSystem).Name
+$computer_name = $env:COMPUTERNAME
 
-$adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
-$ipv4_address = (Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -PrefixOrigin Dhcp).IPAddress
-
-$mac = Get-InternetConnectedAdapterMacAddress
-
-$whoami = whoami
-
-# Prepare the data to send to the Python HTTP server
-$data = @{
-    "username" = $whoami;
-    "hostname"  = $computer_name;
-    "mac_address"   = $mac
-    "ipv4"  = $ipv4_address
-} | ConvertTo-Json
-
-$serverURL = "http://" + $server_ip + ":8000"
-
-Invoke-WebRequest -Uri $serverURL -Method POST -Body $data -ContentType "application/json"
-
-# Request the public key from the Python HTTP server
-$publicKeyURL = "http://"+ $server_ip +":8000/get_public_key/$computer_name"
-$publicKeyResponse = Invoke-WebRequest -Uri $publicKeyURL -Method GET
-
-# Save the received public key in the authorized_keys file
-$publicKey = $publicKeyResponse.Content
-
-Write-Host "Received public key from server: " + $publicKey
-Write-Host "Adding public key to authorized_keys file..."
-
-$sshDir = "$env:USERPROFILE\.ssh"
-if (-not(Test-Path $sshDir))
+try
 {
-    New-Item -ItemType Directory -Path $sshDir
+    $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
+    if ($null -eq $adapter)
+    {
+        Write-Host "No network adapter is up and running." -ForegroundColor Red
+        Read-Host "Press any key to stop the program"
+        exit 1
+    }
+    Write-Host "Using network adapter '$( $adapter.Name )' to retreive local ipv4 address..."
+    $ipv4_address = (Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -PrefixOrigin Dhcp).IPAddress
+    if ($null -eq $ipv4_address)
+    {
+        Write-Host "No IPv4 address found." -ForegroundColor Red
+        Read-Host "Press any key to stop the program"
+        exit 1
+    }
+
+    Write-Host "Local IPv4 address found: $ipv4_address" -ForegroundColor Green
+    Write-Host "Retreiving MAC address of the internet-connected adapter..."
+    $mac = Get-InternetConnectedAdapterMacAddress
+    if ($null -eq $mac)
+    {
+        Write-Host "No MAC address found for the internet-connected adapter." -ForegroundColor Red
+        Read-Host "Press any key to stop the program"
+        exit 1
+    }
+
+    Write-Host "MAC address found: $mac" -ForegroundColor Green
+    $whoami = whoami
+    $computer_name = $env:COMPUTERNAME
+
+    # Prepare the data to send to the Python HTTP server
+    $data = @{
+        "username" = $whoami;
+        "hostname" = $computer_name;
+        "mac_address" = $mac;
+        "ipv4" = $ipv4_address
+    } | ConvertTo-Json
+
+    Write-Host "Sending data to the Python HTTP server to register this pc on the database..."
+
+    $serverURL = "http://" + $server_ip + ":8000"
+
+    Invoke-WebRequest -Uri $serverURL -Method POST -Body $data -ContentType "application/json" -ErrorAction Stop
+
+    Write-Host "Data sent successfully." -ForegroundColor Green
+    Write-Host "Receiving public key from the Python HTTP server for automatic authentification..."
+    # Request the public key from the Python HTTP server
+    $publicKeyURL = "http://" + $server_ip + ":8000/get_public_key/$computer_name"
+    $publicKeyResponse = Invoke-WebRequest -Uri $publicKeyURL -Method GET -ErrorAction Stop
+
+    # Save the received public key in the authorized_keys file
+    $publicKey = $publicKeyResponse.Content
+    Write-Host "Public key received from server: " + $publicKey
+
+    if (-not(Test-IsPublicKeyValid $publicKey))
+    {
+        Write-Host "Invalid or empty public key received." -ForegroundColor Red
+        Read-Host "Press any key to stop the program"
+        exit 1
+    }
+
+    Write-Host "Public key seem valid." -ForegroundColor Green
+    Write-Host "Adding public key to authorized_keys file..."
+    $sshDir = "$env:USERPROFILE\.ssh"
+    if (-not(Test-Path $sshDir))
+    {
+        New-Item -ItemType Directory -Path $sshDir
+    }
+
+    $authorizedKeysPath = Join-Path $sshDir "authorized_keys"
+    Add-Content -Path $authorizedKeysPath -Value $publicKey
+
+    Write-Host "Public key added to authorized_keys file."
+    Write-Host "The server should be able to connect to this computer using SSH now."
+}
+catch
+{
+    Write-Host "Error: $( $_.Exception.Message )" -ForegroundColor Red
+    Read-Host "Press any key to stop the program"
+    exit 1
 }
 
-$authorizedKeysPath = Join-Path $sshDir "authorized_keys"
-Add-Content -Path $authorizedKeysPath -Value $publicKey
+# Check if rules for ping command are configured
+Write-Host "Checking if ICMP rules are configured..."
+Check-AndCreateICMPRule
+Write-Host "ICMP rules are configured."
 
-Write-Host "Public key added to authorized_keys file."
-Write-Host "The server should be able to connect to this computer using SSH now."
 
 # Enable Wake on LAN for Ethernet adapters that support it
 Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription -match "Ethernet" } | ForEach-Object {

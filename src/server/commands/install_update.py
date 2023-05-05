@@ -12,15 +12,13 @@ def update_all_computer(database: ComputerDatabase) -> None:
     :param database: The database containing all the computers, and the data object.
     """
 
-    log("Updating ip addresses database...")
-    database.refresh_ip_addresses()
-    log("Checking for updates on all pc...")
-
     max_workers = database.data.get_max_number_of_simultaneous_updates()
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Update all computers using threads
         computers: list[Computer] = database.get_computers()
         executor.map(update_computer, computers)
+
+    log("Update rollout over. Checks logs for more informations.")
 
 
 def update_computer(computer: Computer):

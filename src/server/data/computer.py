@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 import traceback
@@ -10,8 +9,8 @@ from src.server.commands.install_client_files_and_dependencies import python_scr
     python_path, python_packages, wait_for_ssh_shutdown
 from src.server.commands.path_functions import list_files_recursive, find_directory, change_directory_to_root_folder
 from src.server.config import Infos
-from src.server.ssh.ssh_commands import is_ssh_server_available, stdout_err_execute_ssh_command, manage_ssh_output, \
-    wait_and_reconnect
+from src.server.environnement.server_logs import ComputerLogger
+from src.server.ssh.ssh_commands import is_ssh_server_available, stdout_err_execute_ssh_command, wait_and_reconnect
 from src.server.wake_on_lan.wake_on_lan_utils import send_wol
 
 
@@ -45,10 +44,10 @@ class Computer:
         self.mac_address = computer_info.get("mac_address")
         self.username = computer_info.get("username")
 
-        self.__private_key: paramiko.PKey | None = None
+        self.__private_key: ed25519.Ed25519PrivateKey | None = None
         self.__public_key: ed25519.Ed25519PublicKey | None = None
 
-        self.private_key_filepath: str = os.path.join(find_directory("ssh_keys"), f"private_key_{self.hostname}.pem")
+        self.private_key_filepath: str = os.path.join(find_directory("ssh_keys"), f"private_key_{self.hostname}")
         self.public_key_filepath: str = os.path.join(find_directory("ssh_keys"), f"public_key_{self.hostname}.pub")
 
         self.check_informations_integrity()
@@ -137,7 +136,7 @@ class Computer:
             return False
 
     def is_pc_awake(self) -> bool:
-        if not is_ssh_server_available(computer=self, timeout=15):
+        if not is_ssh_server_available(computer=self, timeout=5):
             self.log("The pc is off.")
             return False
         self.log("The pc is on.")
@@ -161,11 +160,9 @@ class Computer:
         Turn on the pc to update windows.
         :return: True if the pc is on, False otherwise.
         """
-        self.log("Waking up the pc...")
-
         send_wol(mac_address=self.mac_address, ip_address=self.ipv4)
 
-        if not is_ssh_server_available(self, timeout=180):
+        if not is_ssh_server_available(self, timeout=20):
             self.log_error("Error, the pc is still off.")
             return False
 
@@ -184,7 +181,7 @@ class Computer:
     def install_update(self) -> bool:
         self.log("Installing update on the client...")
         result = self.__start_python_script()
-        if result is None:
+        if result is None or result is False:
             return False
 
         if result.lower() == "reboot":
@@ -192,7 +189,7 @@ class Computer:
             return self.wait_for_pc_to_be_online_again()
         return True
 
-    def __start_python_script(self):
+    def __start_python_script(self) -> str | bool:
         self.log("Starting the python script...")
         command: str = "cd " + Infos.PROJECT_NAME + " && python " + self.get_main_script_path()
 
@@ -200,7 +197,17 @@ class Computer:
 
         self.log("Python script started.")
 
-        return manage_ssh_output(stderr, stdout)
+        if stderr:
+            self.log_error("Error while starting the python script:")
+            return False
+        if "Traceback" in stdout:
+            self.log_error(f"Error while starting the python script:\n\n{stdout}")
+            return False
+        if stdout:
+            self.log(f"Stdout : \n{stdout}")
+            return stdout
+        self.log_error("Error, the python script returned nothing.")
+        return False
 
     def shutdown(self):
         """
@@ -299,7 +306,7 @@ class Computer:
             return None
 
         if self.__private_key is None:
-            self.__private_key = paramiko.RSAKey.from_private_key_file(self.private_key_filepath)
+            self.__private_key = paramiko.Ed25519Key.from_private_key_file(self.private_key_filepath)
         return self.__private_key
 
     def get_public_key(self):
@@ -366,100 +373,3 @@ class Computer:
         str_repr += "\tmac_address: " + self.mac_address + "\n"
         str_repr += "\tusername: " + self.username + "\n"
         return str_repr
-
-
-
-
-class ComputerLogger:
-    """
-    Class to log messages from a computer.
-    It is used to log messages of a computer in a file, and to display them in the console.
-    """
-
-    def __init__(self, logs_filename: str, new_msg_header: str = "New computer session"):
-        self.logs_filename = logs_filename
-        self.logger = self.setup_logger(new_msg_header=new_msg_header)
-        self.current_log_message: str = ""
-
-    def setup_logger(self, new_msg_header: str) -> logging.Logger:
-        logger = logging.getLogger(self.logs_filename)
-        logger.setLevel(logging.INFO)
-
-        if not logger.handlers:
-            file_handler = logging.FileHandler(filename=self.logs_filename, encoding="utf-8")
-            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-            file_handler.setFormatter(formatter)
-            logger.addHandler(file_handler)
-
-        self.setup_log_file(new_msg_header=new_msg_header)
-
-        return logger
-
-    def log(self, message: str, level: str = "info", new_lines: int = 0) -> None:
-        message = "\n" * new_lines + message
-        if level.lower() == "info":
-            self.logger.info(message)
-        elif level.lower() == "warning":
-            self.logger.warning(message)
-        elif level.lower() == "error":
-            self.logger.error(message)
-        elif level.lower() == "critical":
-            self.logger.critical(message)
-        else:
-            self.logger.debug(message)
-
-    def close_logger(self) -> None:
-        for handler in self.logger.handlers:
-            handler.close()
-            self.logger.removeHandler(handler)
-
-    def add_log_memory(self, message: str = "") -> None:
-        self.current_log_message += message + "\n"
-
-    def log_from_memory(self, level: str = "info") -> None:
-        self.log(message=self.current_log_message, level=level)
-        self.current_log_message = ""
-
-    @staticmethod
-    def get_header_style_string(header_txt: str) -> str:
-        width = len(header_txt) * 4
-        edge = "═" * width
-        padding = " " * 3  # Add 3 spaces for padding
-
-        header = f"╔{edge}╗\n║{padding}{header_txt.center(width - 6)}{padding}║\n╚{edge}╝"
-        return header
-
-    def setup_log_file(self, new_msg_header: str) -> None:
-        write_lines: bool = False
-        with open(self.logs_filename, "r", encoding="utf-8") as f:
-            if len(f.read()) > 1:
-                write_lines = True
-
-        if write_lines:
-            with open(self.logs_filename, "a", encoding="utf-8") as f:
-                f.write("\n\n")
-
-        # Write the header
-        with open(self.logs_filename, "a", encoding="utf-8") as f:
-            f.write(self.get_header_style_string(header_txt=new_msg_header) + "\n")
-
-    def log_add_vertical_space(self, new_lines: int = 1):
-        """
-        To make the logs more readable, add a vertical space in the log file and in the console.
-        :param new_lines: The number of new lines to add.
-        :return: Nothing.
-        """
-        with open(self.logs_filename, "a", encoding="utf-8") as f:
-            new_lines: str = "\n" * new_lines
-            f.write(new_lines)
-
-        print(new_lines.split("\n").pop(0))
-
-    def log_raw(self, param):
-        """
-        Log a raw object, without the formatter.
-        :param param: The object to log.
-        :return: Nothing.
-        """
-        with open(self.logs_filename, "a", encoding="utf-8") as f:
-            f.write(str(param) + "\n")

@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import socket
 import sys
 
@@ -75,7 +76,7 @@ def print_log_setup():
     log_new_lines()
 
     log("Please, make sure that all computers are connected to the same network.", print_formatted=False)
-    log("The software will await you to install the client setup (powershell script) on each pc"
+    log("The software will await you to install the client setup (powershell script) on each pc "
         "you desire to automate the update on.", print_formatted=False)
 
     log("A http server will be created temporarily to allow the client to send connexion data to the server.")
@@ -121,8 +122,9 @@ def server_setup() -> bool:
     log("Starting setup...", print_formatted=False)
     log("Scanning network... and setting up http server...", print_formatted=False)
 
+    log_new_lines()
     log("Please press ctrl+c to stop the http server and continue the setup process once all desired computers has "
-        "been registered...")
+        "been registered...", print_formatted=False)
 
     if not run_server():
         log_error("Error with the http server. The database may be empty, or something else went wrong.")
@@ -240,17 +242,21 @@ def update_powershell_client_script_ip(ip: str):
 
     try:
         powershell_file = find_file(Infos.powershell_client_script_installer_name)
-        with open(powershell_file, "r") as f:
-            powershell_script: str = f.read()
 
-        powershell_script = powershell_script.replace("$server_ip = \"\"", f"$server_ip = \"{ip}\"")
+        # Read the existing PowerShell script
+        with open(powershell_file, 'r') as f:
+            powershell_script = f.read()
 
-        with open(powershell_file, "w") as f:
+        # Replace the existing IP address or set a new one
+        powershell_script = re.sub(r'\$server_ip\s*=\s*".*"', f'$server_ip = "{ip}"', powershell_script)
+
+        # Write the updated script to the file
+        with open(powershell_file, 'w') as f:
             f.write(powershell_script)
 
-        log(f"Powershell script updated successfully with the {ip} ip address as server.", print_formatted=False)
+        log(f"Powershell script updated successfully with the {ip} IP address as server.", print_formatted=False)
     except FileNotFoundError:
         log_error("Failed to update the powershell script. Make sure you run this script with administrative "
                   "privileges.\nFurthermore, make sure that the powershell script name "
-                  f"{Infos.powershell_client_script_installer_name} exists in the {Infos.PROJECT_NAME} root " "folder.")
+                  f"{Infos.powershell_client_script_installer_name} exists in the {Infos.PROJECT_NAME} root folder.")
         raise FileNotFoundError

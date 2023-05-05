@@ -6,6 +6,7 @@ from src.server.data.computer import Computer
 from src.server.data.local_network_data import Data
 from threading import Lock
 
+from src.server.environnement.server_logs import log_error
 from src.server.ssh.ssh_keygen import gen_keys_and_save_them
 
 
@@ -70,11 +71,19 @@ class ComputerDatabase:
         Refresh the local ip adresses of all the computers in the database.
         :return: None
         """
-        # TODO: A tester ?
+        at_least_one_online: bool = False
         for computer in self.__computers:
-            computer.ipv4 = socket.gethostbyname(computer.hostname)
+            try:
+                computer.ipv4 = socket.gethostbyname(computer.hostname)
+                at_least_one_online = True
+            except socket.gaierror:
+                log_error(f"Cannot find the ip address of the computer {computer.hostname}. It might be offline.")
+                continue
 
-        self.save_computer_data()
+        if at_least_one_online:
+            self.save_computer_data()
+        else:
+            raise ConnectionError("Cannot find any computer on the local network. Please check your connection.")
 
     def refresh_ip_address(self, host: str, new_host: dict) -> None:
         if host in self.computers_json:

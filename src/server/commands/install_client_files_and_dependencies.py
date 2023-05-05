@@ -167,10 +167,10 @@ def add_python_to_path(computer: 'Computer') -> bool:
     stdout, stderr = stdout_err_execute_ssh_command(ssh, path_add_command)
 
     if stderr is not None and (stderr and not stdout or "error" in stderr.lower()):
-        print("Error, could not add python to path : " + stderr)
+        computer.log_error("Error, could not add python to path : " + stderr)
         return False
     if stdout:
-        print(STDOUT_MESSAGE + stdout)
+        computer.log_error(STDOUT_MESSAGE + stdout)
     return True
 
 
@@ -236,7 +236,7 @@ def install_python(computer: 'Computer') -> bool:
     if not python_installer_installed:
         return False
 
-    print("\nInstalling Python...")
+    computer.log("\nInstalling Python...")
 
     # Get the path to the python script that will install python
     path_update_guardian: str = computer.get_project_directory_on_client()
@@ -252,14 +252,14 @@ def install_python(computer: 'Computer') -> bool:
 
     if stderr:
         computer.add_log_memory("Error, could not install python : " + stderr)
-        print("command : " + command)
-        print("Python update guardian variable : " + path_update_guardian)
+        computer.log_error("command : " + command)
+        computer.log_error("Python update guardian variable : " + path_update_guardian)
         return False
 
     if stdout:
-        print(STDOUT_MESSAGE + stdout)
+        computer.log(STDOUT_MESSAGE + stdout)
 
-    print("Python installed.")
+    computer.log("Python installed.")
 
     return True
 
@@ -298,7 +298,7 @@ def wait_for_ssh_shutdown(computer: 'Computer') -> None:
 
 
 def refresh_env_variables(computer: 'Computer') -> bool:
-    print("Rebooting remote computer...")
+    computer.log("Rebooting remote computer...")
     ssh: paramiko.SSHClient = computer.ssh_session
     reboot_remote_pc(ssh)
     ipaddress, remote_user, remote_computer_private_key = computer.ipv4, computer.username, computer.get_private_key()

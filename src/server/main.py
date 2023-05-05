@@ -44,12 +44,11 @@ def launch_software() -> None:
     scheduler.start()
 
     try:
-        while True:
-            time.sleep(20)  # Sleep for 20 seconds, then check again if the scheduled time has been reached.
+        while not stopped:
+            time.sleep(2)  # Sleep for 2 seconds, then check again if the scheduled time has been reached.
     except (KeyboardInterrupt, SystemExit):
         scheduler.shutdown()
         log("Program stopped.")
-        sys.exit(0)
 
 
 def force_start_execute_job():
@@ -70,7 +69,7 @@ def settings_thread() -> None:
         scheduled_time = get_launch_time()
 
         day, hour = scheduled_time['day'], scheduled_time['hour']
-        print(f"The program is scheduled to start every {day} at {hour}:00.\n")
+        print(f"\nThe program is scheduled to start every {day} at {hour}:00.\n")
         print("Type 'modify' to modify settings.")
         print("Type 'force' to force start the scheduled task.")
         print("Type 'exit' to exit the program.\n")
@@ -89,8 +88,6 @@ def settings_thread() -> None:
 
 
 def main_loop() -> None:
-    setup_data = Data()
-
     if not server_setup():
         exit(1)
 
