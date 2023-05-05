@@ -64,7 +64,7 @@ def check_python_installed(computer: 'Computer') -> bool:
             computer.log(f"Python executable {executable} exists")
             return True
 
-    computer.log_error("Failed to find python executable.")
+    computer.log("Failed to find python executable.", level="warning")
     return False
 
 
@@ -202,7 +202,12 @@ def check_python_path_set(computer: 'Computer') -> bool:
         if stdout3:
             computer.log("Pip is installed")
             return True
-        computer.log_error("Error, pip is not installed : " + stderr3)
+        if stderr3:
+            computer.log_error("Error, pip is not installed : " + stderr3)
+        else:
+            computer.log_error("Error, pip is not installed and there is no error message."
+                               "Make sure that python is installed correctly. You may have to reinstall it "
+                               "manually. Also, please check the path.")
         return False
     else:
         computer.log_error("Python is not set correctly in path, because it may be there despite the fact that it is"

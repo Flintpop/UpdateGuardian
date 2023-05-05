@@ -12,6 +12,7 @@ from src.server.config import Infos
 from src.server.environnement.server_logs import ComputerLogger
 from src.server.ssh.ssh_commands import is_ssh_server_available, stdout_err_execute_ssh_command, wait_and_reconnect
 from src.server.wake_on_lan.wake_on_lan_utils import send_wol
+from src.server.warn_admin.mails import send_error_email
 
 
 class Computer:
@@ -33,11 +34,8 @@ class Computer:
     Close_logger()
         Closes the logger for the computer.
     """
-    _id_counter = 0
 
     def __init__(self, computer_info: dict) -> None:
-        Computer._id_counter += 1
-        self.id = Computer._id_counter
 
         self.hostname = computer_info.get("hostname")
         self.ipv4 = computer_info.get("ipv4")
@@ -58,12 +56,14 @@ class Computer:
         change_directory_to_root_folder()
         self.logs_filename = "logs"
         self.logs_filename = os.path.join(self.logs_filename,
-                                          f"{self.hostname}-{Computer._id_counter}.log")
+                                          f"{self.hostname}.log")
 
         self.computer_logger = ComputerLogger(self.logs_filename)
 
         self.ssh_session: paramiko.SSHClient | None = None
         self.current_log_message: str = ""
+
+        self.updated_successfully: bool = False
 
     def update(self) -> bool:
         # noinspection PyBroadException
@@ -90,17 +90,17 @@ class Computer:
             if not self.shutdown():
                 return self.log_error("Could not shutdown client.")
 
+            self.updated_successfully = True
             return True
-        except Exception:
+        except Exception as e:
             self.log_add_vertical_space(2)
             self.log_raw("\n" + ComputerLogger.get_header_style_string("ERROR"))
             self.log_error(f"Unhandled error. Could not update computer {self.hostname}: ")
             self.log_add_vertical_space(1)
             trace_back_str: str = traceback.format_exc()
             self.log_error(f"Here is the traceback:\n{trace_back_str}")
-            # string: str = "Unhandled error. Could not update computer " + self.hostname
-            # string += f"\nHere is the traceback:\n{trace_back_str}"
-            # send_mail("Unhandled error. Could not update computer " + self.hostname, string)
+            if Infos.email_send:
+                send_error_email(computer=self, error=str(e), traceback=trace_back_str)
 
     def connect(self):
         self.log(message="Connecting to computer...")
@@ -366,6 +366,10 @@ class Computer:
 
     def close_logger(self):
         self.computer_logger.close_logger()
+
+    def remove_keys(self):
+        os.remove(self.private_key_filepath)
+        os.remove(self.public_key_filepath)
 
     def __str__(self):
         str_repr = f"Computer {self.hostname}:\n"

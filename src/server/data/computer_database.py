@@ -2,12 +2,14 @@ import json
 import socket
 
 from src.server.commands.path_functions import find_file, change_directory_to_root_folder
+from src.server.config import Infos
 from src.server.data.computer import Computer
 from src.server.data.local_network_data import Data
 from threading import Lock
 
 from src.server.environnement.server_logs import log_error
 from src.server.ssh.ssh_keygen import gen_keys_and_save_them
+from src.server.warn_admin.mails import load_email_infos
 
 
 class ComputerDatabase:
@@ -28,6 +30,7 @@ class ComputerDatabase:
         self.data = Data()
         self.__computers: list[Computer] = []
         self.computers_json: dict = {}
+        Infos.email_send = load_email_infos()
 
     def add_computer(self, computer: Computer) -> None:
         self.__computers.append(computer)
@@ -49,6 +52,7 @@ class ComputerDatabase:
     def remove_computer(self, hostname: str) -> bool:
         for computer in self.__computers:
             if computer.hostname == hostname:
+                computer.remove_keys()
                 self.__computers.remove(computer)
                 self.computers_json.pop(hostname)
                 return True
@@ -160,9 +164,25 @@ class ComputerDatabase:
             new_computer = Computer(new_computer_dict)
             computer_database.add_computer(new_computer)
 
-
     def get_number_of_computers(self) -> int:
         return len(self.__computers)
+
+    def get_successfully_number_of_updated_computers(self) -> int:
+        res = 0
+        for computer in self.__computers:
+            if computer.updated_successfully:
+                res += 1
+
+        return res
+
+
+    def get_not_updated_computers(self):
+        res = []
+        for computer in self.__computers:
+            if not computer.updated_successfully:
+                res.append(computer)
+
+        return res
 
     def __str__(self) -> str:
         string_representation = "########## Computer Database ##########\n\n"
