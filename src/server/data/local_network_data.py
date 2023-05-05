@@ -36,10 +36,6 @@ class Data:
         else:
             self.data_json = json_data
 
-        data_check: bool = self.__check_json_integrity()
-        if not data_check:
-            raise ValueError("Le fichier JSON est invalide.")
-
     def __load_data(self, filename: str = find_file("setup_informations.json")):
         # Ouvrir le fichier JSON en mode lecture
         with open(filename, 'r', encoding='utf-8') as fichier:
@@ -56,72 +52,6 @@ class Data:
             return True
         except ipaddress.AddressValueError:
             return False
-
-    def __check_json_integrity(self) -> bool:
-        if not self.check_fields_required():
-            return False
-
-        if not self.check_fields_length():
-            return False
-
-        # Vérifier l'intégrité des adresses IP
-        subnet_mask = self.data_json["subnet_mask"]
-        taken_ips = self.data_json["taken_ips"]
-
-        for host in self.data_json["remote_host"]:
-            if not self.__is_valid_ipv4_address(host):
-                print(f"L'adresse IP {host} n'est pas valide.")
-                return False
-
-            # Vérifier si l'adresse IP est dans la plage autorisée
-            ip_parts = host.split(".")
-            if not (ip_parts[0] == "192" and ip_parts[1] == "168" and ip_parts[2] == subnet_mask and 1 <= int(
-                    ip_parts[3]) <= 255):
-                print(f"The ip address {host} is not in the authorized range. For now only 192.168.x.xxx work")
-                return False
-
-            # Vérifier si l'adresse IP n'est pas déjà prise
-            if host in taken_ips:
-                print(f"IP address {host} is already taken.")
-                return False
-
-        ip_pool: list[str] = self.data_json["ip_pool_range"]
-        cond: bool = len(ip_pool) == 2
-        cond = cond and self.__is_valid_ipv4_address(ip_pool[0])
-        cond = cond and self.__is_valid_ipv4_address(ip_pool[1])
-        cond = cond and int(ip_pool[0].split(".")[3]) < int(ip_pool[1].split(".")[3])
-
-        if not cond:
-            print("Please, enter a valid IP range. 2 IPv4 values are required in the 192.168 format.")
-            print("The first ip must be lower than the third.")
-            return False
-        return True
-
-    def check_fields_required(self):
-        # Vérifier la présence des champs requis
-        # TODO: Enlever les champs inutiles :
-        #  - remote_user
-        #  - remote_host
-        required_fields = ["remote_user", "remote_host", "max_computers_per_iteration",
-                           "subnet_mask", "taken_ips", "python_client_script_path", "ip_pool_range"]
-
-        for field in required_fields:
-            if field not in self.data_json:
-                print(f"Lacking field in the json file : {field}")
-                return False
-        return True
-
-    def check_fields_length(self) -> bool:
-        # Vérifier l'intégrité des longueurs des listes
-        if len(self.data_json["remote_user"]) != len(self.data_json["remote_host"]):
-            print("Length list of remote_user and remote_host are not equal.")
-            print("Please, enter the same number of remote_user and remote_host.")
-            return False
-
-        if len(self.data_json["remote_user"]) == 0:
-            print("No remote_user found. Please enter at least one remote_user.")
-            return False
-        return True
 
     def get_max_number_of_simultaneous_updates(self) -> int:
         return self.data_json.get("max_computers_per_iteration")

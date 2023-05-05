@@ -28,7 +28,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
     Class that handles the HTTP requests so that the server can receive the whoami command and send the SSH public
     keys to the clients.
     """
-    computer_database: ComputerDatabase = ComputerDatabase()
+    computer_database: ComputerDatabase = ComputerDatabase.load_computer_data_if_exists()
 
     # noinspection PyPep8Naming
     def do_POST(self):
@@ -126,5 +126,5 @@ def run_server(server_class=HTTPServer, handler_class=MyRequestHandler, port=800
 
     log("Saving database...", print_formatted=False)
     log(f"The database looks like this: \n{MyRequestHandler.computer_database}", print_formatted=False)
-    ComputerDatabase.save_computer_data(MyRequestHandler.computer_database.computers_json)
+    MyRequestHandler.computer_database.save_computer_data(MyRequestHandler.computer_database.computers_json)
     return True

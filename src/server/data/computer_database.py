@@ -50,6 +50,7 @@ class ComputerDatabase:
         for computer in self.__computers:
             if computer.hostname == hostname:
                 self.__computers.remove(computer)
+                self.computers_json.pop(hostname)
                 return True
         return False
 
@@ -89,8 +90,7 @@ class ComputerDatabase:
         if host in self.computers_json:
             self.computers_json[host]["ip"] = new_host[host]["ip"]
 
-    @classmethod
-    def save_computer_data(cls, hosts=None) -> None:
+    def save_computer_data(self, hosts=None) -> None:
         """
         Save the computers data in the computers_database.json file.
         Creates a backup of the file before saving, just in case.
@@ -101,38 +101,57 @@ class ComputerDatabase:
         if hosts is not None:
             # Save the new data to the file
             change_directory_to_root_folder()
-            with open(cls.json_computers_database_filename, "w") as f:
+            with open(self.json_computers_database_filename, "w") as f:
                 json.dump(hosts, f, indent=4)
                 return
 
         with ComputerDatabase.computer_database_lock:
             try:
-                with open(find_file(cls.json_computers_database_filename), 'r') as file:
+                with open(find_file(self.json_computers_database_filename), 'r') as file:
                     current_data = json.load(file)
             except FileNotFoundError:
-                raise FileNotFoundError("Cannot find the file 'computers_database.json'. It should have been created "
-                                        "at the setup phase. Please check the setup process, and restart the program."
-                                        "You can try deleting the file 'computers_database.json' (make a backup first)"
-                                        ". The program will create a new one."
-                                        "You can try copy paste the old information into the new file.")
+                raise FileNotFoundError(f"Cannot find the file {self.json_computers_database_filename}. "
+                                        f"It should have been created " "at the setup phase. Please check the setup "
+                                        "process, and restart the program.You can try deleting the file "
+                                        f"'{self.json_computers_database_filename}' (make a backup first). "
+                                        f"The program will create a " "new one.You can try copy paste the old "
+                                        "information into the new file.")
 
             # Save the current data as a backup
             with open("computers_database_backup.json", 'w') as backup_file:
                 json.dump(current_data, backup_file, indent=4)
 
             # Save the new data to the file
-            with open(find_file(cls.json_computers_database_filename), "w") as f:
-                json.dump(current_data, f, indent=4)
+            with open(find_file(self.json_computers_database_filename), "w") as f:
+                json.dump(self.computers_json, f, indent=4)
 
     @classmethod
     def load_computer_data(cls) -> "ComputerDatabase":
         computer_database = ComputerDatabase()
         computers_data_json_file = find_file(cls.json_computers_database_filename)
         if computers_data_json_file is None:
-            raise FileNotFoundError("Cannot find the file 'computers_database.json'. It should have been created at the"
-                                    "setup phase. Please check the setup process, and restart the program.")
+            raise FileNotFoundError(f"Cannot find the file '{cls.json_computers_database_filename}'. "
+                                    f"It should have been created at the" "setup phase. Please check the setup process,"
+                                    " and restart the program.")
 
-        with open(find_file("computers_database.json"), "r") as file:
+        cls.__load_computers_from_json(computer_database, computers_data_json_file)
+
+        return computer_database
+
+    @classmethod
+    def load_computer_data_if_exists(cls):
+        computer_database = ComputerDatabase()
+        computers_data_json_file = find_file(cls.json_computers_database_filename)
+        if computers_data_json_file is None:
+            return computer_database
+
+        cls.__load_computers_from_json(computer_database, computers_data_json_file)
+
+        return computer_database
+
+    @classmethod
+    def __load_computers_from_json(cls, computer_database: "ComputerDatabase", json_file_path: str) -> None:
+        with open(json_file_path, "r") as file:
             computer_database.computers_json = json.loads(file.read())
 
         # Add all the computers to the database, using the Computer class.
@@ -141,7 +160,9 @@ class ComputerDatabase:
             new_computer = Computer(new_computer_dict)
             computer_database.add_computer(new_computer)
 
-        return computer_database
+
+    def get_number_of_computers(self) -> int:
+        return len(self.__computers)
 
     def __str__(self) -> str:
         string_representation = "########## Computer Database ##########\n\n"

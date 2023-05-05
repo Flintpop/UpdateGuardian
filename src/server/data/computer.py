@@ -269,7 +269,7 @@ class Computer:
         Get the home directory on the client. It supposes that the home directory is in "C:\\Users\\" on Windows.
         :return: The string of the home directory on the client.
         """
-        return "C:\\Users\\" + self.username
+        return "C:\\Users\\" + self.username.split("\\")[1]
 
     @staticmethod
     def get_list_client_files_to_send() -> list[str]:

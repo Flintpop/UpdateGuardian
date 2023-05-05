@@ -1,4 +1,3 @@
-import sys
 import time
 import threading
 import warnings
@@ -8,7 +7,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from src.server.commands.install_update import update_all_computer
 from src.server.data.computer_database import ComputerDatabase
-from src.server.data.local_network_data import Data
 from src.server.environnement.modify_settings import modify_settings
 from src.server.environnement.setup import server_setup, get_launch_time
 from src.server.environnement.server_logs import log, log_new_lines
@@ -57,7 +55,6 @@ def force_start_execute_job():
 
 def stop_code():
     global stopped
-    log("Program stopped.")
     stopped = True
 
 

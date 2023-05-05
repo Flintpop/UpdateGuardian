@@ -138,10 +138,7 @@ def load_launch_time() -> dict:
         return json.load(file)
 
 
-def get_launch_time() -> dict[str, str]:
-    if find_file(launch_infos_filename):
-        return load_launch_time()
-
+def ask_and_save_launch_time():
     days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
     while True:
@@ -174,6 +171,13 @@ def get_launch_time() -> dict[str, str]:
         json.dump(launch_time, file, indent=4)
 
     return launch_time
+
+
+def get_launch_time() -> dict[str, str]:
+    if find_file(launch_infos_filename):
+        return load_launch_time()
+
+    return ask_and_save_launch_time()
 
 
 def check_if_setup_needed() -> bool:
