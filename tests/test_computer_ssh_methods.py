@@ -8,7 +8,7 @@ class TestComputerSSHMethods(unittest.TestCase):
         # For this test to work, please create a file called password_test.txt in the tests/tests_data folder.
         # This file should contain the password of your computer. Make sure you have openssh server installed.
         computer_database = ComputerDatabase.load_computer_data()
-        self.computer = computer_database.get_computer(1)
+        self.computer = computer_database.get_computer(0)
         self.project_path = self.computer.get_project_directory_on_client()
 
         self.computer.connect()

@@ -106,9 +106,6 @@ def find_directory(directory_name: str, root_folder='.', already_called=False) -
 
 
 def list_files_recursive(directory: str) -> list[str]:
-    # if not is_path_valid(directory):
-    #     raise ValueError(f"Path {directory} is not valid")
-
     all_files = []
 
     for root, _, files in os.walk(directory):

@@ -67,9 +67,7 @@ class ComputerDatabase:
         return self.__computers
 
     def get_computer(self, index: int) -> Computer:
-        for computer in self.__computers:
-            if computer.id == index:
-                return computer
+        return self.__computers[index]
 
     def refresh_ip_addresses(self) -> None:
         """

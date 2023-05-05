@@ -7,8 +7,6 @@ import paramiko
 
 from typing import TYPE_CHECKING
 
-from cryptography.hazmat.backends.openssl import ed25519
-
 if TYPE_CHECKING:
     from src.server.data.computer import Computer
 
@@ -64,6 +62,7 @@ def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float
     :param computer: The computer to test the ssh server availability.
     :param port: The port to test the ssh server availability.
     :param timeout: The timeout to test the ssh server availability.
+    :param print_log_connected: If True, the computer will log when it is connected to the ssh server.
     :return: True if the ssh server is available on the computer, False otherwise.
     """
     ip: str = computer.ipv4
