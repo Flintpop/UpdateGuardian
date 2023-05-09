@@ -70,20 +70,22 @@ def check_all_files_integrity():
 
 
 def print_log_setup():
-    log_new_lines()
+    log_new_lines(print_in_console=True)
     log(
         "Welcome to the Windows Update Server Setup. This software will help you to install Windows Update on "
         "all computers of your network.", print_formatted=False)
 
-    log_new_lines()
+    log_new_lines(print_in_console=True)
 
     log("Please, make sure that all computers are connected to the same network.", print_formatted=False)
     log("The software will await you to install the client setup (powershell script) on each pc "
         "you desire to automate the update on.", print_formatted=False)
 
-    log("A http server will be created temporarily to allow the client to send connexion data to the server.")
+    log_new_lines(print_in_console=True)
+    log("A http server will be created temporarily to allow the client to send connexion data to the server.",
+        print_formatted=False)
 
-    log_new_lines()
+    log_new_lines(print_in_console=True)
 
     log("Please, enter (y) when you are ready to start the setup, 'exit' to cancel.", print_formatted=False)
     print()
@@ -120,11 +122,11 @@ def server_setup() -> bool:
         if usr_input != "y":
             log_error("Error: Invalid input. Please enter 'y' to continue, or 'exit' to cancel.", print_formatted=False)
 
-    log_new_lines()
+    log_new_lines(print_in_console=True)
     log("Starting setup...", print_formatted=False)
     log("Scanning network... and setting up http server...", print_formatted=False)
 
-    log_new_lines()
+    log_new_lines(print_in_console=True)
     log("Please press ctrl+c to stop the http server and continue the setup process once all desired computers has "
         "been registered...", print_formatted=False)
 

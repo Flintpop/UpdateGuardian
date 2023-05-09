@@ -433,7 +433,7 @@ try
     Write-Host "Receiving public key from the Python HTTP server for automatic authentification..."
     # Request the public key from the Python HTTP server
     $publicKeyURL = "http://" + $server_ip + ":8000/get_public_key/$computer_name"
-    $publicKeyResponse = Invoke-WebRequest -Uri $publicKeyURL -Method GET -ErrorAction Stop
+    $publicKeyResponse = Invoke-WebRequest -Uri $publicKeyURL -Method GET -UseBasicParsing -ErrorAction Stop
 
     # Save the received public key in the authorized_keys file
     $publicKey = $publicKeyResponse.Content
