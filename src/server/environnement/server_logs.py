@@ -1,7 +1,7 @@
 import logging
 import os
 
-from src.server.commands.path_functions import change_directory_to_root_folder
+from src.server.commands.path_functions import change_directory_to_root_folder, find_directory
 
 
 class ComputerLogger:
@@ -16,6 +16,9 @@ class ComputerLogger:
         self.current_log_message: str = ""
 
     def setup_logger(self, new_msg_header: str) -> logging.Logger:
+        if find_directory("logs") is None:
+            os.mkdir("logs")
+
         logger = logging.getLogger(self.logs_filename)
         logger.setLevel(logging.INFO)
 

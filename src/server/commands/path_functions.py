@@ -105,7 +105,7 @@ def find_file(filename: str, root_folder=None, already_called=False, show_print=
     return find_file(filename, root_folder, True, show_print=show_print)
 
 
-def find_directory(directory_name: str, root_folder=None, already_called=False) -> str:
+def find_directory(directory_name: str, root_folder=None, already_called=False) -> str | None:
     if root_folder is None:
         root_folder = get_resource_path('')
 
@@ -119,8 +119,9 @@ def find_directory(directory_name: str, root_folder=None, already_called=False) 
                 return os.path.join(root, directory)
 
     if already_called:
-        raise FileNotFoundError(f"Directory '{directory_name}' not found in the root folder '{root_folder}'"
-                                f" and its subdirectories.")
+        print(f"Directory '{directory_name}' not found in the root folder '{root_folder}' and its subdirectories.")
+        return None
+
     change_directory_to_root_folder()
     return find_directory(directory_name, root_folder, True)
 
