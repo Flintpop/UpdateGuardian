@@ -113,8 +113,21 @@ def find_directory(directory_name: str, root_folder=None, already_called=False) 
         root_folder = os.getcwd()
         return root_folder
 
+    excluded_dirs = ["__pycache__", ".git", ".idea", ".vscode", "venv", ".gitignore", "__init__.py", ".github",
+                     "build", "dist"]
+
+    skip = False
     for root, dirs, files in os.walk(root_folder):
         for directory in dirs:
+            if directory in excluded_dirs:
+                continue
+            for excluded_dir in excluded_dirs:
+                if os.path.sep + excluded_dir + os.path.sep in os.path.join(root, directory):
+                    skip = True
+                    break
+            if skip:
+                skip = False
+                continue
             if directory == directory_name:
                 return os.path.join(root, directory)
 
