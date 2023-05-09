@@ -1,6 +1,10 @@
 import time
 import threading
 import warnings
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))  # Change to the script's directory
+# noinspection PyUnresolvedReferences
+import add_paths  # Import and execute add_paths.py to update sys.path
 
 from pytz_deprecation_shim import PytzUsageWarning
 from apscheduler.schedulers.background import BackgroundScheduler

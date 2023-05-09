@@ -1,5 +1,6 @@
 import os.path
 import re
+import sys
 
 from src.server.config import Infos
 
@@ -44,27 +45,38 @@ def go_back_n_dir(path: str, n: int) -> str:
     return path
 
 
+def get_resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        # noinspection PyProtectedMember
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath('.'), relative_path)
+
+
 def change_directory_to_root_folder() -> None:
     current_directory: str = os.getcwd()
     if current_directory.endswith(Infos.PROJECT_NAME):
         return
+
     if os.name == 'nt':
         cond = "\\" + Infos.PROJECT_NAME + "\\" not in os.getcwd()
     else:
         cond = "/" + Infos.PROJECT_NAME + "/" not in os.getcwd()
+
     if cond:
         print("Name of the project not found in the current nested directory. Please change directory to the "
               "root folder containing the name of the project.")
         raise EnvironmentError("Name of the project not found in the current nested directory.")
 
     print("Changing directory to the root folder...")
-    project_directory = os.path.join(current_directory.split(Infos.PROJECT_NAME)[0], Infos.PROJECT_NAME)
+    root_folder = get_resource_path('')
+    root_folder_str = root_folder.decode('utf-8') if isinstance(root_folder, bytes) else root_folder
+    project_directory = os.path.join(root_folder_str.split(Infos.PROJECT_NAME)[0], Infos.PROJECT_NAME)
 
     # Change the working directory to the project_directory
     os.chdir(project_directory)
 
 
-def find_file(filename: str, root_folder='.', already_called=False, show_print=True) -> str | None:
+def find_file(filename: str, root_folder=None, already_called=False, show_print=True) -> str | None:
     """
     Find a file in the project root folder and its subdirectories.\n
     **Note**: If the file is not found in the root folder, the function will change the working directory to the root
@@ -76,6 +88,9 @@ def find_file(filename: str, root_folder='.', already_called=False, show_print=T
     :param show_print: To print if file not found
     :return: The relative path to the file if found, None otherwise
     """
+    if root_folder is None:
+        root_folder = get_resource_path('')
+
     for root, dirs, files in os.walk(root_folder):
         for file in files:
             if file == filename:
@@ -90,14 +105,19 @@ def find_file(filename: str, root_folder='.', already_called=False, show_print=T
     return find_file(filename, root_folder, True, show_print=show_print)
 
 
-def find_directory(directory_name: str, root_folder='.', already_called=False) -> str:
+def find_directory(directory_name: str, root_folder=None, already_called=False) -> str:
+    if root_folder is None:
+        root_folder = get_resource_path('')
+
     if os.getcwd().endswith(Infos.PROJECT_NAME) and directory_name == Infos.PROJECT_NAME:
         root_folder = os.getcwd()
         return root_folder
+
     for root, dirs, files in os.walk(root_folder):
         for directory in dirs:
             if directory == directory_name:
                 return os.path.join(root, directory)
+
     if already_called:
         raise FileNotFoundError(f"Directory '{directory_name}' not found in the root folder '{root_folder}'"
                                 f" and its subdirectories.")
