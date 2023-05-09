@@ -20,7 +20,14 @@ from src.server.data.computer_database import ComputerDatabase
 from src.server.environnement.server_logs import log, log_error, log_new_lines
 
 authorized_keys_filename = "authorized_keys.json"
-authorized_keys_file = os.path.join(find_directory("ssh_keys"), authorized_keys_filename)
+authorized_keys_directory = find_directory("ssh_keys")
+if authorized_keys_directory is None:
+    os.mkdir(os.path.join("src", "server", "data", "ssh_keys"))
+authorized_keys_directory = find_directory("ssh_keys")
+if authorized_keys_directory is None:
+    log_error("Could not create the 'ssh_keys' directory.")
+    exit(1)
+authorized_keys_file = os.path.join(authorized_keys_directory, authorized_keys_filename)
 
 
 class MyRequestHandler(BaseHTTPRequestHandler):
