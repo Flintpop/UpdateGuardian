@@ -30,6 +30,7 @@ def update_computer(computer: Computer):
     log(message="Updating computer " + computer.hostname + "...")
     if not computer.update():
         computer.updated_successfully = False
+        computer.no_updates = False
 
         log_error("Error while updating computer " + computer.hostname)
         log_error("Skipping this computer...")

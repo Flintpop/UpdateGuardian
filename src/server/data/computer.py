@@ -24,19 +24,11 @@ class Computer:
     - mac_address\n
     - username\n
     - logger (logging.Logger, used to log the computer's activity in a file)\n
-
-    Methods
-    -------
-    setup_logger()
-        Sets up the logger for the computer.
-    Log(level: str, message: str)
-        Logs a message in the computer's log file.
-    Close_logger()
-        Closes the logger for the computer.
     """
 
     def __init__(self, computer_info: dict) -> None:
 
+        self.no_updates = None
         self.hostname = computer_info.get("hostname")
         self.ipv4 = computer_info.get("ipv4")
         self.mac_address = computer_info.get("mac_address")
@@ -83,9 +75,16 @@ class Computer:
                 return self.log_error("Could not install prerequisites on the client... Cannot Update.")
 
             self.log_add_vertical_space()
-            if not self.install_update():
+            res, up = self.install_update()
+            if not res:
                 return self.log_error("Could not install update on client.")
 
+            if up is not None:
+                self.log("No updates found.")
+                self.updated_successfully = True
+                self.no_updates = True
+
+            self.no_updates = False
             self.log_add_vertical_space()
             if not self.shutdown():
                 return self.log_error("Could not shutdown client.")
@@ -178,16 +177,19 @@ class Computer:
         self.log("Pre-requisites installed on the client.")
         return True
 
-    def install_update(self) -> bool:
+    def install_update(self) -> tuple[bool, str | None]:
         self.log("Installing update on the client...")
         result = self.__start_python_script()
         if result is None or result is False:
-            return False
+            return False, None
 
         if result.lower() == "reboot":
             self.log("The client needs to reboot, waiting for it to be back online...")
-            return self.wait_for_pc_to_be_online_again()
-        return True
+            return self.wait_for_pc_to_be_online_again(), None
+
+        if "no updates found" in result.lower():
+            return self.shutdown(), "no up"
+        return True, None
 
     def __start_python_script(self) -> str | bool:
         self.log("Starting the python script...")
@@ -358,8 +360,8 @@ class Computer:
         if error:
             raise ValueError(error_message_list)
 
-    def log_add_vertical_space(self, new_lines: int = 1):
-        self.computer_logger.log_add_vertical_space(new_lines=new_lines)
+    def log_add_vertical_space(self, new_lines: int = 1, print_in_console: bool = False):
+        self.computer_logger.log_add_vertical_space(new_lines=new_lines, print_in_console=print_in_console)
 
     def log_raw(self, param):
         self.computer_logger.log_raw(param=param)

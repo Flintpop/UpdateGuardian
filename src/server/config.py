@@ -1,4 +1,5 @@
 class Infos:
+    config_json_file = "config.json"
     email_infos_json = "email_infos.json"
     PROJECT_NAME: str = "UpdateGuardian"
     python_version = "3.11"

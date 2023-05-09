@@ -90,18 +90,33 @@ def test_credential(mail: str, password_to_test: str) -> bool:
 def send_error_email(computer: 'Computer', error: str, traceback: str) -> None:
     send_string = f"<h3>Error, {Infos.PROJECT_NAME} did not manage to update {computer.hostname} !</h3>" \
                   f"<h4>The main error is : {error}.</h4>" \
-                  f"<p>The traceback : </b>{traceback}<\\p>The close price is <b>"
+                  f"<p>The traceback : </b>{traceback}</p>"
 
     send_email(message=send_string, subject=f"Program crashed on computer {computer.hostname}!")
 
 
 def send_result_email(database: "ComputerDatabase") -> None:
     n_updated_computers = database.get_successfully_number_of_updated_computers()
-    total_computers = database.get_number_of_computers()
-    send_string = f"<h3>{Infos.PROJECT_NAME} finished updating all computers !</h3>" \
-                  f"<h4>{n_updated_computers}/{total_computers} computers has been updated successfully.</h4>"
-    if n_updated_computers != total_computers:
-        send_string += "<p>Here is the list of computers that has not been updated successfully : </p>"
+    total_updatable_computers = database.get_number_of_updatable_computers()
+    total_failures = database.get_number_of_failed_computers()
+
+    if total_updatable_computers == 0:
+        send_string = f"<h3>{Infos.PROJECT_NAME} found no updates to install.</h3>"
+        send_email(message=send_string, subject=f"{Infos.PROJECT_NAME} found no updates to install.")
+        return
+
+    if n_updated_computers == 0:
+        send_string = f"<h3>{Infos.PROJECT_NAME} did not manage to update any computer !</h3>"
+    else:
+        send_string = f"<h3>{Infos.PROJECT_NAME} finished updating all/some computers !</h3>"
+
+    if total_updatable_computers > 0 and n_updated_computers > 0:
+        send_string += f"<h4>{n_updated_computers}/{total_updatable_computers} computers has been updated " \
+                       f"successfully.</h4>"
+
+    if n_updated_computers != total_updatable_computers:
+        send_string += f"<h4>{total_failures} of computers were not able to be updated. An error occurred.</h4>"
+        send_string += "<p>Here is the list: </p>"
         for computer in database.get_not_updated_computers():
             send_string += f"<p>{computer.hostname}</p>"
 

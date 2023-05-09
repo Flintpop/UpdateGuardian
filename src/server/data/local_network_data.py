@@ -4,7 +4,6 @@ import re
 import json
 import socket
 
-from src.server.commands.find_all_pc import generate_ip_range
 from src.server.commands.path_functions import find_file
 from src.server.config import Infos
 
@@ -30,13 +29,13 @@ class Data:
     computers_data: dict = {}
     ipaddresses: dict = {}
 
-    def __init__(self, filename: str = find_file("setup_informations.json"), json_data: dict = None):
+    def __init__(self, filename: str = find_file(Infos.config_json_file), json_data: dict = None):
         if json_data is None:
             self.__load_data(filename)
         else:
             self.data_json = json_data
 
-    def __load_data(self, filename: str = find_file("setup_informations.json")):
+    def __load_data(self, filename: str = find_file(Infos.config_json_file)):
         # Ouvrir le fichier JSON en mode lecture
         with open(filename, 'r', encoding='utf-8') as fichier:
             # Charger le contenu du fichier JSON dans une variable
@@ -112,10 +111,6 @@ class Data:
             r'^([0-9A-Fa-f]{2}([:-]))(?:[0-9A-Fa-f]{2}\2){4}[0-9A-Fa-f]{2}$'
         )
         return bool(mac_regex.match(mac_address))
-
-    def get_ip_range(self):
-        raw_ip_range: str = self.data_json.get("ip_pool_range")
-        return generate_ip_range(raw_ip_range[0], raw_ip_range[1])
 
     def get_passwords_with_ip(self, ip_address: str) -> str | None:
         for i in range(len(self.get_data_json()["remote_host"])):

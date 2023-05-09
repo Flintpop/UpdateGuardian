@@ -77,7 +77,7 @@ class ComputerLogger:
         with open(self.logs_filename, "a", encoding="utf-8") as f:
             f.write(self.get_header_style_string(header_txt=new_msg_header) + "\n")
 
-    def log_add_vertical_space(self, new_lines: int = 1):
+    def log_add_vertical_space(self, new_lines: int = 1, print_in_console: bool = False) -> None:
         """
         To make the logs more readable, add a vertical space in the log file and in the console.
         :param new_lines: The number of new lines to add.
@@ -87,7 +87,8 @@ class ComputerLogger:
             new_lines: str = "\n" * new_lines
             f.write(new_lines)
 
-        print(new_lines.split("\n").pop(0))
+        if print_in_console:
+            print(new_lines.split("\n").pop(0))
 
     def log_raw(self, param):
         """

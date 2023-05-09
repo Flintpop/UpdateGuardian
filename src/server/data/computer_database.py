@@ -149,11 +149,10 @@ class ComputerDatabase:
     def get_successfully_number_of_updated_computers(self) -> int:
         res = 0
         for computer in self.__computers:
-            if computer.updated_successfully:
+            if computer.updated_successfully and not computer.no_updates:
                 res += 1
 
         return res
-
 
     def get_not_updated_computers(self):
         res = []
@@ -162,6 +161,28 @@ class ComputerDatabase:
                 res.append(computer)
 
         return res
+
+    def get_computers_without_new_updates(self):
+        res = []
+        for computer in self.__computers:
+            if computer.no_updates and computer.updated_successfully:
+                res.append(computer)
+
+        return res
+
+    def get_number_of_updatable_computers(self):
+        res = []
+        for computer in self.__computers:
+            if computer.no_updates is not None and not computer.no_updates:
+                res.append(computer)
+        return len(res)
+
+    def get_number_of_failed_computers(self):
+        res = []
+        for computer in self.__computers:
+            if not computer.updated_successfully:
+                res.append(computer)
+        return len(res)
 
     def __str__(self) -> str:
         string_representation = "########## Computer Database ##########\n\n"

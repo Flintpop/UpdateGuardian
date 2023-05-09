@@ -18,11 +18,21 @@ warnings.filterwarnings("ignore", category=PytzUsageWarning)
 stopped: bool = False
 
 
+def execute_job_force():
+    log("Force executing scheduled task...")
+    log_new_lines(2)
+    start_program()
+
+
 def execute_job() -> None:
     log("Executing scheduled task...")
 
     log_new_lines(2)
 
+    start_program()
+
+
+def start_program():
     computer_database: ComputerDatabase = ComputerDatabase.load_computer_data()
 
     update_all_computer(computer_database)
@@ -58,6 +68,11 @@ def stop_code():
     stopped = True
 
 
+def list_computers():
+    computer_database: ComputerDatabase = ComputerDatabase.load_computer_data()
+    print(computer_database)
+
+
 def settings_thread() -> None:
     log("Program started, settings loaded", print_formatted=False)
     log_new_lines()
@@ -69,12 +84,14 @@ def settings_thread() -> None:
         print(f"\nThe program is scheduled to start every {day} at {hour}:00.\n")
         print("Type 'modify' to modify settings.")
         print("Type 'force' to force start the scheduled task.")
+        print("Type 'list' to list all the computers in the database.")
         print("Type 'exit' to exit the program.\n")
         try:
             usr_input = input("> ")
             switcher = {
                 "modify": modify_settings,
                 "force": force_start_execute_job,
+                "list": list_computers,
                 "exit": stop_code
             }
             switcher.get(usr_input, lambda: print("Invalid input."))()
