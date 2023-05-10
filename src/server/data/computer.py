@@ -80,12 +80,12 @@ class Computer:
             if not res:
                 return self.log_error("Could not install update on client.")
 
+            self.no_updates = False
+
             if up is not None:
                 self.log("No updates found.")
-                self.updated_successfully = True
                 self.no_updates = True
 
-            self.no_updates = False
             self.log_add_vertical_space()
             if not self.shutdown():
                 return self.log_error("Could not shutdown client.")
@@ -192,7 +192,7 @@ class Computer:
             return self.wait_for_pc_to_be_online_again(), None
 
         if "no updates found" in result.lower():
-            return self.shutdown(), "no up"
+            return True, "no up"
         return True, None
 
     def __start_python_script(self) -> str | bool:
@@ -262,7 +262,6 @@ class Computer:
             return False
         self.log("Log file downloaded from the client.")
         return True
-
 
     def wait_for_pc_to_be_online_again(self) -> bool:
         wait_for_ssh_shutdown(self.ipv4)

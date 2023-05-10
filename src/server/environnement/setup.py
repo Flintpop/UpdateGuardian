@@ -91,6 +91,10 @@ def print_log_setup():
     print()
 
 
+def setup_email_config_done() -> bool:
+    return find_file("email_infos.json") is not None
+
+
 def server_setup() -> bool:
     check_all_files_integrity()
     if not check_if_setup_needed():
@@ -134,7 +138,8 @@ def server_setup() -> bool:
         log_error("Error with the http server. The database may be empty, or something else went wrong.")
         return False
 
-    setup_email_config()
+    if not setup_email_config_done():
+        setup_email_config()
 
     return True
 
