@@ -38,6 +38,7 @@ def execute_job() -> None:
 
 def start_program():
     computer_database: ComputerDatabase = ComputerDatabase.load_computer_data()
+    computer_database.load_email_infos()
 
     update_all_computer(computer_database)
 

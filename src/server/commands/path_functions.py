@@ -67,7 +67,6 @@ def change_directory_to_root_folder() -> None:
               "root folder containing the name of the project.")
         raise EnvironmentError("Name of the project not found in the current nested directory.")
 
-    print("Changing directory to the root folder...")
     root_folder = get_resource_path('')
     root_folder_str = root_folder.decode('utf-8') if isinstance(root_folder, bytes) else root_folder
     project_directory = os.path.join(root_folder_str.split(Infos.PROJECT_NAME)[0], Infos.PROJECT_NAME)
@@ -133,7 +132,6 @@ def find_directory(directory_name: str, root_folder=None, already_called=False) 
                 return os.path.join(root, directory)
 
     if already_called:
-        print(f"Directory '{directory_name}' not found in the root folder '{root_folder}' and its subdirectories.")
         return None
 
     change_directory_to_root_folder()

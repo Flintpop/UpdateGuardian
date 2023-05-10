@@ -30,7 +30,6 @@ class ComputerDatabase:
         self.data = Data()
         self.__computers: list[Computer] = []
         self.computers_json: dict = {}
-        Infos.email_send = load_email_infos()
 
     def add_computer(self, computer: Computer) -> None:
         self.__computers.append(computer)
@@ -124,7 +123,7 @@ class ComputerDatabase:
     @classmethod
     def load_computer_data_if_exists(cls):
         computer_database = ComputerDatabase()
-        computers_data_json_file = find_file(cls.json_computers_database_filename)
+        computers_data_json_file = find_file(cls.json_computers_database_filename, show_print=False)
         if computers_data_json_file is None:
             return computer_database
 
@@ -183,6 +182,9 @@ class ComputerDatabase:
             if not computer.updated_successfully:
                 res.append(computer)
         return len(res)
+
+    def load_email_infos(self):
+        Infos.email_send = load_email_infos()
 
     def __str__(self) -> str:
         string_representation = "########## Computer Database ##########\n\n"

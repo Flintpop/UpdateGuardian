@@ -23,7 +23,7 @@ def load_email_infos() -> bool:
     if not does_email_json_file_exists():
         log_error(f"The file  '{Infos.email_infos_json}' was not found.\n"
                   f"\nTo fix it, create the file {Infos.email_infos_json} and fill it with the following informations :"
-                  " \n{\n  \"email\": \"\" \n\"password\": \"\"\n}")
+                  " \n{\n\t\"email\": \"\" \n\t\"password\": \"\"\n}")
 
         with open(Infos.email_infos_json, "w") as f:
             json.dump({"email": "", "password": ""}, f, indent=4)

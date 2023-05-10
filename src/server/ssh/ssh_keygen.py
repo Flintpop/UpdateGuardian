@@ -5,17 +5,16 @@
 # Description: Used to generate ssh keys for the server.
 # -----------------------------------------------------------
 import os
+import stat
 
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa, ed25519
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat, NoEncryption
 
 from typing import TYPE_CHECKING
 
-from nacl import public, encoding
-
-# if TYPE_CHECKING:
-from src.server.data.computer import Computer
+if TYPE_CHECKING:
+    from src.server.data.computer import Computer
 
 from src.server.environnement.server_logs import log
 
@@ -46,7 +45,7 @@ def gen_keys_and_save_them(computer: 'Computer') -> None:
     with open(private_key_file, "wb") as f:
         f.write(private_openssh)
 
-    os.chmod(private_key_path, stat.S_IRUSR | stat.S_IWUSR)
+    os.chmod(private_key_file, stat.S_IRUSR | stat.S_IWUSR)
 
     # Get the public key from the private key
     public_key = private_key.public_key()
