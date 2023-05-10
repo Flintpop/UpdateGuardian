@@ -106,6 +106,7 @@ def find_file(filename: str, root_folder=None, already_called=False, show_print=
 
 
 def find_directory(directory_name: str, root_folder=None, already_called=False) -> str | None:
+    change_directory_to_root_folder()
     if root_folder is None:
         root_folder = get_resource_path('')
 
