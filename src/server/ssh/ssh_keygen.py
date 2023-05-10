@@ -46,6 +46,8 @@ def gen_keys_and_save_them(computer: 'Computer') -> None:
     with open(private_key_file, "wb") as f:
         f.write(private_openssh)
 
+    os.chmod(private_key_path, stat.S_IRUSR | stat.S_IWUSR)
+
     # Get the public key from the private key
     public_key = private_key.public_key()
 
