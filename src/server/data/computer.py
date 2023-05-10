@@ -93,7 +93,6 @@ class Computer:
             self.updated_successfully = True
             return True
         except Exception as e:
-            self.download_log_file_ssh()
             self.log_add_vertical_space(2)
             self.log_raw("\n" + ComputerLogger.get_header_style_string("ERROR"))
             self.log_error(f"Unhandled error. Could not update computer {self.hostname}: ")
@@ -102,6 +101,7 @@ class Computer:
             self.log_error(f"Here is the traceback:\n{trace_back_str}")
             if Infos.email_send:
                 send_error_email(computer=self, error=str(e), traceback=trace_back_str)
+            return False
 
     def connect(self):
         self.log(message="Connecting to computer...")
@@ -117,7 +117,6 @@ class Computer:
             self.log(f"Connected to computer {self.hostname}.")
             return True
         except paramiko.AuthenticationException as e:
-            self.download_log_file_ssh()
             self.log_add_vertical_space()
             self.log_error("Authentication failed: " + str(e))
             self.log_error(f"Please, check your username and password for the computer {self.hostname}.")
@@ -133,7 +132,6 @@ class Computer:
                            f"\n\tusername: {self.username}")
             return False
         except Exception as e:
-            self.download_log_file_ssh()
             self.log_error(f"Unhandled error. Could not connect to {self.hostname}:\n " + str(e))
             self.log_error(f"Here is the traceback: \n{traceback.format_exc()}\n")
             return False
