@@ -10,8 +10,21 @@ try {
     } else {
         Write-Host "Found $($Updates.Count) updates."
 
+        # Filter out updates that are already downloaded or being downloaded
+        $UpdatesToDownload = @()
+        foreach ($Update in $Updates) {
+            if (-not $Update.IsDownloaded -and $Update.DownloadPriority -eq 1) {
+                $UpdatesToDownload += $Update
+            }
+        }
+
+        if ($UpdatesToDownload.Count -eq 0) {
+            Write-Host "No updates to download."
+            exit 0
+        }
+
         $Downloader = $UpdateSession.CreateUpdateDownloader()
-        $Downloader.Updates = $Updates
+        $Downloader.Updates = $UpdatesToDownload
         Write-Host "Downloading updates..."
         $DownloadResult = $Downloader.Download()
 
@@ -22,9 +35,9 @@ try {
 
         $UpdatesToInstall = New-Object -TypeName Microsoft.Update.UpdateColl
 
-        for ($i = 0; $i -lt $Updates.Count; $i++) {
-            if ($Updates.Item($i).IsDownloaded) {
-                $UpdatesToInstall.Add($Updates.Item($i)) | Out-Null
+        for ($i = 0; $i -lt $UpdatesToDownload.Count; $i++) {
+            if ($UpdatesToDownload[$i].IsDownloaded) {
+                $UpdatesToInstall.Add($UpdatesToDownload[$i]) | Out-Null
             }
         }
 

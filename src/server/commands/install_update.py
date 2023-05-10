@@ -29,6 +29,7 @@ def update_all_computer(database: ComputerDatabase) -> None:
 def update_computer(computer: Computer):
     log(message="Updating computer " + computer.hostname + "...")
     if not computer.update():
+        computer.download_log_file_ssh()
         computer.updated_successfully = False
         computer.no_updates = False
 

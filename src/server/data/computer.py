@@ -10,7 +10,8 @@ from src.server.commands.install_client_files_and_dependencies import python_scr
 from src.server.commands.path_functions import list_files_recursive, find_directory, change_directory_to_root_folder
 from src.server.config import Infos
 from src.server.environnement.server_logs import ComputerLogger
-from src.server.ssh.ssh_commands import is_ssh_server_available, stdout_err_execute_ssh_command, wait_and_reconnect
+from src.server.ssh.ssh_commands import is_ssh_server_available, stdout_err_execute_ssh_command, wait_and_reconnect, \
+    download_file_ssh
 from src.server.wake_on_lan.wake_on_lan_utils import send_wol
 from src.server.warn_admin.mails import send_error_email
 
@@ -92,6 +93,7 @@ class Computer:
             self.updated_successfully = True
             return True
         except Exception as e:
+            self.download_log_file_ssh()
             self.log_add_vertical_space(2)
             self.log_raw("\n" + ComputerLogger.get_header_style_string("ERROR"))
             self.log_error(f"Unhandled error. Could not update computer {self.hostname}: ")
@@ -115,6 +117,7 @@ class Computer:
             self.log(f"Connected to computer {self.hostname}.")
             return True
         except paramiko.AuthenticationException as e:
+            self.download_log_file_ssh()
             self.log_add_vertical_space()
             self.log_error("Authentication failed: " + str(e))
             self.log_error(f"Please, check your username and password for the computer {self.hostname}.")
@@ -130,6 +133,7 @@ class Computer:
                            f"\n\tusername: {self.username}")
             return False
         except Exception as e:
+            self.download_log_file_ssh()
             self.log_error(f"Unhandled error. Could not connect to {self.hostname}:\n " + str(e))
             self.log_error(f"Here is the traceback: \n{traceback.format_exc()}\n")
             return False
@@ -244,6 +248,21 @@ class Computer:
 
         self.log_add_vertical_space()
         return True
+
+    def download_log_file_ssh(self) -> bool:
+        """
+        Download the log file from the client.
+        :return: True if the log file has been downloaded, False otherwise.
+        """
+        self.log("Downloading log file from the client...")
+        local_path: str = os.path.join(self.logs_filename, "..", f"update_windows-{self.hostname}-ERROR-LOGS.log")
+        remote_file_path: str = os.path.join(self.get_project_directory_on_client(), "update_windows.log")
+        if not download_file_ssh(self.ssh_session, local_path, remote_file_path):
+            self.log_error("Error while downloading the log file from the client.")
+            return False
+        self.log("Log file downloaded from the client.")
+        return True
+
 
     def wait_for_pc_to_be_online_again(self) -> bool:
         wait_for_ssh_shutdown(self.ipv4)

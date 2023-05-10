@@ -148,10 +148,26 @@ def delete_file_ssh(ssh: paramiko.SSHClient, file_path: str) -> bool:
     return True
 
 
+def download_file_ssh(ssh: paramiko.SSHClient, local_file_path: str, remote_file_path: str) -> bool:
+    # noinspection PyBroadException
+    try:
+        sftp = ssh.open_sftp()
+        sftp.get(remote_file_path, local_file_path)
+        sftp.close()
+    except Exception:
+        return False
+    return True
+
+
+
 def send_file_ssh(ssh: paramiko.SSHClient, local_path: str, remote_path: str) -> bool:
-    sftp = ssh.open_sftp()
-    sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
-    sftp.close()
+    # noinspection PyBroadException
+    try:
+        sftp = ssh.open_sftp()
+        sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
+        sftp.close()
+    except Exception:
+        return False
     return True
 
 

@@ -3,11 +3,13 @@ import subprocess
 import os
 import sys
 import logging
+import time
 import traceback
 
 import psutil
 import requests
 import win32com.client
+from win32com.universal import com_error
 
 
 def update_windows():
@@ -79,8 +81,7 @@ def start_client_update():
             update_windows()
         except Exception as e:
             traceback_str: str = traceback.format_exc()
-            print_and_log_client(f"Error occurred during Python update process:\n {e}", "error")
-            print_and_log_client(f"Traceback:\n {traceback_str}", "error")
+            print_and_log_client(f"Error occurred during Python update process:\n {e}\nTraceback:\n {traceback_str}", "error")
             print_and_log_client("Attempting to update using PowerShell script...", "warning")
             check_disk_space(20)
             run_powershell_script()
@@ -97,7 +98,8 @@ def run_windows_update_troubleshooter():
     if return_code != 0:
         print_and_log_client(f"Error running Windows Update Troubleshooter. Return code: {return_code}", "error")
         if stderr:
-            print_and_log_client(f"Error details: {stderr.decode('utf-8')}", "error")
+            # TODO: Bug here with the stderr decoding
+            print_and_log_client(f"Error details: {stderr.decode()}", "error")
     else:
         print_and_log_client("Windows Update Troubleshooter ran successfully.")
 
@@ -166,9 +168,31 @@ def install_updates(wua, updates_to_install) -> tuple:
 
 def download_updates(wua, updates_to_install) -> None:
     print_and_log_client("Downloading updates...")
-    downloader = wua.CreateUpdateDownloader()
-    downloader.Updates = updates_to_install
-    download_result = downloader.Download()
+
+    updates_to_install = [update for update in updates_to_install if not update.IsDownloaded and update.DownloadPriority == 1]
+
+    # If there are no updates to download, return
+    if not updates_to_install:
+        print_and_log_client("No updates to download.")
+        return
+
+    attempts = 0
+    while attempts < 5:  # Retry up to 5 times
+        try:
+            downloader = wua.CreateUpdateDownloader()
+            downloader.Updates = updates_to_install
+            download_result = downloader.Download()
+            break
+        except com_error as e:
+            if e.hresult == -2147024891:  # Access denied
+                attempts += 1
+                print_and_log_client(f"Access denied, retrying after 10 seconds... ({attempts})")
+                time.sleep(10)  # Wait for 10 seconds before retrying
+            else:
+                raise  # Re-raise the exception if it's not "access denied"
+    else:  # No break, all attempts exhausted
+        print_and_log_client("Error: Access denied 5 times, aborting.", "error")
+        sys.exit(1)
 
     if download_result.ResultCode != 2:
         print_and_log_client("Error downloading updates.", "error")
