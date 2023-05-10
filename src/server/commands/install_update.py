@@ -37,4 +37,7 @@ def update_computer(computer: Computer):
         log_error("Skipping this computer...")
         return
 
+    if computer.no_updates:
+        log("Computer " + computer.hostname + " has no updates.")
+        return
     log("Computer " + computer.hostname + " updated successfully!")
