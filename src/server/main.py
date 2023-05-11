@@ -1,19 +1,29 @@
+import sys
 import time
 import threading
 import warnings
 import os
-os.chdir(os.path.dirname(os.path.abspath(__file__)))  # Change to the script's directory
+
+# If running as a PyInstaller bundle
+if getattr(sys, 'frozen', False):
+    # Add the directory containing your modules to sys.path
+    sys.path.append(os.path.join(sys._MEIPASS, 'src/server'))
+else:
+    # Add the directory containing your modules to sys.path
+    sys.path.append(os.path.abspath('src/server'))
+
 # noinspection PyUnresolvedReferences
 import add_paths  # Import and execute add_paths.py to update sys.path
 
 from pytz_deprecation_shim import PytzUsageWarning
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from src.server.commands.install_update import update_all_computer
-from src.server.data.computer_database import ComputerDatabase
-from src.server.environnement.modify_settings import modify_settings
-from src.server.environnement.setup import server_setup, get_launch_time
-from src.server.environnement.server_logs import log, log_new_lines
+
+from commands.install_update import update_all_computer
+from data.computer_database import ComputerDatabase
+from environnement.modify_settings import modify_settings
+from environnement.setup import server_setup, get_launch_time
+from environnement.server_logs import log, log_new_lines
 
 function_executed: bool = False
 

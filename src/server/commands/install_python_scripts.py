@@ -79,7 +79,7 @@ def install_python_script(computer: 'Computer') -> bool:
 
     if not created:
         computer.log_error(f"Error while creating the folder {python_script_path}")
-        FileCreationError(f"Error while creating the folder {python_script_path}")
+        raise FileCreationError(f"Error while creating the folder {python_script_path}")
 
     sftp = ssh.open_sftp()
     computer.log("Opened sftp communication to install the scripts and requirements")

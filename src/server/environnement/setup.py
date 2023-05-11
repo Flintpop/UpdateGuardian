@@ -44,9 +44,6 @@ def get_all_files_from_server() -> list[str]:
             if exception in directories_and_files_of_file and file in files:
                 files_to_remove.append(file)
 
-    # for file in files_to_remove:
-    #     files.remove(file)
-
     return files
 
 

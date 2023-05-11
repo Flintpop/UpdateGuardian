@@ -1,5 +1,4 @@
 import json
-import socket
 
 from src.server.commands.path_functions import find_file, change_directory_to_root_folder
 from src.server.config import Infos
@@ -7,7 +6,6 @@ from src.server.data.computer import Computer
 from src.server.data.local_network_data import Data
 from threading import Lock
 
-from src.server.environnement.server_logs import log_error
 from src.server.ssh.ssh_keygen import gen_keys_and_save_them
 from src.server.warn_admin.mails import load_email_infos
 
