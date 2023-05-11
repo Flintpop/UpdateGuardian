@@ -11,7 +11,7 @@ if getattr(sys, 'frozen', False):
 else:
     # Add the directory containing your modules to sys.path
     sys.path.append(os.path.abspath('src/server'))
-    os.chdir(os.path.abspath(__file__))
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))  # Change to the script's directory
 
 # noinspection PyUnresolvedReferences
 import add_paths  # Import and execute add_paths.py to update sys.path
