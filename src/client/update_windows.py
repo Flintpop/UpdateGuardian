@@ -126,7 +126,7 @@ def run_powershell_script(troubleshooted=False):
         elif exit_code == 3:
             print_and_log_client("Powershell script indicates that no updates were found.")
         elif exit_code != 0:
-            print_and_log_client(f"Error occurred while running the PowerShell script: {error.decode('utf-8')}",
+            print_and_log_client(f"Error occurred while running the PowerShell script: {error.decode()}",
                                  "error")
         else:
             print_and_log_client(f"PowerShell script output: {output.decode('utf-8')}")
@@ -160,9 +160,14 @@ def reboot(reboot_msg: str = "reboot"):
 
 def install_updates(wua, updates_to_install) -> tuple:
     print_and_log_client("Installing updates...")
-    installer = wua.CreateUpdateInstaller()
-    installer.Updates = updates_to_install
-    installation_result = installer.Install()
+    try:
+        installer = wua.CreateUpdateInstaller()
+        installer.Updates = updates_to_install
+        installation_result = installer.Install()
+    except com_error as e:
+        print_and_log_client(f"COM Error: \n{e}")
+        print_and_log_client(f"Exception info: \n{e.excepinfo}")
+        return None, None
     return installer, installation_result
 
 
@@ -240,6 +245,7 @@ def process_update_error(installation_result, updates_to_install) -> None:
 
 def print_and_log_client(message: str, level: str = "info") -> None:
     print(message)
+    message = message + "\n"
     if level == "info":
         logging.info(message)
     elif level == "error":
