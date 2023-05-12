@@ -480,7 +480,7 @@ if (!(Get-Module -ListAvailable -Name PSWindowsUpdate))
 {
     try
     {
-        echo "" | Install-Module PSWindowsUpdate -Force -Scope CurrentUser -ErrorAction Stop
+        Install-Module PSWindowsUpdate -Force -Scope CurrentUser -ErrorAction Stop
         Write-Host "Module PSWindowsUpdate installed successfully." -ForegroundColor Green
     }
     catch
