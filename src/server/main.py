@@ -76,8 +76,7 @@ def launch_software() -> None:
 
 
 def force_start_execute_job():
-    execute_job()
-
+    execute_job_force()
 
 def stop_code():
     global stopped

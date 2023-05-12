@@ -13,20 +13,38 @@ from win32com.universal import com_error
 
 
 def update_windows():
-    wua = win32com.client.Dispatch("Microsoft.Update.Session")
-    searcher = wua.CreateUpdateSearcher()
-    print_and_log_client("Searching for new updates...")
+    process = subprocess.Popen(
+        ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", "Update.ps1"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
 
-    # Search for updates
-    updates_to_install = search_for_updates(searcher)
+    output, error = process.communicate()
+    exit_code: int = process.returncode
 
-    # Download updates
-    download_updates(wua, updates_to_install)
+    if exit_code != 0:
+        print_and_log_client(f"Error occurred while running the PowerShell script: {error.decode('cp850')}",
+                             "error")
+    else:
+        print_and_log_client(f"PowerShell script output: {output.decode('cp850')}")
 
-    # Install updates
-    installer, installation_result = install_updates(wua, updates_to_install)
-
-    process_updates(installation_result, updates_to_install)
+    # wua = win32com.client.Dispatch("Microsoft.Update.Session")
+    # searcher = wua.CreateUpdateSearcher()
+    # print_and_log_client("Searching for new updates...")
+    #
+    # # Search for updates
+    # updates_to_install = search_for_updates(searcher)
+    #
+    # # Download updates
+    # download_updates(wua, updates_to_install)
+    #
+    # # Install updates
+    # installer, installation_result = install_updates(wua, updates_to_install)
+    #
+    # if installer is None or installation_result is None:
+    #     print_and_log_client("Error occurred while installing updates.", "error")
+    # else:
+    #     process_updates(installation_result, updates_to_install)
 
 
 def reset_windows_update_components():
@@ -48,7 +66,7 @@ def reset_windows_update_components():
             subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             print_and_log_client(f"Successfully executed command: {command}")
         except subprocess.CalledProcessError as e:
-            print_and_log_client(f"Error occurred while executing command '{command}': {e.stderr.decode('utf-8')}",
+            print_and_log_client(f"Error occurred while executing command '{command}': {e.stderr.decode('cp850')}",
                                  "error")
 
 
@@ -82,9 +100,7 @@ def start_client_update():
         except Exception as e:
             traceback_str: str = traceback.format_exc()
             print_and_log_client(f"Error occurred during Python update process:\n {e}\nTraceback:\n {traceback_str}", "error")
-            print_and_log_client("Attempting to update using PowerShell script...", "warning")
             check_disk_space(20)
-            run_powershell_script()
     else:
         print_and_log_client("Please, execute this script in administrator to update the windows pc.", "error")
         sys.exit(1)
@@ -99,7 +115,7 @@ def run_windows_update_troubleshooter():
         print_and_log_client(f"Error running Windows Update Troubleshooter. Return code: {return_code}", "error")
         if stderr:
             # TODO: Bug here with the stderr decoding
-            print_and_log_client(f"Error details: {stderr.decode()}", "error")
+            print_and_log_client(f"Error details: {stderr.decode('cp850')}", "error")
     else:
         print_and_log_client("Windows Update Troubleshooter ran successfully.")
 
@@ -126,10 +142,10 @@ def run_powershell_script(troubleshooted=False):
         elif exit_code == 3:
             print_and_log_client("Powershell script indicates that no updates were found.")
         elif exit_code != 0:
-            print_and_log_client(f"Error occurred while running the PowerShell script: {error.decode()}",
+            print_and_log_client(f"Error occurred while running the PowerShell script: {error.decode('cp850')}",
                                  "error")
         else:
-            print_and_log_client(f"PowerShell script output: {output.decode('utf-8')}")
+            print_and_log_client(f"PowerShell script output: {output.decode('cp850')}")
 
     except Exception as e:
         print_and_log_client(f"Error occurred while executing the PowerShell script: \n{e}", "error")
@@ -165,6 +181,8 @@ def install_updates(wua, updates_to_install) -> tuple:
         installer.Updates = updates_to_install
         installation_result = installer.Install()
     except com_error as e:
+        if e.hresult == -2147021889:
+            print_and_log_client("The update is already installed, or being installed", "warning")
         print_and_log_client(f"COM Error: \n{e}")
         print_and_log_client(f"Exception info: \n{e.excepinfo}")
         return None, None
@@ -216,6 +234,8 @@ def search_for_updates(searcher):
         print_and_log_client(f"{search_result.Updates.Count} update(s) found.")
 
     for update in search_result.Updates:
+        if update.IsInstalled:
+            continue
         print_and_log_client(f"Update {update.Title} is available.")
         updates_to_install.Add(update)
 
@@ -244,8 +264,8 @@ def process_update_error(installation_result, updates_to_install) -> None:
 
 
 def print_and_log_client(message: str, level: str = "info") -> None:
-    print(message)
     message = message + "\n"
+    print(message, end="")
     if level == "info":
         logging.info(message)
     elif level == "error":

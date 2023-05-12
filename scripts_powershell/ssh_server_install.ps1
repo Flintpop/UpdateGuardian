@@ -472,6 +472,26 @@ Write-Host "Checking if ICMP rules are configured..."
 Check-AndCreateICMPRule
 Write-Host "ICMP rules are configured."
 
+Write-Host "Installing a module to automatically update the pc..."
+
+Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser -confirm:$false -Force
+
+if (!(Get-Module -ListAvailable -Name PSWindowsUpdate))
+{
+    try
+    {
+        echo "" | Install-Module PSWindowsUpdate -Force -Scope CurrentUser -ErrorAction Stop
+        Write-Host "Module PSWindowsUpdate installed successfully." -ForegroundColor Green
+    }
+    catch
+    {
+        Write-Host "Error: $( $_.Exception.Message )" -ForegroundColor Red
+        Read-Host "Press any key to stop the program"
+        exit 1
+    }
+} else {
+    Write-Host "Module PSWindowsUpdate already installed."
+}
 
 # Enable Wake on LAN for Ethernet adapters that support it
 Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription -match "Ethernet" } | ForEach-Object {
