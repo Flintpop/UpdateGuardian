@@ -427,7 +427,7 @@ try
 
     $serverURL = "http://" + $server_ip + ":8000"
 
-    Invoke-WebRequest -Uri $serverURL -Method POST -Body $data -ContentType "application/json" -ErrorAction Stop
+    Invoke-WebRequest -Uri $serverURL -Method POST -Body $data -ContentType "application/json" -UseBasicParsing -ErrorAction Stop
 
     Write-Host "Data sent successfully." -ForegroundColor Green
     Write-Host "Receiving public key from the Python HTTP server for automatic authentification..."
