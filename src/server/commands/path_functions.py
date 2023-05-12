@@ -53,8 +53,8 @@ def get_resource_path(relative_path):
 
 
 def change_directory_to_root_folder() -> None:
-    current_directory: str = os.getcwd()
-    if current_directory.endswith(Infos.PROJECT_NAME):
+    current_directory: str = os.getcwd().lower()
+    if current_directory.endswith(Infos.PROJECT_NAME.lower()):
         return
 
     if os.name == 'nt':
@@ -161,8 +161,3 @@ def add_file(all_files: list[str], file: str, root: str) -> None:
 
         if add_var:
             all_files.append(file_path)
-
-
-def get_root_project_dir():
-    change_directory_to_root_folder()
-    return os.getcwd()

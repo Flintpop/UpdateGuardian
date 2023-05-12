@@ -6,6 +6,7 @@
 # This server is used to receive the whoami command and send the SSH public keys to the clients.
 # -----------------------------------------------------------
 import os
+import sys
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
@@ -26,7 +27,7 @@ if authorized_keys_directory is None:
 authorized_keys_directory = find_directory("ssh_keys")
 if authorized_keys_directory is None:
     log_error("Could not create the 'ssh_keys' directory.")
-    exit(1)
+    sys.exit(1)
 authorized_keys_file = os.path.join(authorized_keys_directory, authorized_keys_filename)
 
 
