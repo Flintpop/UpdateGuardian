@@ -178,7 +178,7 @@ def add_python_to_path(computer: 'Computer') -> bool:
         computer.log_error("Error, could not add python to path : " + stderr)
         return False
     if stdout:
-        computer.log_error(STDOUT_MESSAGE + stdout)
+        computer.log(STDOUT_MESSAGE + stdout)
     return True
 
 
