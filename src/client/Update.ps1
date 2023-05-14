@@ -7,3 +7,4 @@ If (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 }
 # Now running elevated so launch the script:
 Get-WindowsUpdate -AcceptAll -Install -AutoReboot
+exit 0

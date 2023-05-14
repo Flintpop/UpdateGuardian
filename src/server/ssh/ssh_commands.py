@@ -117,7 +117,7 @@ def create_folder_ssh(computer: 'Computer', folder_path: str) -> bool:
         return False
 
     if stdout:
-        print(f"Stdout : {stdout}")
+        computer.log(f"Stdout : {stdout}")
 
     return True
 
@@ -184,17 +184,6 @@ def send_files_ssh(ssh: paramiko.SSHClient, local_paths: list[str], remote_path:
     for local_path in local_paths:
         sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
     sftp.close()
-    return True
-
-
-def manage_stdout_stderr_output(stdout: str, stderr: str) -> bool:
-    if stderr:
-        print(f"Error : {stderr}")
-        return False
-
-    if stdout:
-        print(f"Stdout : {stdout}")
-
     return True
 
 

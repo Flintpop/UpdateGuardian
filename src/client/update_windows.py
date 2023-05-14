@@ -12,7 +12,7 @@ import win32com.client
 from win32com.universal import com_error
 
 
-def update_windows():
+def update_windows(already_tried=False):
     process = subprocess.Popen(
         ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", "Update.ps1"],
         stdout=subprocess.PIPE,
@@ -25,26 +25,12 @@ def update_windows():
     if exit_code != 0:
         print_and_log_client(f"Error occurred while running the PowerShell script: {error.decode('cp850')}",
                              "error")
+        if not already_tried:
+            print_and_log_client("Trying to reset Windows Update components and retrying...", "warning")
+            reset_windows_update_components()
+            update_windows(True)
     else:
         print_and_log_client(f"PowerShell script output: {output.decode('cp850')}")
-
-    # wua = win32com.client.Dispatch("Microsoft.Update.Session")
-    # searcher = wua.CreateUpdateSearcher()
-    # print_and_log_client("Searching for new updates...")
-    #
-    # # Search for updates
-    # updates_to_install = search_for_updates(searcher)
-    #
-    # # Download updates
-    # download_updates(wua, updates_to_install)
-    #
-    # # Install updates
-    # installer, installation_result = install_updates(wua, updates_to_install)
-    #
-    # if installer is None or installation_result is None:
-    #     print_and_log_client("Error occurred while installing updates.", "error")
-    # else:
-    #     process_updates(installation_result, updates_to_install)
 
 
 def reset_windows_update_components():
@@ -99,8 +85,11 @@ def start_client_update():
             update_windows()
         except Exception as e:
             traceback_str: str = traceback.format_exc()
-            print_and_log_client(f"Error occurred during Python update process:\n {e}\nTraceback:\n {traceback_str}", "error")
+            print_and_log_client(f"Error occurred during Python update process:\n {e}\nTraceback:\n {traceback_str}",
+                                 "error")
             check_disk_space(20)
+            check_internet_connection()
+            update_windows()
     else:
         print_and_log_client("Please, execute this script in administrator to update the windows pc.", "error")
         sys.exit(1)
@@ -114,7 +103,6 @@ def run_windows_update_troubleshooter():
     if return_code != 0:
         print_and_log_client(f"Error running Windows Update Troubleshooter. Return code: {return_code}", "error")
         if stderr:
-            # TODO: Bug here with the stderr decoding
             print_and_log_client(f"Error details: {stderr.decode('cp850')}", "error")
     else:
         print_and_log_client("Windows Update Troubleshooter ran successfully.")
@@ -123,39 +111,6 @@ def run_windows_update_troubleshooter():
 def troubleshoot():
     reset_windows_update_components()
     run_windows_update_troubleshooter()
-
-
-def run_powershell_script(troubleshooted=False):
-    try:
-        process = subprocess.Popen(
-            ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", "install_updates.ps1"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-
-        output, error = process.communicate()
-        exit_code: int = process.returncode
-
-        if exit_code == 2:
-            print_and_log_client("PowerShell script indicates a reboot is required.", "warning")
-            reboot()
-        elif exit_code == 3:
-            print_and_log_client("Powershell script indicates that no updates were found.")
-        elif exit_code != 0:
-            print_and_log_client(f"Error occurred while running the PowerShell script: {error.decode('cp850')}",
-                                 "error")
-        else:
-            print_and_log_client(f"PowerShell script output: {output.decode('cp850')}")
-
-    except Exception as e:
-        print_and_log_client(f"Error occurred while executing the PowerShell script: \n{e}", "error")
-        print_and_log_client(f"The traceback : \n{traceback.format_exc()}", "error")
-        sys.exit(-1)
-        # TODO: Test this new troubleshooting method below
-        # print_and_log_client("Attempting to troubleshoot the problem...", "warning")
-        # if not troubleshooted:
-        #     troubleshoot()
-        #     run_powershell_script(troubleshooted=True)
 
 
 def is_admin():
@@ -192,7 +147,8 @@ def install_updates(wua, updates_to_install) -> tuple:
 def download_updates(wua, updates_to_install) -> None:
     print_and_log_client("Downloading updates...")
 
-    updates_to_install = [update for update in updates_to_install if not update.IsDownloaded and update.DownloadPriority == 1]
+    updates_to_install = [update for update in updates_to_install if not update.IsDownloaded and update.DownloadPriority
+                          == 1]
 
     # If there are no updates to download, return
     if not updates_to_install:

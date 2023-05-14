@@ -262,7 +262,7 @@ class Computer:
         return True
 
     def wait_for_pc_to_be_online_again(self) -> bool:
-        wait_for_ssh_shutdown(self.ipv4)
+        wait_for_ssh_shutdown(self)
 
         ssh: paramiko.SSHClient = self.ssh_session
         ipaddress: str = self.ipv4

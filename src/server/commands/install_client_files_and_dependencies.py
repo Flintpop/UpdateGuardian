@@ -30,6 +30,9 @@ def os_windows(computer: 'Computer'):
         stdout, stderr = stdout_err_execute_ssh_command(ssh, "ver")
         os_info = stdout
 
+    if not os_info:
+        computer.log("Failed to get OS information.", level="warning")
+        return True
     if "windows" in os_info.lower():
         return True
 
