@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import traceback
@@ -7,7 +8,8 @@ from cryptography.hazmat.backends.openssl import ed25519
 
 from src.server.commands.install_client_files_and_dependencies import python_scripts, python_installation, \
     python_path, python_packages, wait_for_ssh_shutdown
-from src.server.commands.path_functions import list_files_recursive, find_directory, change_directory_to_root_folder
+from src.server.commands.path_functions import list_files_recursive, find_directory, change_directory_to_root_folder, \
+    find_file
 from src.server.config import Infos
 from src.server.environnement.server_logs import ComputerLogger
 from src.server.ssh.ssh_commands import is_ssh_server_available, stdout_err_execute_ssh_command, wait_and_reconnect, \
@@ -182,24 +184,36 @@ class Computer:
     def install_update(self) -> tuple[bool, str | None]:
         self.log("Installing update on the client...")
         try:
-            result = self.__start_python_script()
-            if result is None:
+            result: dict = self.__start_python_script()
+
+            if not result:
+                self.log_error("Could not start python script.")
+                return False, None
+
+            if result["ErrorMessage"]:
+                self.log_error(f"An error occurred :\n{result['ErrorMessage']}.")
+                return False, None
+
+            if result["UpdateCount"] == 0:
+                self.log("No updates found.")
+                return True, "no updates found"
+
+            if result["RebootRequired"]:
                 self.log("Pc is rebooting...")
-                if not self.wait_for_pc_to_be_online_again():
+                eighty_minutes: int = 4800
+                if not self.wait_for_pc_to_be_online_again(timeout=eighty_minutes):
                     self.log_error("Could not wait for pc to be online again.")
                     return False, None
+
                 return True, None
+
         except Exception as e:
             self.log_error("Unhandled error while installing update on client:\n" + str(e))
             return False, None
 
-        if "success" in result.lower():
-            self.log("Update successfully installed on the client.")
-            return True, None
+        return True, None
 
-        return True, "no updates found"
-
-    def __start_python_script(self) -> str | bool | None:
+    def __start_python_script(self) -> dict | None:
         self.log("Starting the python script...")
         command: str = "cd " + Infos.PROJECT_NAME + " && python " + self.get_main_script_path()
 
@@ -209,20 +223,22 @@ class Computer:
 
         if stderr:
             self.log_error("Error while starting the python script:")
-            return False
+            return None
         if stdout:
             if "Traceback" in stdout:
                 self.log_error(f"Error while starting the python script:\n\n{stdout}")
-                return False
+                return None
             self.log(f"Stdout : \n{stdout}")
-            json_filename: str = "result.json"
+            json_filename: str = find_file("result.json")
             download_file_ssh(self.ssh_session, json_filename,
                               os.path.join(self.get_project_directory_on_client(), json_filename))
+
             with open(json_filename, "r") as f:
-                self.log("Here is the json file content:\n")
-                self.log(f.read())
-            return stdout
-        self.log("The python script returned nothing.")
+                json_res: dict = json.load(f)
+                self.log(f"Here is the json file content:\n{json_res.__str__()}", new_lines=1)
+
+            return json_res
+        self.log_error("The python script returned nothing.")
         return None
 
     def shutdown(self):
@@ -273,7 +289,7 @@ class Computer:
         self.log("Log file downloaded from the client.")
         return True
 
-    def wait_for_pc_to_be_online_again(self) -> bool:
+    def wait_for_pc_to_be_online_again(self, timeout=300) -> bool:
         wait_for_ssh_shutdown(self)
 
         ssh: paramiko.SSHClient = self.ssh_session
@@ -281,7 +297,7 @@ class Computer:
         remote_user: str = self.username
         remote_private_key: paramiko.pkey = self.__private_key
 
-        if not wait_and_reconnect(ssh, ipaddress, remote_user, remote_private_key):
+        if not wait_and_reconnect(ssh, ipaddress, remote_user, remote_private_key, timeout=timeout):
             self.log_error("Failed to reconnect to remote computer.")
             return False
         return True

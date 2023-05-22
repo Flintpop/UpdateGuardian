@@ -7,10 +7,19 @@ $jsonFilePath = "C:\Temp\UpdateGuardian\update_status.json"
 function Write-Log {
     param (
         [Parameter(Mandatory=$true)]
-        [string] $Message
+        [string] $Message,
+        [Parameter(Mandatory=$false)]
+        [int] $new_lines
     )
-    "$((Get-Date).ToString()): $Message" | Out-File -Append -FilePath $logFilePath -Encoding UTF8
+    if (-not $PSBoundParameters.ContainsKey('new_lines')) {
+        $new_lines = 0
+    }
+
+    $new_lines_str = "`n" * $new_lines
+    "$new_lines_str$((Get-Date).ToString()): $Message" | Out-File -Append -FilePath $logFilePath -Encoding UTF8
 }
+
+
 
 # Function to write update status to JSON file
 function Write-JSON {
@@ -27,6 +36,7 @@ $updateStatus = @{
     UpdateNames = @();
     UpdateFinished = $false;
     ErrorMessage = $null
+    RebootRequired = $false
 }
 
 # Write initial JSON status
@@ -37,45 +47,68 @@ if (-not (Test-Path $logFilePath)) {
     New-Item -ItemType File -Path $logFilePath | Out-Null
 }
 
+Out-File -FilePath $logFilePath -Encoding UTF8 -Force
 # Start the script
 Write-Log "Script started"
 
 try {
     # Check for updates
-    Write-Log "Checking for updates..."
-    $updateResult = Get-WindowsUpdate
+    Write-Log "Checking for updates..." -new_lines 1
+    $updateResult = Get-WindowsUpdate -IgnoreReboot
 
     # Check if there are any updates that are not installed
-    $updatesToInstall = $updateResult.Updates | Where-Object { -not $_.IsInstalled }
+    $updatesToInstall = @()
+    foreach ($update in $updateResult) {
+        if ($update.IsInstalled -eq $false) {
+            $updatesToInstall += $update
+        }
+    }
+
     if ($null -eq $updatesToInstall -or $updatesToInstall.Count -eq 0){
-        Write-Log "No updates found"
+        Write-Log "No updates found" -new_lines 1
         Write-Log "Script ended"
         $updateStatus.UpdateFinished = $true
         Write-JSON -UpdateStatus $updateStatus
         exit 0
     }
 
-    foreach ($update in $updateResult.Updates) {
-        if ($update.IsInstalled -eq $false) {
-            Write-Log "Update found: $($update.Title)"
-            # Update JSON status
-            $updateStatus.UpdateCount++
-            $updateStatus.UpdateNames += $update.Title
-            Write-JSON -UpdateStatus $updateStatus
-        }
+    
+    Write-Log "Updates found: $($updatesToInstall.Count)" -new_lines 1
+    foreach ($update in $updatesToInstall) {
+        Write-Log "Update found: $($update.Title)"
+        # Update JSON status
+        $updateStatus.UpdateCount++
+        $updateStatus.UpdateNames += $update.Title
+        Write-JSON -UpdateStatus $updateStatus
     }
 
-    Write-Log "Downloading updates..."
-    Get-WindowsUpdate -Download -AcceptAll *>> $logFilePath
+    Write-Log "Downloading updates..." -new_lines 1
+    $output = Get-WindowsUpdate -Download -AcceptAll -IgnoreReboot | Out-String
+    Write-Log $output
 
-    Write-Log "Installing updates..."
-    Get-WindowsUpdate -Install -AcceptAll -AutoReboot *>> $logFilePath
+    Write-Log "Installing updates..." -new_lines 1
+    $output = Get-WindowsUpdate -Install -AcceptAll -IgnoreReboot | Out-String
+    Write-Log $output
 
-    Write-Log "Update process completed"
-    # Update JSON status
+
+    Write-Log "Update process completed" -new_lines 1
     $updateStatus.UpdateFinished = $true
     Write-JSON -UpdateStatus $updateStatus
 
+    $PendingReboot = Get-ItemProperty -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired' -ErrorAction SilentlyContinue
+    if ($PendingReboot) {
+        Write-Log "A reboot is required" -new_lines 1
+        $updateStatus.RebootRequired = $true
+        Write-JSON -UpdateStatus $updateStatus
+        Write-Log "Rebooting in 3 seconds..."
+        Write-Log "Script ended"
+        
+        Start-Sleep -Seconds 3
+        Get-WindowsUpdate -Install -AcceptAll -AutoReboot
+    }
+    else {
+        Write-Log "No reboot required" - new_lines 1
+    }
 } catch {
     # Handle exceptions and log the error details
     $ErrorMessage = $_.Exception.Message
