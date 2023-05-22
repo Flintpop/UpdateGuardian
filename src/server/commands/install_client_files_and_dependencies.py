@@ -306,7 +306,7 @@ def wait_for_ssh_shutdown(computer: 'Computer') -> None:
     ssh_server_shutdown = False
     computer.log("Waiting for SSH server to be down...")
     while not ssh_server_shutdown:
-        ssh_server_shutdown = not is_ssh_server_available(computer=computer)
+        ssh_server_shutdown = not is_ssh_server_available(computer=computer, print_log_connected=False)
     computer.log("SSH server is down, waiting for it to be up again...")
 
 

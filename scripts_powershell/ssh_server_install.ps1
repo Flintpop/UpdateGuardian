@@ -268,7 +268,7 @@ function Set-RightsSSHServerFiles
     }
 }
 
-$server_ip = "192.168.2.80"
+$server_ip = "192.168.2.41"
 
 # Ensure the script is running with administrative privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator"))
