@@ -34,7 +34,7 @@ def decode_stream(stream) -> str | None:
 
     for encoding in encodings:
         try:
-            return stream.decode(encoding, errors="replace").strip().replace("\n", "").replace("\r", "")
+            return stream.decode(encoding, errors="replace").strip().replace("\r\n", "\n").replace("\r", "")
         except UnicodeDecodeError:
             pass
 

@@ -49,7 +49,7 @@ def check_python_installed(computer: 'Computer') -> bool:
     programs_path: bool = does_path_exists_ssh(computer.ssh_session, folder_path)
 
     if not programs_path:
-        computer.log_error("Programs folder does not exists")
+        computer.log("Programs folder does not exists", "warning")
         return False
 
     computer.log("Programs folder exists")
@@ -195,7 +195,7 @@ def check_python_path_set(computer: 'Computer') -> bool:
         return False
 
     if "python" not in stdout.lower():
-        computer.log_error("Python is not in path")
+        computer.log("Python is not in path", "warning")
         return False
 
     computer.log("Python seems to be in path. Checking if python executable is launchable...")
@@ -230,7 +230,7 @@ def python_installer_exists(computer: 'Computer') -> bool:
 
 
 def install_python_installer(computer: 'Computer') -> bool:
-    computer.log("\nChecking if python installer exists on client computer...")
+    computer.log("Checking if python installer exists on client computer...")
     does_python_installer_exists: bool = python_installer_exists(computer)
 
     if does_python_installer_exists:
@@ -249,7 +249,7 @@ def install_python(computer: 'Computer') -> bool:
     if not python_installer_installed:
         return False
 
-    computer.log("\nInstalling Python...")
+    computer.log("Installing Python...")
 
     # Get the path to the python script that will install python
     path_update_guardian: str = computer.get_project_directory_on_client()
@@ -315,7 +315,7 @@ def refresh_env_variables(computer: 'Computer') -> bool:
     ssh: paramiko.SSHClient = computer.ssh_session
     reboot_remote_pc(ssh)
     ipaddress, remote_user, remote_computer_private_key = computer.ipv4, computer.username, computer.get_private_key()
-    wait_for_ssh_shutdown(ipaddress)
+    wait_for_ssh_shutdown(computer)
 
     if not wait_and_reconnect(ssh, ipaddress, remote_user, remote_computer_private_key):
         computer.log_error("Failed to reconnect to remote computer.")

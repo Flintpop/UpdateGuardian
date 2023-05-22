@@ -1,4 +1,6 @@
 import ctypes
+import datetime
+import json
 import subprocess
 import os
 import sys
@@ -8,29 +10,236 @@ import traceback
 
 import psutil
 import requests
-import win32com.client
-from win32com.universal import com_error
+
+path_output_file: str = os.path.abspath("output.txt")
+if " " in path_output_file:
+    path_output_file = os.path.abspath(os.path.join(os.path.expanduser("~"), "Desktop", "output.txt"))
+    if " " in path_output_file:
+        raise ValueError(f"Path to output file still contains spaces: {path_output_file}.")
 
 
-def update_windows(already_tried=False):
-    process = subprocess.Popen(
-        ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", "Update.ps1"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
+def get_cmd(ps_script: str) -> list[str]:
+    global path_output_file
 
-    output, error = process.communicate()
-    exit_code: int = process.returncode
+    command: str = ps_script + " | Out-File -FilePath " + path_output_file + " -Encoding UTF8"
+    command += "; $Error | Out-File -FilePath " + path_output_file.replace("output", "error") + " -Encoding UTF8"
+    cmd = [
+        "powershell.exe", "-Command", "Start-Process", "powershell", "-Verb", "runAs", "-Wait", "-ArgumentList",
+        "'-executionpolicy', 'bypass', '-Command', '" + command + "'"
+    ]
+    return cmd
 
-    if exit_code != 0:
-        print_and_log_client(f"Error occurred while running the PowerShell script: {error.decode('cp850')}",
-                             "error")
-        if not already_tried:
-            print_and_log_client("Trying to reset Windows Update components and retrying...", "warning")
-            reset_windows_update_components()
-            update_windows(True)
-    else:
-        print_and_log_client(f"PowerShell script output: {output.decode('cp850')}")
+
+def execute_command(command: list[str]) -> tuple[str, str | None]:
+    global path_output_file
+
+    subprocess.run(command, shell=True)
+
+    try:
+        with open(path_output_file, "r") as file:
+            output = file.read()
+        with open(path_output_file.replace("output", "error"), "r") as file:
+            error = file.read()
+    except FileNotFoundError:
+        print_and_log_client("File not found", "error")
+
+    return output, error
+
+
+def execute_file() -> tuple[str, str | None]:
+    import subprocess
+    import time
+
+    # Define the paths for your batch file and output file
+    batch_file_path = os.path.abspath("yes.bat")
+    output_file_path = os.path.abspath('output.txt')
+
+    start_time = (datetime.datetime.now() + datetime.timedelta(minutes=5)).strftime("%H:%M")
+
+    # Define the command to create the scheduled task
+    create_task_command = f'schtasks /create /tn "WindowsUpdate" /tr "{batch_file_path}" /sc once /st ' \
+                          f'{start_time} /rl highest'
+
+    # Run the command to create the task
+    subprocess.run(create_task_command, shell=True, check=True)
+
+    # Define the command to run the scheduled task
+    run_task_command = 'schtasks /run /tn "WindowsUpdate"'
+
+    # Run the command to start the task
+    subprocess.run(run_task_command, shell=True, check=True)
+
+    # Wait for the task to complete. This is a simple way to wait,
+    # but in a real-world situation, you'd want to check the task's
+    # actual status or implement a timeout.
+    time.sleep(60)
+
+    # Read the output file
+    with open(output_file_path, 'r') as file:
+        output = file.read()
+
+    print_and_log_client(output)
+    # return output.replace(b"\r\n", b"\n").decode('cp1252'), error.replace(b"\r\n", b"\n").decode('cp1252')
+
+    return output, None
+
+
+def update_windows():
+    # TODO:
+    #  - Corriger le bug qui fait que le programme ne s'arrête pas
+    #  - Corriger le bug qui fait que le module PSWindowsUpdate n'est pas trouvé par
+    #   le script en ssh ✔️
+    #  - Corriger le bug qui fait que quand ça crash il me dit "bool" n'a pas d'attribut "lower"
+    #  - Corriger le bug qui fait que le script s'arrête alors que le truc qui fait les maj ne s'est pas terminé ✔️
+    print_and_log_client("Starting Windows Update and launching the scheduled task...")
+
+    task_name = "TestTask"
+    file_path = os.path.abspath("Update.ps1")
+
+    # Check and create folder in C:\Temp
+    temp_folder = "C:\\Temp"
+    if not os.path.exists(temp_folder):
+        os.mkdir(temp_folder)
+
+    temp_folder = os.path.join(temp_folder, 'UpdateGuardian')
+    if not os.path.exists(temp_folder):
+        os.mkdir(temp_folder)
+
+    # Create a symbolic link to script
+    link_path = os.path.join(temp_folder, 'Update.ps1')
+    if not os.path.exists(link_path):
+        os.symlink(file_path, link_path)
+
+    # Create batch file to run PowerShell script and log output
+    batch_file_path = os.path.join(temp_folder, 'RunUpdateScript.bat')
+    with open(batch_file_path, 'w') as batch_file:
+        batch_file.write('@echo off\n')
+        batch_file.write('powershell -ExecutionPolicy Bypass -File ' + link_path + ' > ' + os.path.join(temp_folder, 'UpdateLog.txt') + ' 2>&1\n')
+
+    find_task_command = ['schtasks', '/query', '/TN', task_name]
+    task_found = subprocess.run(find_task_command, capture_output=True, text=True)
+
+    if task_name in task_found.stdout:
+        delete_task_command = ['schtasks', '/delete', '/TN', task_name, '/F']
+        delete_task = subprocess.run(delete_task_command, capture_output=True, text=True)
+        if delete_task.returncode != 0:
+            raise OSError(f'Failed to delete task: {delete_task.stderr}')
+
+    create_task_command = ['schtasks', '/create', '/tn', task_name, '/tr',
+                           f'cmd.exe /C "{batch_file_path}"', '/sc', 'once', '/st', '00:00',
+                           '/RL', 'HIGHEST', '/ru', 'SYSTEM', '/F']
+    create_task = subprocess.run(create_task_command, capture_output=True, text=True)
+    if create_task.returncode != 0:
+        raise OSError(f'Failed to create task: {create_task.stderr}')
+
+    run_task_command = ['schtasks', '/run', '/tn', task_name]
+    run_task = subprocess.run(run_task_command, capture_output=True, text=True)
+    if run_task.returncode != 0:
+        raise OSError(f'Failed to run task: {run_task.stderr}')
+
+    delete_task_command = ['schtasks', '/delete', '/TN', task_name, '/F']
+    delete_task = subprocess.run(delete_task_command, capture_output=True, text=True)
+    if delete_task.returncode != 0:
+        raise OSError(f'Failed to delete task: {delete_task.stderr}')
+
+    json_infos = get_updates_infos()
+    with open("results.json", "w") as json_file:
+        json.dump(json_infos, json_file)
+
+    print_and_log_client("Windows Update finished, json file dumped.")
+
+    # if not list_updates():
+    #     return
+    #
+    # print_and_log_client("Downloading updates...")
+    # if not download_updates():
+    #     return
+    #
+    # print_and_log_client("Installing updates...")
+    # if not install_updates():
+    #     return
+
+
+def get_updates_infos() -> dict:
+    json_file_path = "C:/Temp/UpdateGuardian/update_status.json"
+
+    while True:
+        try:
+            with open(json_file_path, 'r') as json_file:
+                data = json.load(json_file)
+                print_and_log_client(data)  # or do something else with the data
+
+                if data["UpdateFinished"]:
+                    print_and_log_client("Update process is finished.")
+                    if data["ErrorMessage"]:
+                        print_and_log_client("Error occurred:", data["ErrorMessage"])
+                    break
+        except json.JSONDecodeError:
+            # This error occurs when the JSON file is being written to while we're trying to read it
+            print_and_log_client("Waiting for file to be available...")
+        except FileNotFoundError:
+            # This error occurs if the file does not exist
+            print_and_log_client("File not found. Waiting for file to be created...")
+
+        # Wait for a bit before checking the file again to not overwhelm the system
+        time.sleep(1)
+
+    return data
+
+
+def list_updates() -> bool:
+    ps_script = 'Get-WindowsUpdate'
+
+    cmd = get_cmd(ps_script)
+
+    output, error = execute_command(cmd)
+
+    if error:
+        print_and_log_client(f"Error: {error}", "error")
+        return False
+
+    if not output or output == "":
+        print_and_log_client("No updates available.")
+        return False
+
+    print_and_log_client(f"Updates available.\n{output}")
+    return True
+
+
+def download_updates() -> bool:
+    ps_script = 'Download-WindowsUpdate -AcceptAll'
+    cmd = get_cmd(ps_script)
+
+    output, error = execute_command(cmd)
+
+    if error:
+        print_and_log_client(f"Error: {error}", "error")
+        return False
+
+    if not output:
+        print_and_log_client("Error: No updates downloadable.", "error")
+        return False
+
+    print_and_log_client(f"Updates downloaded.\n{output}")
+    return True
+
+
+def install_updates() -> bool:
+    ps_script = 'Install-WindowsUpdate -AcceptAll -AutoReboot'
+    cmd = get_cmd(ps_script)
+
+    output, error = execute_command(cmd)
+
+    if error:
+        print_and_log_client(f"Error: {error}", "error")
+        return False
+
+    if not output:
+        print_and_log_client("Updates could not be installed.", "error")
+        return False
+
+    print_and_log_client(f"Updates installed.\n{output}")
+    return True
 
 
 def reset_windows_update_components():
@@ -125,98 +334,8 @@ def is_admin():
 def reboot(reboot_msg: str = "reboot"):
     print_and_log_client("A system reboot is required to complete the update installation.", "warning")
     print_and_log_client("Rebooting...")
-    print(reboot_msg)  # This lines allows the server to know that the client needs to reboot
+    print_and_log_client(reboot_msg)  # This lines allows the server to know that the client needs to reboot
     os.system("shutdown /g /t 1")
-
-
-def install_updates(wua, updates_to_install) -> tuple:
-    print_and_log_client("Installing updates...")
-    try:
-        installer = wua.CreateUpdateInstaller()
-        installer.Updates = updates_to_install
-        installation_result = installer.Install()
-    except com_error as e:
-        if e.hresult == -2147021889:
-            print_and_log_client("The update is already installed, or being installed", "warning")
-        print_and_log_client(f"COM Error: \n{e}")
-        print_and_log_client(f"Exception info: \n{e.excepinfo}")
-        return None, None
-    return installer, installation_result
-
-
-def download_updates(wua, updates_to_install) -> None:
-    print_and_log_client("Downloading updates...")
-
-    updates_to_install = [update for update in updates_to_install if not update.IsDownloaded and update.DownloadPriority
-                          == 1]
-
-    # If there are no updates to download, return
-    if not updates_to_install:
-        print_and_log_client("No updates to download.")
-        return
-
-    attempts = 0
-    while attempts < 5:  # Retry up to 5 times
-        try:
-            downloader = wua.CreateUpdateDownloader()
-            downloader.Updates = updates_to_install
-            download_result = downloader.Download()
-            break
-        except com_error as e:
-            if e.hresult == -2147024891:  # Access denied
-                attempts += 1
-                print_and_log_client(f"Access denied, retrying after 10 seconds... ({attempts})")
-                time.sleep(10)  # Wait for 10 seconds before retrying
-            else:
-                raise  # Re-raise the exception if it's not "access denied"
-    else:  # No break, all attempts exhausted
-        print_and_log_client("Error: Access denied 5 times, aborting.", "error")
-        sys.exit(1)
-
-    if download_result.ResultCode != 2:
-        print_and_log_client("Error downloading updates.", "error")
-        sys.exit(1)
-    print_and_log_client("Updates downloaded successfully.")
-
-
-def search_for_updates(searcher):
-    search_result = searcher.Search("IsInstalled=0 and Type='Software'")
-    updates_to_install = win32com.client.Dispatch("Microsoft.Update.UpdateColl")
-
-    if search_result.Updates.Count == 0:
-        print_and_log_client("No updates found.")
-        sys.exit(0)
-    else:
-        print_and_log_client(f"{search_result.Updates.Count} update(s) found.")
-
-    for update in search_result.Updates:
-        if update.IsInstalled:
-            continue
-        print_and_log_client(f"Update {update.Title} is available.")
-        updates_to_install.Add(update)
-
-    if updates_to_install.Count == 0:
-        print_and_log_client("No updates found.")
-        sys.exit(0)
-    return updates_to_install
-
-
-def process_updates(installation_result, updates_to_install) -> None:
-    if installation_result.ResultCode == 2:
-        print_and_log_client("Updates installed successfully.")
-        if installation_result.RebootRequired:
-            reboot()
-    else:
-        process_update_error(installation_result, updates_to_install)
-
-
-def process_update_error(installation_result, updates_to_install) -> None:
-    hresult = installation_result.HResult
-    for i in range(updates_to_install.Count):
-        update_result = installation_result.GetUpdateResult(i)
-        update = updates_to_install.Item(i)
-        print_and_log_client(f"Error installing update {update.Title}. Error code: {update_result.ResultCode},"
-                             f" HRESULT: {hresult}", "error")
 
 
 def print_and_log_client(message: str, level: str = "info") -> None:

@@ -88,7 +88,7 @@ class Computer:
 
             self.log_add_vertical_space()
             if not self.shutdown():
-                return self.log_error("Could not shutdown client.")
+                return self.log_error("Could not shut down client.")
 
             self.updated_successfully = True
             return True
@@ -181,19 +181,25 @@ class Computer:
 
     def install_update(self) -> tuple[bool, str | None]:
         self.log("Installing update on the client...")
-        result = self.__start_python_script()
-        if result is None or result is False:
+        try:
+            result = self.__start_python_script()
+            if result is None:
+                self.log("Pc is rebooting...")
+                if not self.wait_for_pc_to_be_online_again():
+                    self.log_error("Could not wait for pc to be online again.")
+                    return False, None
+                return True, None
+        except Exception as e:
+            self.log_error("Unhandled error while installing update on client:\n" + str(e))
             return False, None
 
-        if result.lower() == "reboot":
-            self.log("The client needs to reboot, waiting for it to be back online...")
-            return self.wait_for_pc_to_be_online_again(), None
+        if "success" in result.lower():
+            self.log("Update successfully installed on the client.")
+            return True, None
 
-        if "no updates found" in result.lower():
-            return True, "no up"
-        return True, None
+        return True, "no updates found"
 
-    def __start_python_script(self) -> str | bool:
+    def __start_python_script(self) -> str | bool | None:
         self.log("Starting the python script...")
         command: str = "cd " + Infos.PROJECT_NAME + " && python " + self.get_main_script_path()
 
@@ -204,14 +210,20 @@ class Computer:
         if stderr:
             self.log_error("Error while starting the python script:")
             return False
-        if "Traceback" in stdout:
-            self.log_error(f"Error while starting the python script:\n\n{stdout}")
-            return False
         if stdout:
+            if "Traceback" in stdout:
+                self.log_error(f"Error while starting the python script:\n\n{stdout}")
+                return False
             self.log(f"Stdout : \n{stdout}")
+            json_filename: str = "result.json"
+            download_file_ssh(self.ssh_session, json_filename,
+                              os.path.join(self.get_project_directory_on_client(), json_filename))
+            with open(json_filename, "r") as f:
+                self.log("Here is the json file content:\n")
+                self.log(f.read())
             return stdout
-        self.log_error("Error, the python script returned nothing.")
-        return False
+        self.log("The python script returned nothing.")
+        return None
 
     def shutdown(self):
         """

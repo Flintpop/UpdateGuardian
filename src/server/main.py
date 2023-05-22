@@ -93,6 +93,8 @@ def settings_thread() -> None:
     log("Program started, settings loaded", print_formatted=False)
     log_new_lines()
     global stopped
+    force_start_execute_job()
+    return
     while not stopped:
         scheduled_time = get_launch_time()
 

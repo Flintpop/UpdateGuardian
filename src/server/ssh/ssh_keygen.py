@@ -60,6 +60,7 @@ def gen_keys_and_save_them(computer: 'Computer') -> None:
     with open(public_key_file, "wb") as f:
         f.write(public_pem)
 
+    print()
     log(f"Private and public RSA keys have been generated and saved to files for computer {computer.hostname}.",
         print_formatted=False)
 

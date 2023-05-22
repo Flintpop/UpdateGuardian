@@ -72,6 +72,9 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"Received data.")
 
+        print("Write 'stop' to stop the server.")
+        print("> ", end="")
+
     # noinspection PyPep8Naming
     def do_GET(self):
         log_new_lines()

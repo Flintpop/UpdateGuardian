@@ -268,19 +268,15 @@ function Set-RightsSSHServerFiles
     }
 }
 
-$server_ip = "192.168.7.225"
+$server_ip = "192.168.2.80"
 
 # Ensure the script is running with administrative privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator"))
 {
-    Write-Host "Running script without administrative privileges. Attempting to restart with admin rights..."
     $ScriptPath = $MyInvocation.MyCommand.Path
     $CurrentDirectory = (Get-Item -Path ".\").FullName
-    Read-Host "Press Enter to continue, and re-run the script with administratives privileges."
     $AdminProcess = Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -Verb RunAs -PassThru -WorkingDirectory $CurrentDirectory
-    $AdminProcess.WaitForExit()
-    $ExitCode = $AdminProcess.ExitCode
-    exit $ExitCode
+    exit 0
 }
 else
 {
@@ -480,7 +476,10 @@ if (!(Get-Module -ListAvailable -Name PSWindowsUpdate))
 {
     try
     {
-        Install-Module PSWindowsUpdate -Force -Scope CurrentUser -ErrorAction Stop
+        Install-PackageProvider NuGet -Force;
+        Set-PSRepository PSGallery -InstallationPolicy Trusted
+        Install-Module SQLServer -Repository PSGallery
+        Install-Module PSWindowsUpdate -Force -Scope AllUsers -ErrorAction Stop
         Write-Host "Module PSWindowsUpdate installed successfully." -ForegroundColor Green
     }
     catch
