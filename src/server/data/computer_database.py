@@ -137,7 +137,7 @@ class ComputerDatabase:
         # Add all the computers to the database, using the Computer class.
         for computer_hostname in computer_database.computers_json:
             new_computer_dict = computer_database.computers_json[computer_hostname]
-            new_computer = Computer(new_computer_dict)
+            new_computer = Computer(new_computer_dict, init_logger=True)
             computer_database.add_computer(new_computer)
 
     def get_number_of_computers(self) -> int:

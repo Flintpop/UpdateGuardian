@@ -1,5 +1,4 @@
 import ctypes
-import datetime
 import json
 import subprocess
 import os
@@ -11,90 +10,18 @@ import traceback
 import psutil
 import requests
 
-path_output_file: str = os.path.abspath("output.txt")
-if " " in path_output_file:
-    path_output_file = os.path.abspath(os.path.join(os.path.expanduser("~"), "Desktop", "output.txt"))
-    if " " in path_output_file:
-        raise ValueError(f"Path to output file still contains spaces: {path_output_file}.")
-
-
-def get_cmd(ps_script: str) -> list[str]:
-    global path_output_file
-
-    command: str = ps_script + " | Out-File -FilePath " + path_output_file + " -Encoding UTF8"
-    command += "; $Error | Out-File -FilePath " + path_output_file.replace("output", "error") + " -Encoding UTF8"
-    cmd = [
-        "powershell.exe", "-Command", "Start-Process", "powershell", "-Verb", "runAs", "-Wait", "-ArgumentList",
-        "'-executionpolicy', 'bypass', '-Command', '" + command + "'"
-    ]
-    return cmd
-
-
-def execute_command(command: list[str]) -> tuple[str, str | None]:
-    global path_output_file
-
-    subprocess.run(command, shell=True)
-
-    try:
-        with open(path_output_file, "r") as file:
-            output = file.read()
-        with open(path_output_file.replace("output", "error"), "r") as file:
-            error = file.read()
-    except FileNotFoundError:
-        print_and_log_client("File not found", "error")
-
-    return output, error
-
-
-def execute_file() -> tuple[str, str | None]:
-    import subprocess
-    import time
-
-    # Define the paths for your batch file and output file
-    batch_file_path = os.path.abspath("yes.bat")
-    output_file_path = os.path.abspath('output.txt')
-
-    start_time = (datetime.datetime.now() + datetime.timedelta(minutes=5)).strftime("%H:%M")
-
-    # Define the command to create the scheduled task
-    create_task_command = f'schtasks /create /tn "WindowsUpdate" /tr "{batch_file_path}" /sc once /st ' \
-                          f'{start_time} /rl highest'
-
-    # Run the command to create the task
-    subprocess.run(create_task_command, shell=True, check=True)
-
-    # Define the command to run the scheduled task
-    run_task_command = 'schtasks /run /tn "WindowsUpdate"'
-
-    # Run the command to start the task
-    subprocess.run(run_task_command, shell=True, check=True)
-
-    # Wait for the task to complete. This is a simple way to wait,
-    # but in a real-world situation, you'd want to check the task's
-    # actual status or implement a timeout.
-    time.sleep(60)
-
-    # Read the output file
-    with open(output_file_path, 'r') as file:
-        output = file.read()
-
-    print_and_log_client(output)
-    # return output.replace(b"\r\n", b"\n").decode('cp1252'), error.replace(b"\r\n", b"\n").decode('cp1252')
-
-    return output, None
-
 
 def update_windows():
     # TODO:
     #  - Corriger le bug qui fait que le programme ne s'arrête pas
     #  - Corriger le bug qui fait que le module PSWindowsUpdate n'est pas trouvé par
     #   le script en ssh ✔️
-    #  - Corriger le bug qui fait que quand ça crash il me dit "bool" n'a pas d'attribut "lower"
+    #  - Corriger le bug qui fait que quand ça crash il me dit "bool" n'a pas d'attribut "lower" ~✔️
     #  - Corriger le bug qui fait que le script s'arrête alors que le truc qui fait les maj ne s'est pas terminé ✔️
     print_and_log_client("Starting Windows Update and launching the scheduled task...")
 
     task_name = "TestTask"
-    file_path = os.path.abspath("Update.ps1")
+    file_path = os.path.abspath("UpdateTest.ps1")
 
     # Check and create folder in C:\Temp
     temp_folder = "C:\\Temp"
@@ -105,7 +32,7 @@ def update_windows():
     if not os.path.exists(temp_folder):
         os.mkdir(temp_folder)
 
-    # Create a symbolic link to script
+    # Create a symbolic link to powershell script
     link_path = os.path.join(temp_folder, 'Update.ps1')
     if not os.path.exists(link_path):
         os.symlink(file_path, link_path)
@@ -114,7 +41,8 @@ def update_windows():
     batch_file_path = os.path.join(temp_folder, 'RunUpdateScript.bat')
     with open(batch_file_path, 'w') as batch_file:
         batch_file.write('@echo off\n')
-        batch_file.write('powershell -ExecutionPolicy Bypass -File ' + link_path + ' > ' + os.path.join(temp_folder, 'UpdateLog.txt') + ' 2>&1\n')
+        batch_file.write('powershell -ExecutionPolicy Bypass -File ' + link_path + ' > '
+                         + os.path.join(temp_folder, 'UpdateLog.txt') + ' 2>&1\n')
 
     find_task_command = ['schtasks', '/query', '/TN', task_name]
     task_found = subprocess.run(find_task_command, capture_output=True, text=True)
@@ -148,98 +76,63 @@ def update_windows():
 
     print_and_log_client("Windows Update finished, json file dumped.")
 
-    # if not list_updates():
-    #     return
-    #
-    # print_and_log_client("Downloading updates...")
-    # if not download_updates():
-    #     return
-    #
-    # print_and_log_client("Installing updates...")
-    # if not install_updates():
-    #     return
+
+def handle_json_decode_error(e, json_file_path):
+    with open(json_file_path, 'r') as faulty_json_file:
+        content = faulty_json_file.read()
+        logging.error(f"JSONDecodeError occurred. Error details: {e}. Content of the file: {content}")
+        print_and_log_client("Waiting for file to be available...")
+
+
+def handle_file_not_found_error(e):
+    logging.error(f"FileNotFoundError occurred. Error details: {e}")
+    print_and_log_client("File not found. Waiting for file to be created...")
+
+
+def handle_general_error(e):
+    logging.error(f"An unexpected error occurred. Error details: {e}")
+    print_and_log_client("An unexpected error occurred, please check the debug log.")
+
+
+def process_json_data(data: dict):
+    print_and_log_client(data.__str__())
+    if not data.get("UpdateFinished", False):
+        return
+    print_and_log_client("Update process is finished.")
+    if data.get("ErrorMessage", None):
+        print_and_log_client(f"Error occurred: {data['ErrorMessage']}")
 
 
 def get_updates_infos() -> dict:
-    json_file_path = "C:/Temp/UpdateGuardian/update_status.json"
-
+    json_file_path: str = "C:/Temp/UpdateGuardian/update_status.json"
     while True:
+        if not os.path.isfile(json_file_path):
+            print_and_log_client("File does not exist. Waiting for file to be created...")
+            time.sleep(1)
+            continue
+
         try:
-            with open(json_file_path, 'r') as json_file:
+            with open(json_file_path, 'r', encoding="utf-8") as json_file:
+                if os.stat(json_file_path).st_size <= 0:
+                    print_and_log_client("File is empty. Waiting for data to be written...")
+                    time.sleep(1)
+                    continue
+
                 data = json.load(json_file)
-                print_and_log_client(data)  # or do something else with the data
+                process_json_data(data)
+                return data
 
-                if data["UpdateFinished"]:
-                    print_and_log_client("Update process is finished.")
-                    if data["ErrorMessage"]:
-                        print_and_log_client("Error occurred:", data["ErrorMessage"])
-                    break
-        except json.JSONDecodeError:
-            # This error occurs when the JSON file is being written to while we're trying to read it
-            print_and_log_client("Waiting for file to be available...")
-        except FileNotFoundError:
-            # This error occurs if the file does not exist
-            print_and_log_client("File not found. Waiting for file to be created...")
+        except json.JSONDecodeError as e:
+            handle_json_decode_error(e, json_file_path)
 
-        # Wait for a bit before checking the file again to not overwhelm the system
-        time.sleep(1)
+        except FileNotFoundError as e:
+            handle_file_not_found_error(e)
 
-    return data
+        except Exception as e:
+            handle_general_error(e)
 
-
-def list_updates() -> bool:
-    ps_script = 'Get-WindowsUpdate'
-
-    cmd = get_cmd(ps_script)
-
-    output, error = execute_command(cmd)
-
-    if error:
-        print_and_log_client(f"Error: {error}", "error")
-        return False
-
-    if not output or output == "":
-        print_and_log_client("No updates available.")
-        return False
-
-    print_and_log_client(f"Updates available.\n{output}")
-    return True
-
-
-def download_updates() -> bool:
-    ps_script = 'Download-WindowsUpdate -AcceptAll'
-    cmd = get_cmd(ps_script)
-
-    output, error = execute_command(cmd)
-
-    if error:
-        print_and_log_client(f"Error: {error}", "error")
-        return False
-
-    if not output:
-        print_and_log_client("Error: No updates downloadable.", "error")
-        return False
-
-    print_and_log_client(f"Updates downloaded.\n{output}")
-    return True
-
-
-def install_updates() -> bool:
-    ps_script = 'Install-WindowsUpdate -AcceptAll -AutoReboot'
-    cmd = get_cmd(ps_script)
-
-    output, error = execute_command(cmd)
-
-    if error:
-        print_and_log_client(f"Error: {error}", "error")
-        return False
-
-    if not output:
-        print_and_log_client("Updates could not be installed.", "error")
-        return False
-
-    print_and_log_client(f"Updates installed.\n{output}")
-    return True
+        finally:
+            time.sleep(1)
 
 
 def reset_windows_update_components():
@@ -329,13 +222,6 @@ def is_admin():
         print(e)
         logging.error(e)
         return False
-
-
-def reboot(reboot_msg: str = "reboot"):
-    print_and_log_client("A system reboot is required to complete the update installation.", "warning")
-    print_and_log_client("Rebooting...")
-    print_and_log_client(reboot_msg)  # This lines allows the server to know that the client needs to reboot
-    os.system("shutdown /g /t 1")
 
 
 def print_and_log_client(message: str, level: str = "info") -> None:

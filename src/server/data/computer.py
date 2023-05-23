@@ -8,8 +8,7 @@ from cryptography.hazmat.backends.openssl import ed25519
 
 from src.server.commands.install_client_files_and_dependencies import python_scripts, python_installation, \
     python_path, python_packages, wait_for_ssh_shutdown
-from src.server.commands.path_functions import list_files_recursive, find_directory, change_directory_to_root_folder, \
-    find_file
+from src.server.commands.path_functions import list_files_recursive, find_directory, change_directory_to_root_folder
 from src.server.config import Infos
 from src.server.environnement.server_logs import ComputerLogger
 from src.server.ssh.ssh_commands import is_ssh_server_available, stdout_err_execute_ssh_command, wait_and_reconnect, \
@@ -29,7 +28,7 @@ class Computer:
     - logger (logging.Logger, used to log the computer's activity in a file)\n
     """
 
-    def __init__(self, computer_info: dict) -> None:
+    def __init__(self, computer_info: dict, init_logger=False) -> None:
 
         self.no_updates = None
         self.hostname = computer_info.get("hostname")
@@ -53,7 +52,8 @@ class Computer:
         self.logs_filename = os.path.join(self.logs_filename,
                                           f"{self.hostname}.log")
 
-        self.computer_logger = ComputerLogger(self.logs_filename)
+        if init_logger:
+            self.computer_logger = ComputerLogger(self.logs_filename)
 
         self.ssh_session: paramiko.SSHClient | None = None
         self.current_log_message: str = ""
@@ -190,7 +190,7 @@ class Computer:
                 self.log_error("Could not start python script.")
                 return False, None
 
-            if result["ErrorMessage"]:
+            if result.get["ErrorMessage"]:
                 self.log_error(f"An error occurred :\n{result['ErrorMessage']}.")
                 return False, None
 
@@ -229,13 +229,20 @@ class Computer:
                 self.log_error(f"Error while starting the python script:\n\n{stdout}")
                 return None
             self.log(f"Stdout : \n{stdout}")
-            json_filename: str = find_file("result.json")
-            download_file_ssh(self.ssh_session, json_filename,
-                              os.path.join(self.get_project_directory_on_client(), json_filename))
+
+            json_filename: str = f"results-{self.hostname}.json"
+            remote_file_path: str = os.path.join(self.get_project_directory_on_client(),
+                                                 json_filename.replace(f"-{self.hostname}", ""))
+            if not download_file_ssh(self.ssh_session, json_filename, remote_file_path):
+
+                self.log_error("Could not download the json file.")
+                return None
 
             with open(json_filename, "r") as f:
                 json_res: dict = json.load(f)
                 self.log(f"Here is the json file content:\n{json_res.__str__()}", new_lines=1)
+
+            os.remove(json_filename)
 
             return json_res
         self.log_error("The python script returned nothing.")

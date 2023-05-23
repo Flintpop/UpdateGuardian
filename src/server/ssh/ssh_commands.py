@@ -159,7 +159,6 @@ def download_file_ssh(ssh: paramiko.SSHClient, local_file_path: str, remote_file
     return True
 
 
-
 def send_file_ssh(ssh: paramiko.SSHClient, local_path: str, remote_path: str) -> bool:
     # noinspection PyBroadException
     try:

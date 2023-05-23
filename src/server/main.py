@@ -7,6 +7,7 @@ import os
 # If running as a PyInstaller bundle
 if getattr(sys, 'frozen', False):
     # Add the directory containing your modules to sys.path
+    # noinspection PyUnresolvedReferences, PyProtectedMember
     sys.path.append(os.path.join(sys._MEIPASS, 'src/server'))
 else:
     # Add the directory containing your modules to sys.path
@@ -18,7 +19,6 @@ import add_paths  # Import and execute add_paths.py to update sys.path
 
 from pytz_deprecation_shim import PytzUsageWarning
 from apscheduler.schedulers.background import BackgroundScheduler
-
 
 from commands.install_update import update_all_computer
 from data.computer_database import ComputerDatabase
@@ -95,6 +95,7 @@ def settings_thread() -> None:
     global stopped
     force_start_execute_job()
     return
+    # noinspection PyUnboundLocalVariable
     while not stopped:
         scheduled_time = get_launch_time()
 

@@ -27,7 +27,7 @@ function Write-JSON {
         [Parameter(Mandatory=$true)]
         [pscustomobject] $UpdateStatus
     )
-    $UpdateStatus | ConvertTo-Json -Depth 100 | Set-Content -Path $jsonFilePath -Encoding UTF8
+    $UpdateStatus | ConvertTo-Json -Depth 100 | Out-File -FilePath $jsonFilePath -Encoding default
 }
 
 # Initialize JSON object
@@ -54,6 +54,7 @@ Write-Log "Script started"
 try {
     # Check for updates
     Write-Log "Checking for updates..." -new_lines 1
+
     $updateResult = Get-WindowsUpdate -IgnoreReboot
 
     # Check if there are any updates that are not installed
@@ -72,7 +73,7 @@ try {
         exit 0
     }
 
-    
+
     Write-Log "Updates found: $($updatesToInstall.Count)" -new_lines 1
     foreach ($update in $updatesToInstall) {
         Write-Log "Update found: $($update.Title)"
@@ -102,9 +103,9 @@ try {
         Write-JSON -UpdateStatus $updateStatus
         Write-Log "Rebooting in 3 seconds..."
         Write-Log "Script ended"
-        
+
         Start-Sleep -Seconds 3
-        Get-WindowsUpdate -Install -AcceptAll -AutoReboot
+        Get-WindowsUpdate -AutoReboot
     }
     else {
         Write-Log "No reboot required" - new_lines 1
@@ -116,7 +117,7 @@ try {
     Write-Log "Error: $ErrorMessage"
     Write-Log "Item that caused the error: $FailedItem"
     # Update JSON status
-    $updateStatus.ErrorMessage = "Error: $ErrorMessage. Item that caused the error: $FailedItem"
+    $updateStatus.ErrorMessage = "Error: $ErrorMessage. `nItem that caused the error: $FailedItem"
     Write-JSON -UpdateStatus $updateStatus
 }
 
