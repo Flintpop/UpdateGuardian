@@ -21,7 +21,7 @@ def update_windows():
     print_and_log_client("Starting Windows Update and launching the scheduled task...")
 
     task_name = "TestTask"
-    file_path = os.path.abspath("UpdateTest.ps1")
+    file_path = os.path.abspath("Update.ps1")
 
     # Check and create folder in C:\Temp
     temp_folder = "C:\\Temp"
@@ -34,8 +34,12 @@ def update_windows():
 
     # Create a symbolic link to powershell script
     link_path = os.path.join(temp_folder, 'Update.ps1')
-    if not os.path.exists(link_path):
-        os.symlink(file_path, link_path)
+    # If the link already exists, remove it
+    if os.path.exists(link_path):
+        os.remove(link_path)
+
+    # Create a new symbolic link
+    os.symlink(file_path, link_path)
 
     # Create batch file to run PowerShell script and log output
     batch_file_path = os.path.join(temp_folder, 'RunUpdateScript.bat')
@@ -94,16 +98,7 @@ def handle_general_error(e):
     print_and_log_client("An unexpected error occurred, please check the debug log.")
 
 
-def process_json_data(data: dict):
-    print_and_log_client(data.__str__())
-    if not data.get("UpdateFinished", False):
-        return
-    print_and_log_client("Update process is finished.")
-    if data.get("ErrorMessage", None):
-        print_and_log_client(f"Error occurred: {data['ErrorMessage']}")
-
-
-def get_updates_infos() -> dict:
+def get_updates_infos() -> dict | None:
     json_file_path: str = "C:/Temp/UpdateGuardian/update_status.json"
     while True:
         if not os.path.isfile(json_file_path):
@@ -119,8 +114,21 @@ def get_updates_infos() -> dict:
                     continue
 
                 data = json.load(json_file)
-                process_json_data(data)
-                return data
+
+                update_finished: bool = data.get("UpdateFinished", None)
+                error_message = data.get("ErrorMessage", None)
+
+                if error_message is not None and error_message is not False:
+                    print_and_log_client(f"Error occurred: {data['ErrorMessage']}", "error")
+                    return None
+                if update_finished is None:
+                    print_and_log_client("Error, update_finished is None", "error")
+                    return None
+
+                if update_finished:
+                    print_and_log_client("Update process is finished.")
+                    print_and_log_client(data.__str__())
+                    return data
 
         except json.JSONDecodeError as e:
             handle_json_decode_error(e, json_file_path)

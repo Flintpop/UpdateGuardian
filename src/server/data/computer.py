@@ -222,7 +222,7 @@ class Computer:
         self.log("Python script started.")
 
         if stderr:
-            self.log_error("Error while starting the python script:")
+            self.log_error(f"Error while starting the python script:\n\n{stderr}")
             return None
         if stdout:
             if "Traceback" in stdout:
