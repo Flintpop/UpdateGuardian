@@ -95,10 +95,17 @@ def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, private_
     start_time = time.time()
     connected = False
 
-    while not connected and time.time() - start_time < timeout:
+    while time.time() - start_time < timeout:
         try:
-            ssh.connect(ip, username=username, pkey=private_key, timeout=timeout)
-            connected = True
+            success_count = 0
+            for _ in range(10):  # check connection stability 10 times
+                ssh.connect(ip, username=username, pkey=private_key, timeout=retry_interval)
+                success_count += 1
+                time.sleep(0.5)
+
+            if success_count == 10:  # if all 10 connection attempts succeeded
+                connected = True
+                break
         except (paramiko.ssh_exception.NoValidConnectionsError, socket.timeout, ConnectionResetError):
             time.sleep(retry_interval)
 
@@ -175,7 +182,7 @@ def send_files_ssh(ssh: paramiko.SSHClient, local_paths: list[str], remote_path:
     Sends multiple files to the remote computer. The files will be sent to the remote_path folder, and will keep their
     original name.
     :param ssh: SSH session to the remote computer.
-    :param local_paths: List of the local paths of the files to send.
+    :param local_paths: List of the files local paths to send.
     :param remote_path: The remote path of the folder where the files will be sent.
     :return: True if the files were sent successfully, False otherwise.
     """

@@ -314,6 +314,7 @@ def refresh_env_variables(computer: 'Computer') -> bool:
     computer.log("Rebooting remote computer...")
     ssh: paramiko.SSHClient = computer.ssh_session
     reboot_remote_pc(ssh)
+    ssh.close()
     ipaddress, remote_user, remote_computer_private_key = computer.ipv4, computer.username, computer.get_private_key()
     wait_for_ssh_shutdown(computer)
 

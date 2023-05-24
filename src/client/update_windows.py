@@ -119,6 +119,8 @@ def process_data_json_updates_results(data: dict):
         print_and_log_client(data.__str__())
         return True, data
 
+    return False, None
+
 
 def get_updates_infos() -> dict | None:
     already_printed: bool = False
@@ -153,6 +155,7 @@ def get_updates_infos() -> dict | None:
 
         except Exception as e:
             handle_general_error(e)
+            return None
 
         finally:
             time.sleep(1)

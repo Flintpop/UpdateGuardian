@@ -239,8 +239,8 @@ class Computer:
 
             with open(json_filename, "r") as f:
                 json_res: dict = json.load(f)
-                print_json: str = json_res.__str__().replace("{", "{\n").replace("}", "\n}\n")
-                print_json: str = print_json.replace(", ", ",\n")
+                print_json: str = json_res.__str__().replace("{", "{\n\t").replace("}", "\n}\n")
+                print_json: str = print_json.replace(", ", ",\n\t")
                 self.log(f"Here is the json file content:\n{print_json}", new_lines=1)
 
             os.remove(json_filename)
@@ -306,7 +306,7 @@ class Computer:
         remote_private_key: paramiko.pkey = self.__private_key
 
         if not wait_and_reconnect(ssh, ipaddress, remote_user, remote_private_key, timeout=timeout):
-            self.log_error("Failed to reconnect to remote computer.")
+            self.log_error(f"Failed to reconnect to {self.hostname}, timeout likely reached.")
             return False
         return True
 
