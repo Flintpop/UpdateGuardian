@@ -4,27 +4,30 @@ $logFilePath = "C:\Temp\UpdateGuardian\update_powershell_log.txt"
 $jsonFilePath = "C:\Temp\UpdateGuardian\update_status.json"
 
 # Function to log messages with timestamps
-function Write-Log {
+function Write-Log
+{
     param (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string] $Message,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [int] $new_lines
     )
-    if (-not $PSBoundParameters.ContainsKey('new_lines')) {
+    if (-not $PSBoundParameters.ContainsKey('new_lines'))
+    {
         $new_lines = 0
     }
 
     $new_lines_str = "`n" * $new_lines
-    "$new_lines_str$((Get-Date).ToString()): $Message" | Out-File -Append -FilePath $logFilePath -Encoding UTF8
+    "$new_lines_str$((Get-Date).ToString() ): $Message" | Out-File -Append -FilePath $logFilePath -Encoding UTF8
 }
 
 
 
 # Function to write update status to JSON file
-function Write-JSON {
+function Write-JSON
+{
     param (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [pscustomobject] $UpdateStatus
     )
     $UpdateStatus | ConvertTo-Json -Depth 100 | Out-File -FilePath $jsonFilePath -Encoding default
@@ -43,7 +46,8 @@ $updateStatus = @{
 Write-JSON -UpdateStatus $updateStatus
 
 # Clear the log file at the start of the script
-if (-not (Test-Path $logFilePath)) {
+if (-not(Test-Path $logFilePath))
+{
     New-Item -ItemType File -Path $logFilePath | Out-Null
 }
 
@@ -51,7 +55,8 @@ Out-File -FilePath $logFilePath -Encoding UTF8 -Force
 # Start the script
 Write-Log "Script started"
 
-try {
+try
+{
     # Check for updates
     Write-Log "Checking for updates..." -new_lines 1
 
@@ -59,13 +64,16 @@ try {
 
     # Check if there are any updates that are not installed
     $updatesToInstall = @()
-    foreach ($update in $updateResult) {
-        if ($update.IsInstalled -eq $false) {
+    foreach ($update in $updateResult)
+    {
+        if ($update.IsInstalled -eq $false)
+        {
             $updatesToInstall += $update
         }
     }
 
-    if ($null -eq $updatesToInstall -or $updatesToInstall.Count -eq 0){
+    if ($null -eq $updatesToInstall -or $updatesToInstall.Count -eq 0)
+    {
         Write-Log "No updates found" -new_lines 1
         Write-Log "Script ended"
         $updateStatus.UpdateFinished = $true
@@ -74,9 +82,10 @@ try {
     }
 
 
-    Write-Log "Updates found: $($updatesToInstall.Count)" -new_lines 1
-    foreach ($update in $updatesToInstall) {
-        Write-Log "Update found: $($update.Title)"
+    Write-Log "Updates found: $( $updatesToInstall.Count )" -new_lines 1
+    foreach ($update in $updatesToInstall)
+    {
+        Write-Log "Update found: $( $update.Title )"
         # Update JSON status
         $updateStatus.UpdateCount++
         $updateStatus.UpdateNames += $update.Title
@@ -97,7 +106,8 @@ try {
     Write-JSON -UpdateStatus $updateStatus
 
     $PendingReboot = Get-ItemProperty -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired' -ErrorAction SilentlyContinue
-    if ($PendingReboot) {
+    if ($PendingReboot)
+    {
         Write-Log "A reboot is required" -new_lines 1
         $updateStatus.RebootRequired = $true
         Write-JSON -UpdateStatus $updateStatus
@@ -107,10 +117,13 @@ try {
         Start-Sleep -Seconds 3
         Get-WindowsUpdate -AutoReboot
     }
-    else {
+    else
+    {
         Write-Log "No reboot required" - new_lines 1
     }
-} catch {
+}
+catch
+{
     # Handle exceptions and log the error details
     $ErrorMessage = $_.Exception.Message
     $FailedItem = $_.Exception.ItemName

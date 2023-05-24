@@ -19,6 +19,9 @@ def update_windows():
     #  - Corriger le bug qui fait que quand ça crash il me dit "bool" n'a pas d'attribut "lower" ~✔️
     #  - Corriger le bug qui fait que le script s'arrête alors que le truc qui fait les maj ne s'est pas terminé ✔️
     print_and_log_client("Starting Windows Update and launching the scheduled task...")
+    update_status_json_filename: str = "C:\\Temp\\UpdateGuardian\\update_status.json"
+    if os.path.exists(update_status_json_filename):
+        os.remove(update_status_json_filename)
 
     task_name = "TestTask"
     file_path = os.path.abspath("Update.ps1")
@@ -78,31 +81,53 @@ def update_windows():
     with open("results.json", "w") as json_file:
         json.dump(json_infos, json_file)
 
+    os.remove("C:/Temp/UpdateGuardian/update_status.json")
     print_and_log_client("Windows Update finished, json file dumped.")
 
 
 def handle_json_decode_error(e, json_file_path):
     with open(json_file_path, 'r') as faulty_json_file:
         content = faulty_json_file.read()
-        logging.error(f"JSONDecodeError occurred. Error details: {e}. Content of the file: {content}")
-        print_and_log_client("Waiting for file to be available...")
+        print_and_log_client(f"JSONDecodeError occurred. Error details: \n{e}. Content of the file: \n{content}",
+                             "error")
 
 
-def handle_file_not_found_error(e):
-    logging.error(f"FileNotFoundError occurred. Error details: {e}")
-    print_and_log_client("File not found. Waiting for file to be created...")
+def handle_file_not_found_error(e, already_printed: bool):
+    if not already_printed:
+        print_and_log_client(f"File not found: {e}. Waiting for file to be created...", "warning")
 
 
 def handle_general_error(e):
     logging.error(f"An unexpected error occurred. Error details: {e}")
-    print_and_log_client("An unexpected error occurred, please check the debug log.")
+    print_and_log_client(f"An unexpected error occurred. Error details: \n{e}\n\nTraceback: \n{traceback.format_exc()}",
+                         "error")
+
+
+def process_data_json_updates_results(data: dict):
+    update_finished: bool = data.get("UpdateFinished", None)
+    error_message = data.get("ErrorMessage", None)
+
+    if error_message is not None and error_message is not False:
+        print_and_log_client(f"Error occurred: {data['ErrorMessage']}", "error")
+        return True, None
+    if update_finished is None:
+        print_and_log_client("Error, update_finished is None", "error")
+        return True, None
+
+    if update_finished:
+        print_and_log_client("Update process is finished.")
+        print_and_log_client(data.__str__())
+        return True, data
 
 
 def get_updates_infos() -> dict | None:
+    already_printed: bool = False
     json_file_path: str = "C:/Temp/UpdateGuardian/update_status.json"
     while True:
         if not os.path.isfile(json_file_path):
-            print_and_log_client("File does not exist. Waiting for file to be created...")
+            if not already_printed:
+                print_and_log_client("File does not exist. Waiting for file to be created...")
+                already_printed = True
             time.sleep(1)
             continue
 
@@ -115,26 +140,16 @@ def get_updates_infos() -> dict | None:
 
                 data = json.load(json_file)
 
-                update_finished: bool = data.get("UpdateFinished", None)
-                error_message = data.get("ErrorMessage", None)
-
-                if error_message is not None and error_message is not False:
-                    print_and_log_client(f"Error occurred: {data['ErrorMessage']}", "error")
-                    return None
-                if update_finished is None:
-                    print_and_log_client("Error, update_finished is None", "error")
-                    return None
-
-                if update_finished:
-                    print_and_log_client("Update process is finished.")
-                    print_and_log_client(data.__str__())
-                    return data
+                will_return, res = process_data_json_updates_results(data)
+                if will_return:
+                    return res
 
         except json.JSONDecodeError as e:
             handle_json_decode_error(e, json_file_path)
 
         except FileNotFoundError as e:
-            handle_file_not_found_error(e)
+            handle_file_not_found_error(e, already_printed=already_printed)
+            already_printed = True
 
         except Exception as e:
             handle_general_error(e)
@@ -228,7 +243,7 @@ def is_admin():
         return ctypes.windll.shell32.IsUserAnAdmin()
     except Exception as e:
         print(e)
-        logging.error(e)
+        print_and_log_client("Error occurred while checking if the user is admin.", "error")
         return False
 
 

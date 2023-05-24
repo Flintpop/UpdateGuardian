@@ -99,7 +99,7 @@ def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, private_
         try:
             ssh.connect(ip, username=username, pkey=private_key, timeout=timeout)
             connected = True
-        except (paramiko.ssh_exception.NoValidConnectionsError, socket.timeout):
+        except (paramiko.ssh_exception.NoValidConnectionsError, socket.timeout, ConnectionResetError):
             time.sleep(retry_interval)
 
     return connected

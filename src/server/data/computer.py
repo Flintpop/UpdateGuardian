@@ -85,7 +85,6 @@ class Computer:
             self.no_updates = False
 
             if up is not None:
-                self.log("No updates found.")
                 self.no_updates = True
 
             self.log_add_vertical_space()
@@ -190,13 +189,9 @@ class Computer:
                 self.log_error("Could not start python script.")
                 return False, None
 
-            if result.get["ErrorMessage"]:
+            if result["ErrorMessage"]:
                 self.log_error(f"An error occurred :\n{result['ErrorMessage']}.")
                 return False, None
-
-            if result["UpdateCount"] == 0:
-                self.log("No updates found.")
-                return True, "no updates found"
 
             if result["RebootRequired"]:
                 self.log("Pc is rebooting...")
@@ -206,9 +201,13 @@ class Computer:
                     return False, None
 
                 return True, None
+            if result["UpdateCount"] == 0:
+                self.log("No updates found.")
+                return True, "no updates found"
 
         except Exception as e:
-            self.log_error("Unhandled error while installing update on client:\n" + str(e))
+            self.log_error("Unhandled error while installing update on client:\n" + str(e) + "\nTraceback:\n" +
+                           traceback.format_exc())
             return False, None
 
         return True, None
@@ -240,7 +239,9 @@ class Computer:
 
             with open(json_filename, "r") as f:
                 json_res: dict = json.load(f)
-                self.log(f"Here is the json file content:\n{json_res.__str__()}", new_lines=1)
+                print_json: str = json_res.__str__().replace("{", "{\n").replace("}", "\n}\n")
+                print_json: str = print_json.replace(", ", ",\n")
+                self.log(f"Here is the json file content:\n{print_json}", new_lines=1)
 
             os.remove(json_filename)
 
