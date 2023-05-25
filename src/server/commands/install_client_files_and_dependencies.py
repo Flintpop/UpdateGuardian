@@ -305,6 +305,8 @@ def wait_for_ssh_shutdown(computer: 'Computer') -> None:
     """
     ssh_server_shutdown = False
     computer.log("Waiting for SSH server to be down...")
+    computer.force_close_ssh_session()
+    computer.ssh_session.close()
     while not ssh_server_shutdown:
         ssh_server_shutdown = not is_ssh_server_available(computer=computer, print_log_connected=False)
     computer.log("SSH server is down, waiting for it to be up again...")
@@ -314,11 +316,10 @@ def refresh_env_variables(computer: 'Computer') -> bool:
     computer.log("Rebooting remote computer...")
     ssh: paramiko.SSHClient = computer.ssh_session
     reboot_remote_pc(ssh)
-    ssh.close()
     ipaddress, remote_user, remote_computer_private_key = computer.ipv4, computer.username, computer.get_private_key()
     wait_for_ssh_shutdown(computer)
 
-    if not wait_and_reconnect(ssh, ipaddress, remote_user, remote_computer_private_key):
+    if not wait_and_reconnect(computer, ipaddress, remote_user, remote_computer_private_key):
         computer.log_error("Failed to reconnect to remote computer.")
         return False
 

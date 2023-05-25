@@ -195,8 +195,8 @@ class Computer:
 
             if result["RebootRequired"]:
                 self.log("Pc is rebooting...")
-                eighty_minutes: int = 4800
-                if not self.wait_for_pc_to_be_online_again(timeout=eighty_minutes):
+                four_hours: int = 60 * 60 * 4
+                if not self.wait_for_pc_to_be_online_again(timeout=four_hours):
                     self.log_error("Could not wait for pc to be online again.")
                     return False, None
 
@@ -232,15 +232,15 @@ class Computer:
             json_filename: str = f"results-{self.hostname}.json"
             remote_file_path: str = os.path.join(self.get_project_directory_on_client(),
                                                  json_filename.replace(f"-{self.hostname}", ""))
-            if not download_file_ssh(self.ssh_session, json_filename, remote_file_path):
 
+            if not download_file_ssh(self.ssh_session, json_filename, remote_file_path):
                 self.log_error("Could not download the json file.")
                 return None
 
             with open(json_filename, "r") as f:
                 json_res: dict = json.load(f)
                 print_json: str = json_res.__str__().replace("{", "{\n\t").replace("}", "\n}\n")
-                print_json: str = print_json.replace(", ", ",\n\t")
+                print_json: str = print_json.replace(", ", ",\n\t").replace("[", "[\n\t").replace("]", "\n\t]")
                 self.log(f"Here is the json file content:\n{print_json}", new_lines=1)
 
             os.remove(json_filename)
@@ -288,6 +288,10 @@ class Computer:
         Download the log file from the client.
         :return: True if the log file has been downloaded, False otherwise.
         """
+        if not is_ssh_server_available(self, timeout=20):
+            self.log_error("Error, the pc is not connectable, could not download log file.")
+            return False
+
         self.log("Downloading log file from the client...")
         local_path: str = os.path.join(self.logs_filename, "..", f"update_windows-{self.hostname}-ERROR-LOGS.log")
         remote_file_path: str = os.path.join(self.get_project_directory_on_client(), "update_windows.log")
@@ -300,14 +304,29 @@ class Computer:
     def wait_for_pc_to_be_online_again(self, timeout=300) -> bool:
         wait_for_ssh_shutdown(self)
 
-        ssh: paramiko.SSHClient = self.ssh_session
         ipaddress: str = self.ipv4
         remote_user: str = self.username
         remote_private_key: paramiko.pkey = self.__private_key
 
-        if not wait_and_reconnect(ssh, ipaddress, remote_user, remote_private_key, timeout=timeout):
+        if not wait_and_reconnect(self, ipaddress, remote_user, remote_private_key, timeout=timeout):
             self.log_error(f"Failed to reconnect to {self.hostname}, timeout likely reached.")
             return False
+        return True
+
+    def force_close_ssh_session(self) -> bool:
+        """
+        Stops the sshd service on the remote computer.
+        :return: True if the service was stopped, False otherwise.
+        """
+        self.log("Stopping sshd service...")
+        ssh: paramiko.SSHClient = self.ssh_session
+
+        stdout, stderr = stdout_err_execute_ssh_command(ssh, "powershell -Command \"Stop-Service sshd\"")
+        if stderr:
+            self.log_error("Failed to stop sshd service. \nStderr: \n" + stderr)
+            return False
+
+        self.log("Sshd service stopped.")
         return True
 
     def get_project_directory_on_client(self) -> str:

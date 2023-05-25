@@ -38,6 +38,10 @@ class MyRequestHandler(BaseHTTPRequestHandler):
     """
     computer_database: ComputerDatabase = ComputerDatabase.load_computer_data_if_exists()
 
+    # noinspection PyShadowingBuiltins
+    def log_message(self, format, *args):
+        return
+
     # noinspection PyPep8Naming
     def do_POST(self):
         log_new_lines()

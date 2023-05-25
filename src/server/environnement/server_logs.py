@@ -103,14 +103,6 @@ class ComputerLogger:
             f.write(str(param) + "\n")
 
 
-# Create a custom logging handler that writes messages to a log file and the console
-class PrintAndLogHandler(logging.StreamHandler):
-    def emit(self, record):
-        super().emit(record)  # Write the message to the console
-        with open(os.path.join('logs', 'log_file.log'), 'a') as log_file:  # Write the message to the log file
-            log_file.write(self.format(record) + '\n')
-
-
 class ServerLogs(ComputerLogger):
     def __init__(self, logs_filename: str = "server_logs.log"):
         change_directory_to_root_folder()

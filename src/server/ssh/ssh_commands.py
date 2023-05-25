@@ -1,3 +1,4 @@
+import logging
 import os
 import hashlib
 import socket
@@ -34,7 +35,7 @@ def does_path_exists_ssh(ssh: paramiko.SSHClient, file_path: str) -> bool:
 
 
 def reboot_remote_pc(ssh: paramiko.SSHClient) -> None:
-    reboot_command = 'shutdown /r /t 0'
+    reboot_command = 'shutdown /r /t 2'
     ssh.exec_command(reboot_command)
 
 
@@ -85,30 +86,43 @@ def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float
 
                 computer.log(f"Trying again, timeout left is {timeout - (time.time() - start).__round__(2)}")
             except OSError as e:
-                computer.log_error(f"OSError occurred: {e}")
+                computer.log(f"OSError occurred: {e}")
+            except Exception as e:
+                computer.log_error(f"Unknown error occurred: {e}\nTraceback: \n{e.__traceback__}")
                 return False
 
 
-def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, private_key: paramiko.pkey,
+def wait_and_reconnect(computer: 'Computer', ip: str, username: str, private_key: paramiko.pkey,
                        timeout: int = 300, retry_interval: int = 10) -> bool:
+    ssh: paramiko.SSHClient = computer.ssh_session
     ssh.close()
     start_time = time.time()
     connected = False
+    original_logging_level = logging.getLogger("paramiko").level
+    logging.getLogger("paramiko").setLevel(logging.NOTSET)
+    attempts: int = 1
 
-    while time.time() - start_time < timeout:
+    while time.time() - start_time < timeout and not connected:
         try:
+            if not is_ssh_server_available(computer=computer, timeout=retry_interval):
+                continue
             success_count = 0
-            for _ in range(10):  # check connection stability 10 times
+            for _ in range(attempts):  # check connection stability 10 times
                 ssh.connect(ip, username=username, pkey=private_key, timeout=retry_interval)
                 success_count += 1
-                time.sleep(0.5)
+                time.sleep(0.2)
 
-            if success_count == 10:  # if all 10 connection attempts succeeded
+            if success_count == attempts:  # if all 10 connection attempts succeeded
                 connected = True
                 break
-        except (paramiko.ssh_exception.NoValidConnectionsError, socket.timeout, ConnectionResetError):
+        except (paramiko.ssh_exception.NoValidConnectionsError, socket.timeout, paramiko.ssh_exception.SSHException,
+                OSError):
+            time.sleep(retry_interval)
+        except Exception as e:
+            computer.log(f"Unknown error occurred: {e}\nTraceback: \n{e.__traceback__}", "warning")
             time.sleep(retry_interval)
 
+    logging.getLogger("paramiko").setLevel(original_logging_level)
     return connected
 
 
@@ -156,12 +170,15 @@ def delete_file_ssh(ssh: paramiko.SSHClient, file_path: str) -> bool:
 
 
 def download_file_ssh(ssh: paramiko.SSHClient, local_file_path: str, remote_file_path: str) -> bool:
+    original_logging_level = logging.getLogger("paramiko").level
+    logging.getLogger("paramiko").setLevel(logging.CRITICAL)
     # noinspection PyBroadException
     try:
         sftp = ssh.open_sftp()
         sftp.get(remote_file_path, local_file_path)
         sftp.close()
     except Exception:
+        logging.getLogger("paramiko").setLevel(original_logging_level)
         return False
     return True
 
