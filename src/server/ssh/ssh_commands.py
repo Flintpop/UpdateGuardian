@@ -68,6 +68,7 @@ def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float
     """
     ip: str = computer.ipv4
     start = time.time()
+    last_os_error_msg = ""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(timeout)
         while time.time() - start < timeout:
@@ -84,9 +85,12 @@ def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float
                     computer.log("Timeout")
                     break
 
-                computer.log(f"Trying again, timeout left is {timeout - (time.time() - start).__round__(2)}")
+                computer.log(f"Trying again, timeout left is {(timeout - (time.time() - start)).__round__(2)}")
             except OSError as e:
+                if last_os_error_msg == e:
+                    continue
                 computer.log(f"OSError occurred: {e}")
+                last_os_error_msg = e
             except Exception as e:
                 computer.log_error(f"Unknown error occurred: {e}\nTraceback: \n{e.__traceback__}")
                 return False

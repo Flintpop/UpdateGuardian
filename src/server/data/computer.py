@@ -260,7 +260,7 @@ class Computer:
         stdout_err_execute_ssh_command(self.ssh_session, command)
 
         self.log(level="info", message="The pc should be off...")
-        if not self.waiting_pc_off(timeout=60):
+        if not self.waiting_pc_off(timeout=600):
             return False
         return True
 
