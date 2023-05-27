@@ -30,7 +30,7 @@ function Write-JSON
         [Parameter(Mandatory = $true)]
         [pscustomobject] $UpdateStatus
     )
-    $UpdateStatus | ConvertTo-Json -Depth 100 | Out-File -FilePath $jsonFilePath -Encoding default
+    $UpdateStatus | ConvertTo-Json -Depth 100 | Out-File -FilePath $jsonFilePath -Encoding UTF8
 }
 
 # Initialize JSON object
@@ -119,7 +119,7 @@ try
     }
     else
     {
-        Write-Log "No reboot required" - new_lines 1
+        Write-Log "No reboot required" -new_lines 1
     }
 }
 catch

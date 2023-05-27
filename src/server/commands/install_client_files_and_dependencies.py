@@ -282,7 +282,7 @@ def install_python_packages(computer: 'Computer', requirements_file_path: str) -
     command: str = "pip install -r " + requirements_file_path
     stdout, stderr = stdout_err_execute_ssh_command(ssh, command)
 
-    if stderr and "error" in stderr.lower() or "erreur" in stderr.lower():
+    if stderr and "error" in stderr.lower() or stderr and "erreur" in stderr.lower():
         computer.log_error("Error, could not install python packages : " + stderr)
         return False
     if stderr and "warning" in stderr.lower():
