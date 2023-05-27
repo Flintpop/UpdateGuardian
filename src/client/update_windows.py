@@ -61,7 +61,7 @@ def update_windows():
             raise OSError(f'Failed to delete task: {delete_task.stderr}')
 
     create_task_command = ['schtasks', '/create', '/tn', task_name, '/tr',
-                           f'cmd.exe /C "{batch_file_path}"', '/sc', 'once', '/st', '00:00',
+                           f'cmd.exe cmd /C {batch_file_path}', '/sc', 'once', '/st', '00:00',
                            '/RL', 'HIGHEST', '/ru', 'SYSTEM', '/F']
     create_task = subprocess.run(create_task_command, capture_output=True, text=True)
     if create_task.returncode != 0:
@@ -78,6 +78,13 @@ def update_windows():
         raise OSError(f'Failed to delete task: {delete_task.stderr}')
 
     json_infos = get_updates_infos()
+    if json_infos is None:
+        print_and_log_client("Error occurred while getting updates infos.", "error")
+        with open("results.json", "w") as file:
+            with open("C:/Temp/UpdateGuardian/update_status.json", "r") as file_read:
+                file.write(file_read.read())
+                os.remove("C:/Temp/UpdateGuardian/update_status.json")
+                return
     with open("results.json", "w") as json_file:
         json.dump(json_infos, json_file)
 
