@@ -268,7 +268,7 @@ function Set-RightsSSHServerFiles
     }
 }
 
-$server_ip = "192.168.2.36"
+$server_ip = "192.168.1.22"
 
 # Ensure the script is running with administrative privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator"))
@@ -479,6 +479,12 @@ if (!(Get-Module -ListAvailable -Name PSWindowsUpdate))
         Install-PackageProvider NuGet -Force;
         Set-PSRepository PSGallery -InstallationPolicy Trusted
         Install-Module SQLServer -Repository PSGallery
+        # Check if the module is in the wrong scope (CurrentUser)
+        $module = Get-Module -ListAvailable -Name PSWindowsUpdate | Where-Object { $_.ModuleBase -like "$HOME\Documents\*"}
+        if ($null -ne $module) {
+            Uninstall-Module PSWindowsUpdate -Force -ErrorAction Stop
+            Write-Host "Module PSWindowsUpdate uninstalled from user scope successfully." -ForegroundColor Yellow
+        }
         Install-Module PSWindowsUpdate -Force -Scope AllUsers -ErrorAction Stop
         Write-Host "Module PSWindowsUpdate installed successfully." -ForegroundColor Green
     }
