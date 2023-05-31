@@ -114,12 +114,20 @@ def send_result_email(database: "ComputerDatabase") -> None:
         send_string += f"<h4>{n_updated_computers}/{total_updatable_computers} computers has been updated " \
                        f"successfully.</h4>"
 
+    # TODO: End this feature. Lacks list of updates for each computer. Lack tests. Lack traceback support.
+    for computer in database.get_updated_computers():
+        if computer.updates_string is not None:
+            send_string += f" {len(computer.updates_string)} updates"
+            for update in computer.updates_string:
+                send_string += f"<br>&nbsp;&nbsp;&nbsp;&nbsp;- {update}"
     if n_updated_computers != total_updatable_computers:
         send_string += f"<h4>{total_failures} of computers were not able to be updated. An error occurred.</h4>"
         send_string += "<p>Here is the list: </p>"
         for computer in database.get_not_updated_computers():
             send_string += f"<p>{computer.hostname}</p>"
-
+            send_string += f"<p>Error : {computer.error}</p>"
+            send_string += f"<p><br>Traceback : <br>{computer.traceback}</p>"
+            send_string += "<br>"
     send_email(message=send_string, subject=f"{Infos.PROJECT_NAME} finished updating all computers !")
 
 

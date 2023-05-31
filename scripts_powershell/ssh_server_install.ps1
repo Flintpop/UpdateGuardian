@@ -204,6 +204,17 @@ function Configure-OpenSSHServer
         Write-Error "An error occurred while writing the modified content to the sshd_config file: $_"
         exit 1
     }
+    $currentShell = Get-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell | Select-Object -ExpandProperty DefaultShell
+
+    # Check if the current shell is not cmd
+    if ($currentShell -ne "C:\Windows\System32\cmd.exe") {
+        # Change the default shell to cmd
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\cmd.exe"
+        Write-Output "Default SSH server shell has been changed to cmd."
+    } else {
+        Write-Output "Default SSH server shell is already cmd."
+    }
+    Write-Output ""
 }
 
 function Set-RightsSSHServerFiles
@@ -268,7 +279,8 @@ function Set-RightsSSHServerFiles
     }
 }
 
-$server_ip = "192.168.1.22"
+Write-Host ""
+$server_ip = "192.168.2.80"
 
 # Ensure the script is running with administrative privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator"))
@@ -343,24 +355,31 @@ if (-not$SshdService)
 
 
 # Start the sshd service
+Write-Host ""
 Write-Host "Starting for the first time the sshd service..."
 Start-Service sshd
 
 Write-Host "Stopping the sshd service..."
 Stop-Service sshd
 
+Write-Host ""
 Write-Host "Configuring OpenSSH Server..."
 Configure-OpenSSHServer
+Write-Host ""
 Write-Host "OpenSSH Server has been configured successfully." -ForegroundColor Green
 Write-Host "Setting up the corrects rights for pubkey ssh authentification..."
+Write-Host ""
 Set-RightsSSHServerFiles
+Write-Host ""
 
 Write-Host "Restarting the sshd service..."
 Start-Service sshd
 
+Write-Host ""
 # Start the service at each boot
 Write-Host "Setting the sshd service to start automatically at each boot..."
 Set-Service -Name sshd -StartupType 'Automatic'
+Write-Host ""
 
 # Confirm the Firewall rule is configured. It should be created automatically by setup. Run the following to verify
 if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue | Select-Object Name, Enabled))
@@ -375,21 +394,23 @@ else
 Write-Output ""
 
 Write-Output "The OpenSSH Server has been installed and configured."
+Write-Host ""
 
 # Get the computer name
 $computer_name = $env:COMPUTERNAME
 
 try
 {
-    $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
-    if ($null -eq $adapter)
+    $defaultGatewayAdapter = Get-NetRoute -DestinationPrefix 0.0.0.0/0 | Where-Object { $_.NextHop -ne "::" } | Get-NetIPInterface | Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }
+
+    if ($null -eq $defaultGatewayAdapter)
     {
         Write-Host "No network adapter is up and running." -ForegroundColor Red
         Read-Host "Press any key to stop the program"
         exit 1
     }
-    Write-Host "Using network adapter '$( $adapter.Name )' to retreive local ipv4 address..."
-    $ipv4_address = (Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -PrefixOrigin Dhcp).IPAddress
+    Write-Host "Using network adapter '$( $defaultGatewayAdapter.Name )' to retrieve local ipv4 address..."
+    $ipv4_address = (Get-NetIPAddress -InterfaceIndex $defaultGatewayAdapter.ifIndex -AddressFamily IPv4 -PrefixOrigin Dhcp).IPAddress
     if ($null -eq $ipv4_address)
     {
         Write-Host "No IPv4 address found." -ForegroundColor Red

@@ -22,7 +22,7 @@ def stdout_err_execute_ssh_command(ssh: paramiko.SSHClient, command: str) -> tup
     :param command: The command to execute
     :return: First stdout, then stderr. If there is no output, None is returned.
     """
-    stdin, stdout, stderr = ssh.exec_command(command)
+    stdin, stdout, stderr = ssh.exec_command("cmd /C \"" + command + "\"")
     stdout = decode_stream(stdout.read())
     stderr = decode_stream(stderr.read())
     return stdout, stderr
@@ -98,13 +98,23 @@ def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float
 
 def wait_and_reconnect(computer: 'Computer', ip: str, username: str, private_key: paramiko.pkey,
                        timeout: int = 300, retry_interval: int = 10) -> bool:
+    """
+    Waits for the ssh server to be available and reconnects to it.
+    :param computer: The computer to wait and reconnect to.
+    :param ip: The ip of the computer to wait and reconnect to.
+    :param username: The username to use to reconnect to the computer.
+    :param private_key: The private key to use to reconnect to the computer.
+    :param timeout: How long to wait for the ssh server to be available.
+    :param retry_interval: How long to wait between each attempt to connect to the ssh server.
+    :return: A boolean, True if the ssh server is available and the computer is reconnected to it, False otherwise.
+    """
     ssh: paramiko.SSHClient = computer.ssh_session
     ssh.close()
     start_time = time.time()
     connected = False
     original_logging_level = logging.getLogger("paramiko").level
     logging.getLogger("paramiko").setLevel(logging.NOTSET)
-    attempts: int = 1
+    attempts: int = 5
 
     while time.time() - start_time < timeout and not connected:
         try:
@@ -131,6 +141,12 @@ def wait_and_reconnect(computer: 'Computer', ip: str, username: str, private_key
 
 
 def create_folder_ssh(computer: 'Computer', folder_path: str) -> bool:
+    """
+    Creates a folder on the remote computer.
+    :param computer: The computer on which to create the folder.
+    :param folder_path: The path of the folder to create ON the remote computer.
+    :return: True if the folder was created, False otherwise.
+    """
     ssh: paramiko.SSHClient = computer.ssh_session
     stdout, stderr = stdout_err_execute_ssh_command(ssh, f"mkdir {folder_path}")
 
@@ -148,6 +164,12 @@ def create_folder_ssh(computer: 'Computer', folder_path: str) -> bool:
 
 
 def delete_folder_ssh(ssh: paramiko.SSHClient, folder_path: str) -> bool:
+    """
+    Deletes a folder on the remote computer.
+    :param ssh: The ssh session to use to delete the folder.
+    :param folder_path: The path of the folder to delete ON the remote computer.
+    :return: True if the folder was deleted, False otherwise.
+    """
     stdout, stderr = stdout_err_execute_ssh_command(ssh, f"rmdir {folder_path}")
 
     if stderr:

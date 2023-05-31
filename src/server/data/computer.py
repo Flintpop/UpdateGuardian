@@ -60,6 +60,8 @@ class Computer:
 
         self.updated_successfully: bool = False
 
+        self.updates_string: list[str] = []
+
     def update(self) -> bool:
         # noinspection PyBroadException
         try:
@@ -193,6 +195,7 @@ class Computer:
                 self.log_error(f"An error occurred :\n{result['ErrorMessage']}.")
                 return False, None
 
+            self.updates_string = result["UpdateNames"]
             if result["RebootRequired"]:
                 self.log("Pc is rebooting...")
                 four_hours: int = 60 * 60 * 4

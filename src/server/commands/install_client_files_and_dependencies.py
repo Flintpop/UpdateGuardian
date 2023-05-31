@@ -1,4 +1,5 @@
 import os
+import time
 
 import paramiko
 
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
     from src.server.data.computer import Computer
 
 from src.server.ssh.ssh_commands import stdout_err_execute_ssh_command, send_file_ssh, does_path_exists_ssh, \
-    reboot_remote_pc, wait_and_reconnect, is_ssh_server_available, is_client_file_different
+    reboot_remote_pc, wait_and_reconnect, is_ssh_server_available, is_client_file_different, create_folder_ssh
 
 STDOUT_MESSAGE = "STDOUT: \n"
 
@@ -42,21 +43,28 @@ def os_windows(computer: 'Computer'):
 def check_python_installed(computer: 'Computer') -> bool:
     if not os_windows(computer):
         raise NotImplementedError("Only Windows is supported.")
-    python_executables = ("python.exe", "python3.exe", "python311.exe")
+    python_executables = ("python.exe", "python3.exe", "python311.exe", "py.exe")
 
     folder_path = computer.get_home_directory_on_client()
-    folder_path += "\\AppData\\Local\\Programs\\"
+    folder_path += "\\AppData\\Local\\Programs\\Python\\"
     programs_path: bool = does_path_exists_ssh(computer.ssh_session, folder_path)
 
     if not programs_path:
         computer.log("Programs folder does not exists", "warning")
+        create_folder_ssh(computer, folder_path)
+
+        programs_path: bool = does_path_exists_ssh(computer.ssh_session, folder_path)
+
+        if not programs_path:
+            computer.log_error("Programs folder does not exists even after creation")
+            return False
         return False
 
     computer.log("Programs folder exists")
     folder_path += Infos.python_folder_name
 
     if not does_path_exists_ssh(computer.ssh_session, folder_path):
-        computer.log_error("Python folder does not exists")
+        computer.log(f"{folder_path} folder does not exists on remote computer.", "warning")
         return False
 
     computer.log("Python folder exists")
@@ -161,7 +169,7 @@ def add_python_to_path(computer: 'Computer') -> bool:
     user_profile = stdout.strip()
 
     # Construct the new PATH
-    python_path_var = f'{user_profile}\\AppData\\Local\\Programs\\{Infos.python_folder_name}'
+    python_path_var = f'{user_profile}\\AppData\\Local\\Programs\\Python\\{Infos.python_folder_name}'
     scripts_path = f'{python_path_var}\\Scripts'
     if current_path:
         if current_path[-1] == ';':
@@ -220,6 +228,8 @@ def check_python_path_set(computer: 'Computer') -> bool:
     else:
         computer.log_error("Python is not set correctly in path, because it may be there despite the fact that it is"
                            " installed.")
+        computer.log_error(f"Here is the path variable: \n{stdout}")
+        computer.log_error("Please check the path manually, and if it is correct, please reinstall python manually.")
         return False
 
 
@@ -244,20 +254,24 @@ def install_python_installer(computer: 'Computer') -> bool:
     return True
 
 
-def install_python(computer: 'Computer') -> bool:
+def install_python(computer: 'Computer', second_attempt=False) -> bool:
     python_installer_installed: bool = install_python_installer(computer)
     if not python_installer_installed:
         return False
 
     computer.log("Installing Python...")
 
+    target_dir: str = r"%USERPROFILE%\AppData\Local\Programs\Python"
+    if not does_path_exists_ssh(computer.ssh_session, target_dir):
+        create_folder_ssh(computer, target_dir)
+
+    target_dir = target_dir + "\\" + Infos.python_folder_name
     # Get the path to the python script that will install python
     path_update_guardian: str = computer.get_project_directory_on_client()
     python_installer_filename: str = Infos.get_server_python_installer_name()
 
-    parameters: str = "/quiet InstallAllUsers=0 TargetDir=%USERPROFILE%\\AppData\\Local\\Programs\\" \
-                      + Infos.python_folder_name + " " r"Include_launcher=0 Include_test=0 Include_dev=0 " \
-                                                   r"Include_doc=0 Include_pip=1"
+    parameters: str = f"/quiet InstallAllUsers=0 TargetDir={target_dir}" \
+                      f" Include_launcher=0 Include_test=0 Include_dev=0 Include_doc=0 Include_pip=1 PrependPath=1"
 
     command: str = os.path.join(path_update_guardian, python_installer_filename) + " " + parameters
 
@@ -267,6 +281,11 @@ def install_python(computer: 'Computer') -> bool:
         computer.add_log_memory("Error, could not install python : " + stderr)
         computer.log_error("command : " + command)
         computer.log_error("Python update guardian variable : " + path_update_guardian)
+        if not second_attempt:
+            computer.log("The installer may be corrupted. Trying to install python again...")
+            send_python_installer(computer)
+            time.sleep(0.1)  # To make sure that the installer is sent before trying to install it
+            return install_python(computer, second_attempt=True)
         return False
 
     if stdout:
@@ -382,6 +401,12 @@ def python_installation(computer: 'Computer') -> bool:
         if not installed_success:
             computer.log_error("Error, could not install python.")
             return False
+        computer.log("Rebooting after python has been installed and should be in path...")
+        refresh_env: bool = refresh_env_variables(computer)
+        if not refresh_env:
+            computer.log_error("Error, could not refresh environment variables. Failed to reboot the pc.")
+            return False
+
     return True
 
 
