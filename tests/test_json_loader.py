@@ -91,7 +91,7 @@ class TestCheminFichier(unittest.TestCase):
             self.invalid_path2 = "/home/utilisateur/Documents\\mon_fichier.py"
 
     def test_valid_path(self):
-        is_path_valid = self.data.is_path_valid
+        is_path_valid = Data.is_path_valid
 
         self.assertTrue(is_path_valid(self.valid_path), "Path should be valid.")
         self.assertFalse(is_path_valid(self.invalid_path), "Path should not be valid.")

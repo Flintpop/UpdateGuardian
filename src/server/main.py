@@ -1,29 +1,60 @@
 import sys
 import time
+import threading
+import warnings
+import os
 
+# If running as a PyInstaller bundle
+if getattr(sys, 'frozen', False):
+    # Add the directory containing your modules to sys.path
+    # noinspection PyUnresolvedReferences, PyProtectedMember
+    sys.path.append(os.path.join(sys._MEIPASS, 'src/server'))
+else:
+    # Add the directory containing your modules to sys.path
+    sys.path.append(os.path.abspath('src/server'))
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))  # Change to the script's directory
+
+# noinspection PyUnresolvedReferences
+import add_paths  # Import and execute add_paths.py to update sys.path
+
+from pytz_deprecation_shim import PytzUsageWarning
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from src.server.commands.install_update import install_windows_update_all_pc
-from src.server.data.local_network_data import Data
-from src.server.data.logs import add_spaces_logging_file
-from src.server.data.setup import server_setup, get_launch_time
+from commands.install_update import update_all_computer
+from data.computer_database import ComputerDatabase
+from environnement.modify_settings import modify_settings
+from environnement.setup import server_setup, get_launch_time
+from environnement.server_logs import log, log_new_lines
 
 function_executed: bool = False
 
+warnings.filterwarnings("ignore", category=PytzUsageWarning)
 
-def execute_job(data: Data):
-    print("Executing scheduled task...")
-    # print(data.get_data_json().values())
-    add_spaces_logging_file(server_setup=False)
-    install_windows_update_all_pc(data)
+stopped: bool = False
 
 
-def launch_software(data: Data) -> None:
-    add_spaces_logging_file(server_setup=True)
-    server_setup(data)
+def execute_job_force():
+    log("Force executing scheduled task...")
+    log_new_lines(2)
+    start_program()
 
-    data.load_computer_data()
 
+def execute_job() -> None:
+    log("Executing scheduled task...")
+
+    log_new_lines(2)
+
+    start_program()
+
+
+def start_program():
+    computer_database: ComputerDatabase = ComputerDatabase.load_computer_data()
+    computer_database.load_email_infos()
+
+    update_all_computer(computer_database)
+
+
+def launch_software() -> None:
     scheduled_time = get_launch_time()
 
     day, hour = scheduled_time['day'], scheduled_time['hour']
@@ -31,25 +62,77 @@ def launch_software(data: Data) -> None:
     scheduler = BackgroundScheduler()
 
     scheduler.add_job(
-        execute_job, "cron", day_of_week=day[:3].lower(), hour=hour, minute=00, args=(data,)
+        execute_job, "cron", day_of_week=day[:3].lower(), hour=hour, minute=00
     )
 
     scheduler.start()
 
-    print(f"The program is scheduled to launch on {day} at {hour} o'clock.")
-
     try:
-        while True:
-            time.sleep(20)  # Sleep for 20 seconds, then check again if the scheduled time has been reached.
+        while not stopped:
+            time.sleep(2)  # Sleep for 2 seconds, then check again if the scheduled time has been reached.
     except (KeyboardInterrupt, SystemExit):
         scheduler.shutdown()
-        sys.exit(0)
+        log("Program stopped.")
+
+
+def force_start_execute_job():
+    execute_job_force()
+
+
+def stop_code():
+    global stopped
+    stopped = True
+
+
+def list_computers():
+    computer_database: ComputerDatabase = ComputerDatabase.load_computer_data()
+    print(computer_database)
+
+
+def settings_thread() -> None:
+    log("Program started, settings loaded", print_formatted=False)
+    log_new_lines()
+    global stopped
+    # force_start_execute_job()
+    # return
+    # noinspection PyUnboundLocalVariable
+    while not stopped:
+        scheduled_time = get_launch_time()
+
+        day, hour = scheduled_time['day'], scheduled_time['hour']
+        print(f"\nThe program is scheduled to start every {day} at {hour}:00.\n")
+        print("Type 'modify' to modify settings.")
+        print("Type 'force' to force start the scheduled task.")
+        print("Type 'list' to list all the computers in the database.")
+        print("Type 'exit' to exit the program.\n")
+        try:
+            usr_input = input("> ")
+            switcher = {
+                "modify": modify_settings,
+                "force": force_start_execute_job,
+                "list": list_computers,
+                "exit": stop_code
+            }
+            switcher.get(usr_input, lambda: print("Invalid input."))()
+        except KeyboardInterrupt:
+            log("Program stopped.", print_formatted=False)
+            stop_code()
+            break
 
 
 def main_loop() -> None:
-    data = Data()
+    if not server_setup():
+        exit(1)
 
-    launch_software(data)
+    get_launch_time()
+
+    launch_thread = threading.Thread(target=launch_software)
+    launch_thread.start()
+
+    settings_thread()
+
+    launch_thread.join()
+    exit(0)
 
 
 if __name__ == '__main__':

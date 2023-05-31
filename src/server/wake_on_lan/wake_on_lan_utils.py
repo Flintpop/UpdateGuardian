@@ -3,8 +3,6 @@ import platform
 import re
 import subprocess
 
-from src.server.data.local_network_data import Data
-
 
 def is_secureon_password_valid(secureon_password: str) -> bool:
     # Vérifier que le mot de passe SecureOn a 12 caractères hexadécimaux et les sépare par des deux-points
@@ -28,7 +26,7 @@ def send_wol_with_secureon(mac_address: str, secureon_password: str) -> None:
     send_magic_packet(f"{mac_address}/{secureon_password}")
 
 
-def send_wol(mac_address: str, ip_address: str, port: int=9) -> bool:
+def send_wol(mac_address: str, ip_address: str, port: int = 9) -> bool:
     send_magic_packet(mac_address, ip_address=ip_address, port=port)
     return True
 
@@ -48,40 +46,7 @@ def ping_ip(ip_address: str) -> bool:
     return True
 
 
-def get_mac_address(data: Data, ip_address: str) -> str | None:
-    data.get_mac_address(ip_address)
-    if not ping_ip(ip_address):
-        print("Impossible de récupérer l'adresse MAC car l'ordinateur est éteint.")
-        return None
-
-    try:
-        if platform.system() == 'Windows':
-            arp_output = subprocess.check_output(['arp', '-a', ip_address], text=True)
-            mac_address = re.search(r"([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})", arp_output, re.IGNORECASE).group()
-        else:
-            arp_output = subprocess.check_output(['arp', '-n', ip_address], text=True)
-            mac_address = re.search(r"(([a-f\d]{1,2}:){5}[a-f\d]{1,2})", arp_output, re.IGNORECASE).group()
-    except subprocess.CalledProcessError:
-        print(f"Erreur lors de la récupération de l'adresse MAC pour {ip_address}")
-        mac_address = None
-    except AttributeError:
-        print(f"Impossible de trouver l'adresse MAC pour {ip_address}")
-        mac_address = None
-
-    return mac_address
-
-
-def get_mac_addresses(data: Data, ip_addresses: list[str]) -> dict:
-    mac_addresses = {}
-    for current_ip in ip_addresses:
-        current_mac = get_mac_address(data, current_ip)
-        if current_mac:
-            mac_addresses[current_ip] = current_mac
-
-    return mac_addresses
-
-
-def get_router_ip():
+def get_gateway_ip():
     router_ip = None
 
     try:
@@ -104,8 +69,3 @@ def get_router_ip():
         print("Impossible de trouver l'adresse IP du routeur.")
 
     return router_ip
-
-
-# Exemple d'utilisation
-if __name__ == "__main__":
-    print()

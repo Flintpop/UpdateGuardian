@@ -1,9 +1,15 @@
+import logging
 import os
 import hashlib
 import socket
 import time
 
 import paramiko
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.server.data.computer import Computer
 
 from src.server.ssh.ssh_connect import decode_stream
 
@@ -16,7 +22,7 @@ def stdout_err_execute_ssh_command(ssh: paramiko.SSHClient, command: str) -> tup
     :param command: The command to execute
     :return: First stdout, then stderr. If there is no output, None is returned.
     """
-    stdin, stdout, stderr = ssh.exec_command(command)
+    stdin, stdout, stderr = ssh.exec_command("cmd /C \"" + command + "\"")
     stdout = decode_stream(stdout.read())
     stderr = decode_stream(stderr.read())
     return stdout, stderr
@@ -29,65 +35,141 @@ def does_path_exists_ssh(ssh: paramiko.SSHClient, file_path: str) -> bool:
 
 
 def reboot_remote_pc(ssh: paramiko.SSHClient) -> None:
-    reboot_command = 'shutdown /r /t 0'
+    reboot_command = 'shutdown /r /t 2'
     ssh.exec_command(reboot_command)
 
 
-def is_ssh_server_available(ip: str, port: int = 22, timeout: float = 5.0) -> bool:
+def manage_ssh_output(stdout: str, stderr: str) -> str | None:
+    """
+    Prints the stdout and stderr and returns the stdout if there is no stderr.
+    :param stdout: A string containing the stdout of an ssh command.
+    :param stderr: A string containing the stderr of an ssh command.
+    :return: None if there is an error, stdout otherwise.
+    """
+    if stderr:
+        print("Stderr:")
+        print(stderr)
+        return None
+    if stdout:
+        print("Stdout:")
+        print(stdout)
+    return stdout
+
+
+def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float = 5.0,
+                            print_log_connected: bool = True) -> bool:
+    """
+    Give true if the ssh server is available on the computer.
+    :param computer: The computer to test the ssh server availability.
+    :param port: The port to test the ssh server availability.
+    :param timeout: The timeout to test the ssh server availability.
+    :param print_log_connected: If True, the computer will log when it is connected to the ssh server.
+    :return: True if the ssh server is available on the computer, False otherwise.
+    """
+    ip: str = computer.ipv4
     start = time.time()
+    last_os_error_msg = ""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(timeout)
         while time.time() - start < timeout:
             try:
                 sock.connect((ip, port))
+                if print_log_connected:
+                    computer.log(f"Connected to {ip} of {computer.hostname}")
                 return True
             except socket.timeout:
                 time.sleep(0.1)
                 time_left = timeout - (time.time() - start).__round__(2)
 
                 if time_left <= 0:
-                    print("Timeout")
+                    computer.log("Timeout")
                     break
 
-                print(f"Trying again, timeout left is {timeout - (time.time() - start).__round__(2)}")
+                computer.log(f"Trying again, timeout left is {(timeout - (time.time() - start)).__round__(2)}")
             except OSError as e:
-                print(f"OSError occurred: {e}")
+                if last_os_error_msg == e:
+                    continue
+                computer.log(f"OSError occurred: {e}")
+                last_os_error_msg = e
+            except Exception as e:
+                computer.log_error(f"Unknown error occurred: {e}\nTraceback: \n{e.__traceback__}")
                 return False
 
 
-def wait_and_reconnect(ssh: paramiko.SSHClient, ip: str, username: str, password: str, timeout: int = 600,
-                       retry_interval: int = 10) -> bool:
+def wait_and_reconnect(computer: 'Computer', ip: str, username: str, private_key: paramiko.pkey,
+                       timeout: int = 300, retry_interval: int = 10) -> bool:
+    """
+    Waits for the ssh server to be available and reconnects to it.
+    :param computer: The computer to wait and reconnect to.
+    :param ip: The ip of the computer to wait and reconnect to.
+    :param username: The username to use to reconnect to the computer.
+    :param private_key: The private key to use to reconnect to the computer.
+    :param timeout: How long to wait for the ssh server to be available.
+    :param retry_interval: How long to wait between each attempt to connect to the ssh server.
+    :return: A boolean, True if the ssh server is available and the computer is reconnected to it, False otherwise.
+    """
+    ssh: paramiko.SSHClient = computer.ssh_session
     ssh.close()
     start_time = time.time()
     connected = False
+    original_logging_level = logging.getLogger("paramiko").level
+    logging.getLogger("paramiko").setLevel(logging.NOTSET)
+    attempts: int = 5
 
-    while not connected and time.time() - start_time < timeout:
+    while time.time() - start_time < timeout and not connected:
         try:
-            ssh.connect(ip, username=username, password=password, timeout=timeout)
-            connected = True
-        except (paramiko.ssh_exception.NoValidConnectionsError, socket.timeout):
+            if not is_ssh_server_available(computer=computer, timeout=retry_interval):
+                continue
+            success_count = 0
+            for _ in range(attempts):  # check connection stability 10 times
+                ssh.connect(ip, username=username, pkey=private_key, timeout=retry_interval)
+                success_count += 1
+                time.sleep(0.2)
+
+            if success_count == attempts:  # if all 10 connection attempts succeeded
+                connected = True
+                break
+        except (paramiko.ssh_exception.NoValidConnectionsError, socket.timeout, paramiko.ssh_exception.SSHException,
+                OSError):
+            time.sleep(retry_interval)
+        except Exception as e:
+            computer.log(f"Unknown error occurred: {e}\nTraceback: \n{e.__traceback__}", "warning")
             time.sleep(retry_interval)
 
+    logging.getLogger("paramiko").setLevel(original_logging_level)
     return connected
 
 
-def create_folder_ssh(ssh: paramiko.SSHClient, folder_path: str) -> bool:
+def create_folder_ssh(computer: 'Computer', folder_path: str) -> bool:
+    """
+    Creates a folder on the remote computer.
+    :param computer: The computer on which to create the folder.
+    :param folder_path: The path of the folder to create ON the remote computer.
+    :return: True if the folder was created, False otherwise.
+    """
+    ssh: paramiko.SSHClient = computer.ssh_session
     stdout, stderr = stdout_err_execute_ssh_command(ssh, f"mkdir {folder_path}")
 
     if stderr:
         if "exist" in stderr:
-            print(f"Folder {folder_path} already exists")
+            computer.log(f"Folder {folder_path} already exists")
             return True
-        print(f"Error while creating the folder {folder_path}: {stderr}")
+        computer.log_error(f"Error while creating the folder {folder_path}: {stderr}")
         return False
 
     if stdout:
-        print(f"Stdout : {stdout}")
+        computer.log(f"Stdout : {stdout}")
 
     return True
 
 
 def delete_folder_ssh(ssh: paramiko.SSHClient, folder_path: str) -> bool:
+    """
+    Deletes a folder on the remote computer.
+    :param ssh: The ssh session to use to delete the folder.
+    :param folder_path: The path of the folder to delete ON the remote computer.
+    :return: True if the folder was deleted, False otherwise.
+    """
     stdout, stderr = stdout_err_execute_ssh_command(ssh, f"rmdir {folder_path}")
 
     if stderr:
@@ -113,10 +195,28 @@ def delete_file_ssh(ssh: paramiko.SSHClient, file_path: str) -> bool:
     return True
 
 
+def download_file_ssh(ssh: paramiko.SSHClient, local_file_path: str, remote_file_path: str) -> bool:
+    original_logging_level = logging.getLogger("paramiko").level
+    logging.getLogger("paramiko").setLevel(logging.CRITICAL)
+    # noinspection PyBroadException
+    try:
+        sftp = ssh.open_sftp()
+        sftp.get(remote_file_path, local_file_path)
+        sftp.close()
+    except Exception:
+        logging.getLogger("paramiko").setLevel(original_logging_level)
+        return False
+    return True
+
+
 def send_file_ssh(ssh: paramiko.SSHClient, local_path: str, remote_path: str) -> bool:
-    sftp = ssh.open_sftp()
-    sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
-    sftp.close()
+    # noinspection PyBroadException
+    try:
+        sftp = ssh.open_sftp()
+        sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
+        sftp.close()
+    except Exception:
+        return False
     return True
 
 
@@ -125,7 +225,7 @@ def send_files_ssh(ssh: paramiko.SSHClient, local_paths: list[str], remote_path:
     Sends multiple files to the remote computer. The files will be sent to the remote_path folder, and will keep their
     original name.
     :param ssh: SSH session to the remote computer.
-    :param local_paths: List of the local paths of the files to send.
+    :param local_paths: List of the files local paths to send.
     :param remote_path: The remote path of the folder where the files will be sent.
     :return: True if the files were sent successfully, False otherwise.
     """
@@ -133,17 +233,6 @@ def send_files_ssh(ssh: paramiko.SSHClient, local_paths: list[str], remote_path:
     for local_path in local_paths:
         sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
     sftp.close()
-    return True
-
-
-def manage_stdout_stderr_output(stdout: str, stderr: str) -> bool:
-    if stderr:
-        print(f"Error : {stderr}")
-        return False
-
-    if stdout:
-        print(f"Stdout : {stdout}")
-
     return True
 
 
@@ -155,8 +244,9 @@ def sha256(file: str) -> str:
     return hasher.hexdigest()
 
 
-def is_client_file_different(ssh: paramiko.SSHClient, remote_file_path: str, local_file_path: str) -> bool:
+def is_client_file_different(computer: 'Computer', remote_file_path: str, local_file_path: str) -> bool:
     # Créer une session SFTP en utilisant la session SSH existante
+    ssh: paramiko.SSHClient = computer.ssh_session
     sftp = ssh.open_sftp()
 
     try:
@@ -174,9 +264,7 @@ def is_client_file_different(ssh: paramiko.SSHClient, remote_file_path: str, loc
         return hachage_distant == hachage_local
 
     except FileNotFoundError:
-        print(f"Fichier non trouvé : {remote_file_path} ou {local_file_path}")
+        computer.log(f"File not found : {remote_file_path} or {local_file_path}", level="warning")
         return False
-
     finally:
-        # Fermer la session SFTP
         sftp.close()

@@ -10,6 +10,8 @@ from src.server.ssh.ssh_commands import delete_folder_ssh, create_folder_ssh, do
 
 
 class TestSSHFunctions(unittest.TestCase):
+    # TODO: Change this file so that computer backend now work here.
+
     CAN_NOT_DELETE_FOLDER: str = "Can not delete folder"
     CAN_NOT_DELETE_FILE: str = "Can not delete file"
     CAN_NOT_CREATE_FOLDER: str = "Can not create folder"
@@ -116,7 +118,7 @@ class TestSSHFunctions(unittest.TestCase):
         if not send_file_ssh(self.ssh, self.test_filename, self.remote_project_path):
             self.fail("Can not send file")
         
-        self.assertTrue(is_client_file_different(self.ssh, remote_path_file, self.test_filename))
+        self.assertTrue(is_client_file_different(self, remote_path_file, self.test_filename))
 
         with open(self.test_filename, "w") as file:
             file.write("Hello world, file more recent")
