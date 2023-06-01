@@ -1,9 +1,10 @@
-paramiko~=3.1.0
+paramiko==3.2.0
 wakeonlan~=3.0.0
 chardet~=5.1.0
-requests==2.30.0
-cryptography==40.0.2
+requests==2.31.0
+cryptography==41.0.0
 APScheduler==3.10.1
 pytz==2023.3
 WMI~=1.5.1
 psutil~=5.9.5
+pytz_deprecation_shim~=0.1.0
