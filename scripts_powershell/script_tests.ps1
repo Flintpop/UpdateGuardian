@@ -71,6 +71,8 @@ try
     Write-Host "Script Path: $scriptPath"
     if (Test-Path $scriptPath)
     {
+        Write-Host "Starting second installation process with file $scriptPath..."
+        Start-Sleep -s 1
         Start-Process powershell -ArgumentList "-File `"$scriptPath`" -Verb RunAs" -Wait
         Read-Host "First installation process completed, press enter to exit..."
         exit 0
