@@ -62,13 +62,17 @@ function Start-UpdateGuardian
         exit 1
     }
 }
-try {
+try
+{
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
     Clone-Repository
     Install-Python-Dependencies
     Start-UpdateGuardian
     Write-Host "It worked"
     Read-Host "Press Enter to exit"
-} catch {
+}
+catch
+{
     Write-Host "It failed"
     Read-Host "Press Enter to exit"
 }
