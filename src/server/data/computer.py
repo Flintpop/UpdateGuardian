@@ -4,7 +4,7 @@ import time
 import traceback
 
 import paramiko
-from cryptography.hazmat.backends.openssl import ed25519
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from src.server.commands.install_client_files_and_dependencies import python_scripts, python_installation, \
     python_path, python_packages, wait_for_ssh_shutdown
@@ -36,8 +36,8 @@ class Computer:
         self.mac_address = computer_info.get("mac_address")
         self.username = computer_info.get("username")
 
-        self.__private_key: ed25519.Ed25519PrivateKey | None = None
-        self.__public_key: ed25519.Ed25519PublicKey | None = None
+        self.__private_key: Ed25519PrivateKey | None = None
+        self.__public_key: Ed25519PublicKey | None = None
 
         self.private_key_filepath: str = os.path.join(find_directory("ssh_keys"), f"private_key_{self.hostname}")
         self.public_key_filepath: str = os.path.join(find_directory("ssh_keys"), f"public_key_{self.hostname}.pub")
