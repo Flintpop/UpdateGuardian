@@ -64,6 +64,9 @@ function Install-Python
 }
 try
 {
+    Install-Chocolatey
+    Install-Git
+    Install-Python
     $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "test.ps1"
     Write-Host "Script Path: $scriptPath"
     if (Test-Path $scriptPath)
