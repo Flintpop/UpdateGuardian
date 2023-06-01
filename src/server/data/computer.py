@@ -139,6 +139,19 @@ class Computer:
             self.log_error(f"Here is the traceback: \n{traceback.format_exc()}\n")
             return False
 
+    def connect_if_awake(self) -> bool:
+        if not self.is_pc_awake():
+            self.log("Waking up the pc...")
+            if not self.awake_pc():
+                self.log("Could not awake computer...", "warning")
+                return False
+
+        self.log_add_vertical_space()
+        if not self.connect():
+            self.log("Could not connect to computer...", "warning")
+            return False
+        return True
+
     def is_pc_awake(self) -> bool:
         if not is_ssh_server_available(computer=self, timeout=5):
             self.log("The pc is off.")

@@ -181,6 +181,12 @@ class ComputerDatabase:
                 res.append(computer)
         return len(res)
 
+    def shutdown_all_computers(self):
+        for computer in self.__computers:
+            if not computer.connect_if_awake():
+                continue
+            computer.shutdown()
+
     def load_email_infos(self):
         Infos.email_send = load_email_infos()
 
