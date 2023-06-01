@@ -32,6 +32,8 @@ function Install-Python-Dependencies
 {
     try
     {
+        Write-Host "Upgrading pip..."
+        python.exe -m pip install --upgrade pip
         Write-Host "Installing Python dependencies..."
         $destinationPath = "$env:USERPROFILE\UpdateGuardian"
         pip install -r "$destinationPath\requirements.txt"
