@@ -401,7 +401,7 @@ $computer_name = $env:COMPUTERNAME
 
 try
 {
-    $defaultGatewayAdapter = Get-NetRoute -DestinationPrefix 0.0.0.0/0 | Where-Object { $_.NextHop -ne "::" } | Get-NetIPInterface | Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }
+#    $defaultGatewayAdapter = Get-NetRoute -DestinationPrefix 0.0.0.0/0 | Where-Object { $_.NextHop -ne "::" } | Get-NetIPInterface | Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }
 
     if ($null -eq $defaultGatewayAdapter)
     {

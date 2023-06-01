@@ -131,11 +131,16 @@ try
     Install-Git
     Install-Python
 
-    # Clone-Repository
-    # Install-Python-Dependencies
     Write-Host "All tasks completed."
-    # Start-UpdateGuardian
-    Read-Host "Press any key to exit..."
+    Write-Host "Trying to end installation process..."
+    $second_installer_path = Join-Path -Path $PSScriptRoot -ChildPath "InstallUpdateGuardianServer.ps1"
+    if (Test-Path $second_installer_path) {
+        Start-Process powershell -ArgumentList "-File `"$scriptPath`" -Verb RunAs" -Wait
+        Read-Host "First installation process completed, press enter to exit..."
+        exit 0
+    }
+    Read-Host "Second installation file not found... Press enter to exit..."
+
 }
 catch
 {
