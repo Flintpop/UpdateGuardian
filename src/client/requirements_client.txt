@@ -1,3 +1,4 @@
-pywin32
-psutil
-requests
+pywin32~=306
+psutil~=5.9.5
+requests~=2.31.0
+win32security

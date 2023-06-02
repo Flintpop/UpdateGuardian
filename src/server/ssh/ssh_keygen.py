@@ -6,6 +6,7 @@
 # -----------------------------------------------------------
 import os
 import stat
+import subprocess
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -16,7 +17,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.server.data.computer import Computer
 
-from src.server.environnement.server_logs import log
+from src.server.environnement.server_logs import log, log_error
 
 
 def gen_keys_and_save_them(computer: 'Computer') -> None:
@@ -47,6 +48,18 @@ def gen_keys_and_save_them(computer: 'Computer') -> None:
 
     os.chmod(private_key_file, stat.S_IRUSR | stat.S_IWUSR)
 
+    add_key = subprocess.run("ssh-add " + private_key_file, shell=True, check=True)
+
+    if add_key.returncode != 0:
+        log_error(f"An error occurred while adding the private key to the ssh agent. Error code: {add_key.returncode}.",
+                  print_formatted=False)
+
+    delete_key = subprocess.run("del" + private_key_file, shell=True, check=True)
+
+    if delete_key.returncode != 0:
+        log_error(f"An error occurred while deleting the private key from the server. Error code: "
+                  f"{delete_key.returncode}.", print_formatted=False)
+
     # Get the public key from the private key
     public_key = private_key.public_key()
 
@@ -61,8 +74,8 @@ def gen_keys_and_save_them(computer: 'Computer') -> None:
         f.write(public_pem)
 
     print()
-    log(f"Private and public RSA keys have been generated and saved to files for computer {computer.hostname}.",
-        print_formatted=False)
+    log(f"Private and public ed25519 keys have been generated and saved to files and ssh-agent "
+        f"for computer {computer.hostname}.", print_formatted=False)
 
 
 if __name__ == '__main__':
