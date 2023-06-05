@@ -28,7 +28,7 @@ def create_known_hosts_file() -> None:
     known_hosts_file.close()
 
 
-def gen_keys_and_save_them(computer: 'Computer', host_key) -> None:
+def gen_keys_and_save_them(computer: 'Computer', host_key: str) -> None:
     """
     Generate and saves a new ED25519 private key and its public key.
     :param computer: The computer object to which the keys will be saved.
@@ -79,13 +79,9 @@ def gen_keys_and_save_them(computer: 'Computer', host_key) -> None:
     with open(public_key_file, "wb") as f:
         f.write(public_pem)
 
-    with open(public_key_file, "rb") as f:
-        public_key_data = f.read()
-
-    print(public_key_data.decode('utf-8'))
-    public_key_str = public_key_data.decode('utf-8')
-    public_key_data_decoded = base64.b64decode(public_key_str.split(' ')[1].encode('ascii'))
-    public_key_raw = paramiko.Ed25519Key(data=public_key_data_decoded)
+    print(host_key)
+    host_key_data_decoded = base64.b64decode(host_key.split(' ')[1].encode('ascii'))
+    host_key_raw = paramiko.Ed25519Key(data=host_key_data_decoded)
     print()
 
     user_directory: str = os.environ["USERPROFILE"]
@@ -101,7 +97,7 @@ def gen_keys_and_save_them(computer: 'Computer', host_key) -> None:
 
     ssh_client = paramiko.SSHClient()
     ssh_client.load_host_keys(os.path.join(ssh_user_directory, "known_hosts"))  # Load the existing known_hosts file
-    ssh_client.get_host_keys().add(computer.hostname, 'ssh-ed25519', public_key_raw)
+    ssh_client.get_host_keys().add(computer.hostname, 'ssh-ed25519', host_key_raw)
 
     ssh_client.save_host_keys(os.path.join(user_directory, ".ssh", "known_hosts"))  # Save the updated known_hosts file
 
