@@ -70,21 +70,6 @@ function Test-PendingReboot
     return $false
 }
 
-function Restart-ComputerAndRunScript
-{
-    $TaskName = "ssh_install_part2"
-    $ScriptPath = $MyInvocation.MyCommand.Path
-    $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File '$ScriptPath'"
-    $Trigger = New-ScheduledTaskTrigger -AtStartup
-    $Settings = New-ScheduledTaskSettingsSet -DontStopOnIdleEnd -RestartInterval (New-TimeSpan -Minutes 1) -RestartCount 3
-    $Principal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-    $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Settings $Settings -Principal $Principal
-    $Task | Register-ScheduledTask -TaskName $TaskName
-
-    # Reboot the computer
-    Restart-Computer
-}
-
 # Function to check if a network adapter supports Wake-on-LAN
 function Test-WoLSupport
 {
@@ -207,11 +192,14 @@ function Configure-OpenSSHServer
     $currentShell = Get-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell | Select-Object -ExpandProperty DefaultShell
 
     # Check if the current shell is not cmd
-    if ($currentShell -ne "C:\Windows\System32\cmd.exe") {
+    if ($currentShell -ne "C:\Windows\System32\cmd.exe")
+    {
         # Change the default shell to cmd
         Set-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\cmd.exe"
         Write-Output "Default SSH server shell has been changed to cmd."
-    } else {
+    }
+    else
+    {
         Write-Output "Default SSH server shell is already cmd."
     }
     Write-Output ""
@@ -227,10 +215,13 @@ function Set-RightsSSHServerFiles
 
         if (-not(Test-Path -Path $sshFolderPath))
         {
-            try {
+            try
+            {
                 New-Item -ItemType Directory -Path $sshFolderPath -ErrorAction Stop
                 Write-Host "Created .ssh folder at the specified path: $sshFolderPath"
-            } catch {
+            }
+            catch
+            {
                 Write-Error "Failed to create the .ssh folder at the specified path: $sshFolderPath"
                 Read-Host "Press enter to stop the program"
                 exit 1
@@ -239,10 +230,13 @@ function Set-RightsSSHServerFiles
 
         if (-not(Test-Path -Path $authorizedKeysPath))
         {
-            try {
+            try
+            {
                 New-Item -ItemType File -Path $authorizedKeysPath -ErrorAction Stop
                 Write-Host "Created authorized_keys file at the specified path: $authorizedKeysPath"
-            } catch {
+            }
+            catch
+            {
                 Write-Error "Failed to create the authorized_keys file at the specified path: $authorizedKeysPath"
                 Read-Host "Press enter to stop the program"
                 exit 1
@@ -282,6 +276,12 @@ function Set-RightsSSHServerFiles
 Write-Host ""
 $server_ip = "192.168.2.80"
 
+# Check if rules for ping command are configured
+Write-Host "Checking if ICMP rules are configured..."
+Check-AndCreateICMPRule
+Write-Host "ICMP rules are configured."
+Write-Host ""
+
 # Ensure the script is running with administrative privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator"))
 {
@@ -317,9 +317,8 @@ if (-not$InstalledCapability)
     if (Test-PendingReboot)
     {
         Write-Host "A system restart is pending. Restart your computer to complete the installation." -ForegroundColor Yellow
-        Write-Host "Please DO NOT make the script unavailable, or change its path before the reboot process." -ForegroundColor Red
         Read-Host "Press any key to continue and reboot"
-        Restart-ComputerAndRunScript
+        Restart-Computer
     }
 }
 else
@@ -391,8 +390,8 @@ else
 {
     Write-Output "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."
 }
-Write-Output ""
 
+Write-Output ""
 Write-Output "The OpenSSH Server has been installed and configured."
 Write-Host ""
 
@@ -432,12 +431,16 @@ try
     $whoami = whoami
     $computer_name = $env:COMPUTERNAME
 
+    Write-Host "Retrieving host key value..."
+    $ssh_host_ed_key = Get-Content -Path C:\ProgramData\ssh\ssh_host_ed25519_key.pub
+
     # Prepare the data to send to the Python HTTP server
     $data = @{
         "username" = $whoami;
         "hostname" = $computer_name;
         "mac_address" = $mac;
-        "ipv4" = $ipv4_address
+        "ipv4" = $ipv4_address;
+        "host_key" = $ssh_host_ed_key
     } | ConvertTo-Json
 
     Write-Host "Sending data to the Python HTTP server to register this pc on the database..."
@@ -484,10 +487,6 @@ catch
     exit 1
 }
 
-# Check if rules for ping command are configured
-Write-Host "Checking if ICMP rules are configured..."
-Check-AndCreateICMPRule
-Write-Host "ICMP rules are configured."
 
 Write-Host "Installing a module to automatically update the pc..."
 
@@ -501,8 +500,9 @@ if (!(Get-Module -ListAvailable -Name PSWindowsUpdate))
         Set-PSRepository PSGallery -InstallationPolicy Trusted
         Install-Module SQLServer -Repository PSGallery
         # Check if the module is in the wrong scope (CurrentUser)
-        $module = Get-Module -ListAvailable -Name PSWindowsUpdate | Where-Object { $_.ModuleBase -like "$HOME\Documents\*"}
-        if ($null -ne $module) {
+        $module = Get-Module -ListAvailable -Name PSWindowsUpdate | Where-Object { $_.ModuleBase -like "$HOME\Documents\*" }
+        if ($null -ne $module)
+        {
             Uninstall-Module PSWindowsUpdate -Force -ErrorAction Stop
             Write-Host "Module PSWindowsUpdate uninstalled from user scope successfully." -ForegroundColor Yellow
         }
@@ -515,7 +515,9 @@ if (!(Get-Module -ListAvailable -Name PSWindowsUpdate))
         Read-Host "Press any key to stop the program"
         exit 1
     }
-} else {
+}
+else
+{
     Write-Host "Module PSWindowsUpdate already installed."
 }
 

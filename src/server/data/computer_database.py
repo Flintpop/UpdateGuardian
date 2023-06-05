@@ -32,17 +32,18 @@ class ComputerDatabase:
     def add_computer(self, computer: Computer) -> None:
         self.__computers.append(computer)
 
-    def add_new_computer(self, dict_computer: dict) -> bool:
+    def add_new_computer(self, dict_computer: dict, host_key) -> bool:
         """
         Add a new computer to the database and the self.computers_json property.
         :param dict_computer: The computer to add in dictionary form.
+        :param host_key: The host key of the computer.
         :return: None
         """
         if dict_computer["hostname"] in self.computers_json:
             return False
         self.computers_json[dict_computer["hostname"]] = dict_computer
         new_computer: Computer = Computer(dict_computer)
-        gen_keys_and_save_them(new_computer)
+        gen_keys_and_save_them(new_computer, host_key)
         self.add_computer(new_computer)
         return True
 

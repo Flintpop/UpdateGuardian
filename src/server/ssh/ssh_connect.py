@@ -4,23 +4,6 @@ import chardet
 from src.server.Exceptions.DecodingExceptions import DecodingError
 
 
-def ssh_connect(remote_host: str, remote_user: str, remote_passwords: str) -> paramiko.SSHClient:
-    """
-    Connect to a remote computer using SSH.
-    :param remote_host: The remote computer's IP address or hostname.
-    :param remote_user: The remote computer's username.
-    :param remote_passwords: The remote computer's password.
-    :return: The SSH session.
-    """
-    ssh: paramiko.SSHClient = paramiko.SSHClient()
-
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    # Se connecter à la machine distante
-    ssh.connect(remote_host, username=remote_user, password=remote_passwords)
-    return ssh
-
-
 def execute_and_get_all_decoded_streams_ssh(ssh: paramiko.SSHClient, command: str) -> tuple[str, str, str]:
     stdin, stdout, stderr = ssh.exec_command(command)
     return decode_all_ssh_streams(stdin, stdout, stderr)
@@ -64,5 +47,5 @@ def get_stdout_decoded_str(ssh: paramiko.SSHClient, command: str) -> str:
     :param command: The command to execute.
     :return: The output of the command.
     """
-    stdin, stdout, stderr = ssh.exec_command(command)
+    _, stdout, _ = ssh.exec_command(command)
     return decode_stream(stdout.read())

@@ -20,10 +20,11 @@ password: str
 
 def load_email_infos() -> bool:
     global email, password
+    string_email_not_found: str = f"The file  '{Infos.email_infos_json}' was not found.\n\nTo fix it, create the "\
+                                  f"file {Infos.email_infos_json} and fill it with the following informations :"\
+                                  " \n{\n\t\"email\": \"\", \n\t\"password\": \"\"\n}"
     if not does_email_json_file_exists():
-        log_error(f"The file  '{Infos.email_infos_json}' was not found.\n"
-                  f"\nTo fix it, create the file {Infos.email_infos_json} and fill it with the following informations :"
-                  " \n{\n\t\"email\": \"\" \n\t\"password\": \"\"\n}")
+        log_error(string_email_not_found)
 
         with open(Infos.email_infos_json, "w") as f:
             json.dump({"email": "", "password": ""}, f, indent=4)
@@ -35,9 +36,7 @@ def load_email_infos() -> bool:
         with open(find_file(Infos.email_infos_json), "r") as f:
             email_content = json.load(f)
     except FileNotFoundError:
-        log_error(f"The file  '{Infos.email_infos_json}' was not found.\n"
-                  f"\nTo fix it, create the file {Infos.email_infos_json} and fill it with the following informations :"
-                  " \n{\n  \"email\": \"\" \n\"password\": \"\"\n}")
+        log_error(string_email_not_found)
         return False
 
     email = email_content.get("email", "")
@@ -115,19 +114,19 @@ def send_result_email(database: "ComputerDatabase") -> None:
                        f"successfully.</h4>"
 
     # TODO: End this feature. Lacks list of updates for each computer. Lack tests. Lack traceback support.
-    for computer in database.get_updated_computers():
-        if computer.updates_string is not None:
-            send_string += f" {len(computer.updates_string)} updates"
-            for update in computer.updates_string:
-                send_string += f"<br>&nbsp;&nbsp;&nbsp;&nbsp;- {update}"
-    if n_updated_computers != total_updatable_computers:
-        send_string += f"<h4>{total_failures} of computers were not able to be updated. An error occurred.</h4>"
-        send_string += "<p>Here is the list: </p>"
-        for computer in database.get_not_updated_computers():
-            send_string += f"<p>{computer.hostname}</p>"
-            send_string += f"<p>Error : {computer.error}</p>"
-            send_string += f"<p><br>Traceback : <br>{computer.traceback}</p>"
-            send_string += "<br>"
+    # for computer in database.get_updated_computers():
+    #     if computer.updates_string is not None:
+    #         send_string += f" {len(computer.updates_string)} updates"
+    #         for update in computer.updates_string:
+    #             send_string += f"<br>&nbsp;&nbsp;&nbsp;&nbsp;- {update}"
+    # if n_updated_computers != total_updatable_computers:
+    #     send_string += f"<h4>{total_failures} of computers were not able to be updated. An error occurred.</h4>"
+    #     send_string += "<p>Here is the list: </p>"
+    #     for computer in database.get_not_updated_computers():
+    #         send_string += f"<p>{computer.hostname}</p>"
+    #         send_string += f"<p>Error : {computer.error}</p>"
+    #         send_string += f"<p><br>Traceback : <br>{computer.traceback}</p>"
+    #         send_string += "<br>"
     send_email(message=send_string, subject=f"{Infos.PROJECT_NAME} finished updating all computers !")
 
 

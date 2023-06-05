@@ -74,7 +74,8 @@ def print_log_setup():
 
     log_new_lines(print_in_console=True)
 
-    log("Please, make sure that all computers are connected to the same network.", print_formatted=False)
+    log("Please, make sure that all computers are connected to the same network, and all pc that interact with the "
+        "software have a static local ip address.", print_formatted=False)
     log("The software will await you to install the client setup (powershell script) on each pc "
         "you desire to automate the update on.", print_formatted=False)
 
@@ -101,15 +102,6 @@ def server_setup() -> bool:
 
     current_ip = get_local_ipv4_address()
     update_powershell_client_script_ip(current_ip)
-
-    # log_new_lines()
-    # log("To ensure the program works properly, the computer that will work as the server will have a static IP "
-    #     "address.", print_formatted=False)
-    # log_new_lines()
-
-    # if not setup_static_ip():
-    #     log_error("Error: Could not setup static ip.")
-    #     sys.exit(1)
 
     print_log_setup()
 

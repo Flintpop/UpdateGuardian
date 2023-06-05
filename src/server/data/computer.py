@@ -79,15 +79,15 @@ class Computer:
             if not self.install_prerequisites_client():
                 return self.log_error("Could not install prerequisites on the client... Cannot Update.")
 
-            self.log_add_vertical_space()
-            res, up = self.install_update()
-            if not res:
-                return self.log_error("Could not install update on client.")
-
-            self.no_updates = False
-
-            if up is not None:
-                self.no_updates = True
+            # self.log_add_vertical_space()
+            # res, up = self.install_update()
+            # if not res:
+            #     return self.log_error("Could not install update on client.")
+            #
+            # self.no_updates = False
+            #
+            # if up is not None:
+            #     self.no_updates = True
 
             self.log_add_vertical_space()
             if not self.shutdown():
@@ -107,17 +107,13 @@ class Computer:
             return False
 
     def connect(self):
-        self.log(message="Connecting to computer...")
+        self.log(message=f"Connecting to {self.hostname} computer via SSH...")
         try:
-            self.__private_key = self.get_private_key()
-            if not self.__private_key:
-                self.log_error("Could not get private key... Cannot connect.")
-                return False
-
             self.ssh_session = paramiko.SSHClient()
-            self.ssh_session.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            self.ssh_session.connect(self.hostname, username=self.username, pkey=self.__private_key)
-            self.log(f"Connected to computer {self.hostname}.")
+            self.ssh_session.set_missing_host_key_policy(paramiko.RejectPolicy())
+            self.ssh_session.load_host_keys(os.path.join(os.environ["USERPROFILE"], ".ssh", "known_hosts"))
+            self.ssh_session.connect(self.hostname, username=self.username)
+            self.log(f"Connected via SSH to computer {self.hostname}.")
             return True
         except paramiko.AuthenticationException as e:
             self.log_add_vertical_space()
@@ -308,6 +304,10 @@ class Computer:
             self.log_error("Error, the pc is not connectable, could not download log file.")
             return False
 
+        if not self.connect():
+            self.log_error("Could not connect via SSH to the client.")
+            return False
+
         self.log("Downloading log file from the client...")
         local_path: str = os.path.join(self.logs_filename, "..", f"update_windows-{self.hostname}-ERROR-LOGS.log")
         remote_file_path: str = os.path.join(self.get_project_directory_on_client(), "update_windows.log")
@@ -337,7 +337,7 @@ class Computer:
         self.log("Stopping sshd service...")
         ssh: paramiko.SSHClient = self.ssh_session
 
-        stdout, stderr = stdout_err_execute_ssh_command(ssh, "powershell -Command \"Stop-Service sshd\"")
+        _, stderr = stdout_err_execute_ssh_command(ssh, "powershell -Command \"Stop-Service sshd\"")
         if stderr:
             self.log_error("Failed to stop sshd service. \nStderr: \n" + stderr)
             return False

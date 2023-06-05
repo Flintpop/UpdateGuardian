@@ -5,6 +5,7 @@
 # Description: File that is used to set up the HTTP server.
 # This server is used to receive the whoami command and send the SSH public keys to the clients.
 # -----------------------------------------------------------
+import ctypes
 import os
 import sys
 import threading
@@ -29,6 +30,36 @@ if authorized_keys_directory is None:
     log_error("Could not create the 'ssh_keys' directory.")
     sys.exit(1)
 authorized_keys_file = os.path.join(authorized_keys_directory, authorized_keys_filename)
+
+
+# This is for Windows only
+class PowerInformation(ctypes.Structure):
+    _fields_ = [('ACLineStatus', ctypes.c_byte),
+                ('BatteryFlag', ctypes.c_byte),
+                ('BatteryLifePercent', ctypes.c_byte),
+                ('SystemStatusFlag', ctypes.c_byte),
+                ('BatteryLifeTime', ctypes.c_ulong),
+                ('BatteryFullLifeTime', ctypes.c_ulong)]
+
+
+class LastInputInfo(ctypes.Structure):
+    _fields_ = [('cbSize', ctypes.c_uint), ('dwTime', ctypes.c_ulong)]
+
+
+def set_sleep_timeout(ac_dc, timeout):
+    os.system(f'powercfg -change -standby-timeout-{ac_dc} {timeout}')
+
+
+def prevent_sleep():
+    # Disable sleep mode
+    set_sleep_timeout('ac', 0)
+    set_sleep_timeout('dc', 0)
+
+
+def allow_sleep():
+    # Restore the original sleep timeouts
+    set_sleep_timeout('ac', "30")
+    set_sleep_timeout('dc', "30")
 
 
 class MyRequestHandler(BaseHTTPRequestHandler):
@@ -61,8 +92,9 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             return
 
         received_data["mac_address"] = received_data["mac_address"].replace("-", ":")
+        host_key = received_data["host_key"]
 
-        if not self.computer_database.add_new_computer(received_data):
+        if not self.computer_database.add_new_computer(received_data, host_key):
             log_error("Could not add the new computer to the database. It is probably already in the database.")
             log_error(f"Received data: {received_data}")
             log_error(f"Current database:\n {self.computer_database}")
@@ -120,6 +152,7 @@ def wait_for_stop(httpd):
 
 
 def run_server(server_class=HTTPServer, handler_class=MyRequestHandler, port=8000) -> bool:
+    prevent_sleep()
     server_address = ("", port)
     httpd = server_class(server_address, handler_class)
     log(f"Starting server on port {port}", print_formatted=False)
@@ -134,6 +167,7 @@ def run_server(server_class=HTTPServer, handler_class=MyRequestHandler, port=800
     log(f"Stopping server on port {port}", print_formatted=False)
     httpd.server_close()
 
+    allow_sleep()
     if len(MyRequestHandler.computer_database.computers_json) == 0:
         log_error("The database is empty, so it will not be saved.", print_formatted=False)
         log_error("The set up is not complete and has failed.", print_formatted=False)
