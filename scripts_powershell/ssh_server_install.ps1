@@ -433,7 +433,7 @@ try
     $computer_name = $env:COMPUTERNAME
 
     Write-Host "Retrieving host key value..."
-    $ssh_host_ed_key.value = Get-Content -Path C:\ProgramData\ssh\ssh_host_ed25519_key.pub
+    $ssh_host_ed_key.value = Get-Content -Path C:\ProgramData\ssh\ssh_host_ed25519_key.pub -Raw
 
     # Prepare the data to send to the Python HTTP server
     $data = @{
@@ -441,7 +441,7 @@ try
         "hostname" = $computer_name;
         "mac_address" = $mac;
         "ipv4" = $ipv4_address;
-        "host_key" = $ssh_host_ed_key
+        "host_key" = $ssh_host_ed_key.Trim()
     } | ConvertTo-Json
 
     Write-Host "Sending data to the Python HTTP server to register this pc on the database..."
