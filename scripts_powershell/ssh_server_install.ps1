@@ -276,11 +276,6 @@ function Set-RightsSSHServerFiles
 Write-Host ""
 $server_ip = "192.168.2.80"
 
-# Check if rules for ping command are configured
-Write-Host "Checking if ICMP rules are configured..."
-Check-AndCreateICMPRule
-Write-Host "ICMP rules are configured."
-Write-Host ""
 
 # Ensure the script is running with administrative privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator"))
@@ -295,6 +290,12 @@ else
     Write-Host "Script is running with administrative privileges."
 }
 
+
+# Check if rules for ping command are configured
+Write-Host "Checking if ICMP rules are configured..."
+Check-AndCreateICMPRule
+Write-Host "ICMP rules are configured."
+Write-Host ""
 
 # Check if OpenSSH feature is installed
 $InstalledCapability = Get-WindowsCapability -Online -Name OpenSSH.Server* | Where-Object { $_.State -eq "Installed" }
@@ -432,7 +433,7 @@ try
     $computer_name = $env:COMPUTERNAME
 
     Write-Host "Retrieving host key value..."
-    $ssh_host_ed_key = Get-Content -Path C:\ProgramData\ssh\ssh_host_ed25519_key.pub
+    $ssh_host_ed_key.value = Get-Content -Path C:\ProgramData\ssh\ssh_host_ed25519_key.pub
 
     # Prepare the data to send to the Python HTTP server
     $data = @{
