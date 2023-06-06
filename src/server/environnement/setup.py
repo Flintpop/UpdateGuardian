@@ -203,7 +203,7 @@ def setup_static_ip() -> bool:
     adapters = get_network_adapters()
     log("Available network adapters:", print_formatted=False)
     for i, adapter in enumerate(adapters):
-        log(f"{i+1}: {adapter['name']} ({adapter['ip_address']})", print_formatted=False)
+        log(f"{i + 1}: {adapter['name']} ({adapter['ip_address']})", print_formatted=False)
 
     # ask the user which adapter to set the static IP address for
     selected_adapter = input("Enter the number of the adapter to set the static IP address for: ")

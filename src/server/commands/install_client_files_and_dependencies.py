@@ -116,12 +116,14 @@ def check_python_packages_installed(computer: 'Computer') -> bool:
 
         if not stderr and req in stdout:
             computer.log(f"{req} is installed")
-        if stderr and "package(s) not found" in stderr.lower():
+        elif stderr and "package(s) not found" in stderr.lower():
             computer.log(f"{req} is not found. Make sure you have the correct name in requirements_client.txt",
                          level="warning")
-        if stdout and "package(s) not found" in stdout.lower():
+            all_installed = False
+        elif stdout and "package(s) not found" in stdout.lower():
             computer.log(f"{req} is not found. Make sure you have the correct name in requirements_client.txt",
                          level="warning")
+            all_installed = False
         else:
             computer.log(f"{req} is not installed")
             all_installed = False

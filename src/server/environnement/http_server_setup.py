@@ -96,11 +96,11 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
         if not self.computer_database.add_new_computer(received_data, host_key):
             log_error("Could not add the new computer to the database. It is probably already in the database.")
-            log_error(f"Received data: {received_data}")
+            log_error(f"Received data: {json.dumps(received_data, indent = 4)}")
             log_error(f"Current database:\n {self.computer_database}")
             return
 
-        log(f"Received data: {received_data}", print_formatted=False)
+        log(f"Received data: {json.dumps(received_data, indent = 4)}", print_formatted=False)
         log(f"Current database:\n {self.computer_database}", print_formatted=False)
 
         self.send_response(200)

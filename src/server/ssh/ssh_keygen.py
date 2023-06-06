@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.server.data.computer import Computer
 
-from src.server.environnement.server_logs import log, log_error
+from src.server.environnement.server_logs import log
 
 
 def create_known_hosts_file() -> None:
@@ -53,18 +53,6 @@ def gen_keys_and_save_them(computer: 'Computer', host_key: str) -> None:
         f.write(private_openssh)
 
     os.chmod(private_key_file, stat.S_IRUSR | stat.S_IWUSR)
-
-    add_key = subprocess.run("ssh-add \"" + private_key_file + "\"", shell=True, check=True)
-
-    if add_key.returncode != 0:
-        log_error(f"An error occurred while adding the private key to the ssh agent. Error code: {add_key.returncode}.",
-                  print_formatted=False)
-
-    delete_key = subprocess.run(f"del \"{private_key_file}\"", shell=True, check=True)
-
-    if delete_key.returncode != 0:
-        log_error(f"An error occurred while deleting the private key from the server. Error code: "
-                  f"{delete_key.returncode}.", print_formatted=False)
 
     # Get the public key from the private key
     public_key = private_key.public_key()

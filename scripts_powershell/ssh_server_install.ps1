@@ -433,9 +433,7 @@ try
     $computer_name = $env:COMPUTERNAME
 
     Write-Host "Retrieving host key value..."
-    $ssh_host_ed_key_path = "C:\ProgramData\ssh\ssh_host_ed25519_key.pub"
-    $ssh_host_ed_key_content = [System.IO.File]::ReadAllText($ssh_host_ed_key_path, [System.Text.Encoding]::UTF8)
-    $ssh_host_ed_key = $ssh_host_ed_key_content.Trim([System.Text.Encoding]::UTF8.GetPreamble())
+    $ssh_host_ed_key = Get-Content -Path $env:ProgramData\ssh\ssh_host_ed25519_key.pub -Raw
 
     # Prepare the data to send to the Python HTTP server
     $data = @{

@@ -109,10 +109,15 @@ class Computer:
     def connect(self):
         self.log(message=f"Connecting to {self.hostname} computer via SSH...")
         try:
+            self.__private_key = self.get_private_key()
+            if not self.__private_key:
+                self.log_error("Could not get private key... Cannot connect.")
+                return False
+
             self.ssh_session = paramiko.SSHClient()
             self.ssh_session.set_missing_host_key_policy(paramiko.RejectPolicy())
             self.ssh_session.load_host_keys(os.path.join(os.environ["USERPROFILE"], ".ssh", "known_hosts"))
-            self.ssh_session.connect(self.hostname, username=self.username)
+            self.ssh_session.connect(self.hostname, username=self.username, pkey=self.__private_key)
             self.log(f"Connected via SSH to computer {self.hostname}.")
             return True
         except paramiko.AuthenticationException as e:
