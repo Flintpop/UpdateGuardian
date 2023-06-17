@@ -4,6 +4,7 @@ import threading
 import warnings
 import os
 
+from src.server.commands.path_functions import change_directory_to_root_folder
 from src.server.warn_admin.mails import setup_email_config
 
 # If running as a PyInstaller bundle
@@ -53,6 +54,7 @@ def start_program():
     computer_database: ComputerDatabase = ComputerDatabase.load_computer_data()
     computer_database.load_email_infos()
 
+    change_directory_to_root_folder()
     update_all_computer(computer_database)
 
 

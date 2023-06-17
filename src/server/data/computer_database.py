@@ -210,15 +210,23 @@ class ComputerDatabase:
 
     def get_max_number_of_simultaneous_updates(self):
         if self.max_number_of_simultaneous_updates == 0:
-            config_filename: str = find_file("config.py")
+            config_filename: str = find_file("config.json")
             if config_filename is None:
-                json.dump({"max_computers_per_iteration": 2}, open("config.py", "w"), indent=4)
+                json.dump({"max_computers_per_iteration": 2}, open("config.json", "w"), indent=4)
                 self.max_number_of_simultaneous_updates = 2
+
                 return self.max_number_of_simultaneous_updates
 
-            with open(config_filename, "w") as f:
+            with open(config_filename, "r") as f:
                 config_file = json.load(f)
-                self.max_number_of_simultaneous_updates = int(config_file.get("max_computers_per_iteration", 2))
+                if "max_computers_per_iteration" not in config_file:
+                    config_file["max_computers_per_iteration"] = 2
+                    json.dump(config_file, open(config_filename, "w"), indent=4)
+                    self.max_number_of_simultaneous_updates = 2
+
+                    return self.max_number_of_simultaneous_updates
+
+                self.max_number_of_simultaneous_updates = int(config_file["max_computers_per_iteration"])
 
         return self.max_number_of_simultaneous_updates
 

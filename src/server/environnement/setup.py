@@ -4,6 +4,8 @@ import re
 import socket
 import sys
 
+import keyring
+
 from src.server.commands.path_functions import find_file, list_files_recursive, find_directory
 from src.server.config import Infos
 from src.server.environnement.http_server_setup import run_server
@@ -88,7 +90,27 @@ def print_log_setup():
 
 
 def setup_email_config_done() -> bool:
-    return find_file("email_infos.json") is not None
+    service_id = "UpdateGuardian"
+    email_infos_file: str | None = find_file("email_infos.json")
+    if email_infos_file is None:
+        log_error("Error: The file email_infos.json is missing.", print_formatted=False)
+        return False
+
+    with open(email_infos_file, "r") as f:
+        data = json.load(f)
+        email = data.get("email", None)
+        if email is None:
+            log_error("Error: The email is not saved in the email_infos.json file.", print_formatted=False)
+            return False
+        if "@" not in email or "." not in email:
+            log_error("Error: The email is not valid.", print_formatted=False)
+            return False
+        if keyring.get_password(service_id, email) is None:
+            log_error("Error: The password for the email is not saved in the keyring.", print_formatted=False)
+            return False
+
+    log("Email configuration done.", print_formatted=False)
+    return True
 
 
 def server_setup() -> bool:

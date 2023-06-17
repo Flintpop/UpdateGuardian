@@ -91,10 +91,16 @@ def load_email_infos() -> bool:
     # Get credentials
     password = keyring.get_password(service_id, username)
 
-    print(f'The retrieved password is: {password}')
+    if password is None:
+        log_error(f"The password for the email {email} was not found in the windows credential secure system.\n"
+                  f"Please enter the password for the email {email} : ", print_formatted=False)
+        return False
+    log('The password is retrieved successfully', print_formatted=False)
     if not are_credentials_valid(mail=email, password_to_test=password):
         email = ""
         password = ""
+        log_error("The credentials are not valid. Make sure the password and the provided email are correct.",
+                  print_formatted=False)
         return False
 
     return True

@@ -5,13 +5,9 @@ import sys
 from src.server.config import Infos
 
 
-# from src.server.data.local_network_data import Data
-
-
 def is_path_valid(path: str) -> bool:
     # Détecte l'OS actuel
     current_os = os.name
-    # current_os = os.name
 
     # Expression régulière pour les chemins de fichiers et dossiers Windows
     windows_regex = re.compile(
@@ -33,8 +29,6 @@ def is_path_valid(path: str) -> bool:
 
 
 def go_back_one_dir(path: str) -> str:
-    # if not is_path_valid(path):
-    #     raise ValueError(f"Path {path} is not valid")
     path = os.path.join(path, "..", "")
     return os.path.abspath(path)
 
