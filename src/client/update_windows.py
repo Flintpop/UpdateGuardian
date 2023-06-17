@@ -70,11 +70,14 @@ def set_dacl(user_sid, system_sid, everyone_sid):
     return dacl
 
 
-def create_update_folder(dacl):
+def create_update_folder():
+    if not os.path.exists(TEMP_FOLDER):
+        os.mkdir(TEMP_FOLDER)
+        os.mkdir(UPDATE_FOLDER)
     if not os.path.exists(UPDATE_FOLDER):
         os.mkdir(UPDATE_FOLDER)
-    set_security_attributes_to_folder(UPDATE_FOLDER, dacl)
-    set_security_attributes_to_files(UPDATE_FOLDER, dacl)
+    # set_security_attributes_to_folder(UPDATE_FOLDER, dacl)
+    # set_security_attributes_to_files(UPDATE_FOLDER, dacl)
 
 
 def set_security_attributes_to_folder(folder_path, dacl):
@@ -165,9 +168,10 @@ def save_updates_info():
 def update_windows():
     print_and_log_client("Starting Windows Update and launching the scheduled task...")
     remove_existing_update_status_file()
-    user_sid, system_sid, everyone_sid = get_sids()
-    dacl = set_dacl(user_sid, system_sid, everyone_sid)
-    create_update_folder(dacl)
+    # user_sid, system_sid, everyone_sid = get_sids()
+    # dacl = set_dacl(user_sid, system_sid, everyone_sid)
+    # create_update_folder(dacl)
+    create_update_folder()
     link_path = create_symbolic_link()
     batch_file_path = create_batch_file(link_path)
     update_windows_task(batch_file_path)
@@ -214,9 +218,10 @@ def process_data_json_updates_results(data: dict):
     return False, None
 
 
-def check_file_exists(file_path):
+def check_file_exists(file_path, already_printed: bool):
     if not os.path.isfile(file_path):
-        print_and_log_client("File does not exist. Waiting for file to be created...")
+        if not already_printed:
+            print_and_log_client("File does not exist. Waiting for file to be created...")
         return True
     return False
 
@@ -240,7 +245,7 @@ def get_updates_info() -> dict | None:
     already_printed: bool = False
     json_file_path: str = "C:/Temp/UpdateGuardian/update_status.json"
     while True:
-        if check_file_exists(json_file_path) or already_printed:
+        if check_file_exists(json_file_path, already_printed):
             already_printed = True
             time.sleep(1)
             continue
@@ -331,7 +336,7 @@ def start_client_update():
                              "error")
         check_disk_space(20)
         check_internet_connection()
-        reset_windows_update_components()
+        # reset_windows_update_components()
         update_windows()
 
 
@@ -348,11 +353,6 @@ def run_windows_update_troubleshooter():
         print_and_log_client("Windows Update Troubleshooter ran successfully.")
         if stdout:
             print_and_log_client(f"Troubleshooter output: {stdout.decode('cp850')}")
-
-
-def troubleshoot():
-    reset_windows_update_components()
-    run_windows_update_troubleshooter()
 
 
 def is_admin():

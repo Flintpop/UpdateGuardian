@@ -67,7 +67,6 @@ def gen_keys_and_save_them(computer: 'Computer', host_key: str) -> None:
     with open(public_key_file, "wb") as f:
         f.write(public_pem)
 
-    print(host_key)
     host_key_data_decoded = base64.b64decode(host_key.split(' ')[1].encode('ascii'))
     host_key_raw = paramiko.Ed25519Key(data=host_key_data_decoded)
     print()

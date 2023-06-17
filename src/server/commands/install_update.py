@@ -5,7 +5,7 @@ from src.server.data.computer import Computer
 from src.server.data.computer_database import ComputerDatabase
 
 from src.server.environnement.server_logs import log, log_error
-from src.server.warn_admin.mails import send_result_email
+from src.server.warn_admin.mails import EmailResults
 
 
 def update_all_computer(database: ComputerDatabase) -> None:
@@ -14,7 +14,7 @@ def update_all_computer(database: ComputerDatabase) -> None:
     :param database: The database contains all the computers and the data object.
     """
 
-    max_workers = database.data.get_max_number_of_simultaneous_updates()
+    max_workers = database.get_max_number_of_simultaneous_updates()
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Update all computers using threads
         computers: list[Computer] = database.get_computers()
@@ -23,7 +23,7 @@ def update_all_computer(database: ComputerDatabase) -> None:
     log("Update rollout over. Checks logs for more informations.")
     log("Sending result email...")
     if Infos.email_send:
-        send_result_email(database)
+        EmailResults(database).send_email_results()
 
 
 def update_computer(computer: Computer):

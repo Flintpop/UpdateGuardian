@@ -1,36 +1,30 @@
-import requests
+import git
+import os
+import sys
+
+from src.server.environnement.server_logs import log
 
 
-# TODO: Does not work for now
-def get_latest_github_release(user, repo):
-    url = f"https://api.github.com/repos/{user}/{repo}/releases/latest"
-    response = requests.get(url)
+def check_for_update_and_restart():
+    # Path to your repository
+    repo_path = 'path_to_your_repository'
+    repo = git.Repo(repo_path)
 
-    if response.status_code == 200:
-        return response.json()
+    # Fetch the remote repository
+    repo.remotes.origin.fetch()
+
+    # Check if the local commit is the latest
+    local_commit = repo.head.commit
+    remote_commit = repo.remotes.origin.refs.main.commit
+
+    if local_commit != remote_commit:
+        log('New commit detected. Pulling changes...', print_formatted=False)
+
+        # Pull new changes
+        repo.git.pull()
+
+        # Restart the script
+        log("Restarting script...", print_formatted=False)
+        os.execl(sys.executable, sys.executable, *sys.argv)
     else:
-        print(f"Error fetching release info: {response.status_code}")
-        return None
-
-
-def check_for_updates(current_version):
-    user = "flintpop"
-    repo = "UpdateGuardian"
-
-    latest_release_info = get_latest_github_release(user, repo)
-
-    if latest_release_info:
-        latest_version = latest_release_info["tag_name"]
-
-        if current_version != latest_version:
-            print(f"Update available: {current_version} -> {latest_version}")
-            print(f"Download the latest release here: {latest_release_info['html_url']}")
-        else:
-            print("You are using the latest version")
-
-
-# Your project's current installed version
-if __name__ == '__main__':
-    current_project_version = "v0.5.0"
-
-    check_for_updates(current_project_version)
+        log('No new commits.', print_formatted=False)

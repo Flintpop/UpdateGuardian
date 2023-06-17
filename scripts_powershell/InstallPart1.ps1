@@ -74,11 +74,15 @@ try
         Write-Host "Starting second installation process with file $scriptPath..."
         Start-Sleep -s 1
         Start-Process powershell -ArgumentList "-File `"$scriptPath`" -Verb RunAs" -Wait
-        Read-Host "First installation process completed, press enter to exit..."
+        Read-Host "Installation process completed, press enter to exit..."
         exit 0
     }
-    Start-Process powershell -ArgumentList "-NoExit -File `"$scriptPath`" -Verb RunAs" -Wait
-    Read-Host "Press Enter to exit"
+    else
+    {
+        Write-Host "Failed to find second installation script at $scriptPath"
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
 }
 catch
 {

@@ -274,7 +274,7 @@ function Set-RightsSSHServerFiles
 }
 
 Write-Host ""
-$server_ip = "192.168.2.80"
+$server_ip = "192.168.1.103"
 
 
 # Ensure the script is running with administrative privileges

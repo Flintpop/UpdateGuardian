@@ -68,11 +68,10 @@ try
     Clone-Repository
     Install-Python-Dependencies
     Start-UpdateGuardian
-    Write-Host "It worked"
     Read-Host "Press Enter to exit"
 }
 catch
 {
-    Write-Host "It failed"
+    Write-Host "Failed to install UpdateGuardian due to $_"
     Read-Host "Press Enter to exit"
 }

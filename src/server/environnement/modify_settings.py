@@ -3,6 +3,7 @@ from src.server.data.computer_database import ComputerDatabase
 from src.server.environnement.http_server_setup import run_server
 from src.server.environnement.server_logs import log, log_error, log_new_lines
 from src.server.environnement.setup import get_launch_time, ask_and_save_launch_time
+from src.server.warn_admin.mails import setup_email_config
 
 done = False
 
@@ -23,7 +24,8 @@ def add_host():
           f"Please, go to the computer you want to add and execute the powershell installer "
           f"{Infos.powershell_client_script_installer_name} :\n")
     if not run_server():
-        log_error("Error with the http server. The database may be empty, or something else went wrong.")
+        log_error("Error with the http server. The database may be empty, or something else went wrong.",
+                  print_formatted=False)
         return
     modify_settings()
 
@@ -69,11 +71,17 @@ def print_infos():
     log("Type 'remove' to remove a host.", print_formatted=False)
     log("Type 'exit' to exit the settings menu.\n", print_formatted=False)
 
+
+def mails():
+    setup_email_config()
+
+
 def modify_settings():
     global done
     print_infos()
     inputs = {
         "launch time": lambda: modify_launch_time(),
+        "mails": lambda: mails(),
         "add": lambda: add_host(),
         "remove": lambda: remove_host(),
         "exit": lambda: exit_settings()

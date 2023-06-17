@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from src.server.data.computer import Computer
 
 from src.server.ssh.ssh_commands import stdout_err_execute_ssh_command, send_file_ssh, does_path_exists_ssh, \
-    reboot_remote_pc, wait_and_reconnect, is_ssh_server_available, is_client_file_different, create_folder_ssh
+    reboot_remote_pc, wait_and_reconnect, is_pc_on, is_client_file_different, create_folder_ssh
 
 STDOUT_MESSAGE = "STDOUT: \n"
 
@@ -329,7 +329,7 @@ def wait_for_ssh_shutdown(computer: 'Computer') -> None:
     computer.force_close_ssh_session()
     computer.ssh_session.close()
     while not ssh_server_shutdown:
-        ssh_server_shutdown = not is_ssh_server_available(computer=computer, print_log_connected=False)
+        ssh_server_shutdown = not is_pc_on(computer=computer, print_log_connected=False)
     computer.log("SSH server is down, waiting for it to be up again...")
 
 

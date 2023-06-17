@@ -4,6 +4,8 @@ import threading
 import warnings
 import os
 
+from src.server.warn_admin.mails import setup_email_config
+
 # If running as a PyInstaller bundle
 if getattr(sys, 'frozen', False):
     # Add the directory containing your modules to sys.path
@@ -23,7 +25,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from commands.install_update import update_all_computer
 from data.computer_database import ComputerDatabase
 from environnement.modify_settings import modify_settings
-from environnement.setup import server_setup, get_launch_time
+from environnement.setup import server_setup, get_launch_time, setup_email_config_done
 from environnement.server_logs import log, log_new_lines
 
 function_executed: bool = False
@@ -108,7 +110,7 @@ def settings_thread() -> None:
 
         day, hour = scheduled_time['day'], scheduled_time['hour']
         print(f"\nThe program is scheduled to start every {day} at {hour}:00.\n")
-        print("Type 'modify' to modify settings.")
+        print("Type 'settings' to modify settings.")
         print("Type 'force' to force start the scheduled task.")
         print("Type 'list' to list all the computers in the database.")
         print("Type 'shutdown' to shutdown all the computers in the database.")
@@ -116,7 +118,7 @@ def settings_thread() -> None:
         try:
             usr_input = input("> ")
             switcher = {
-                "modify": modify_settings,
+                "settings": modify_settings,
                 "force": force_start_execute_job,
                 "list": list_computers,
                 "shutdown": shutdown_all_computers,
@@ -134,6 +136,9 @@ def main_loop() -> None:
         exit(1)
 
     get_launch_time()
+
+    if not setup_email_config_done():
+        setup_email_config()
 
     launch_thread = threading.Thread(target=launch_software)
     launch_thread.start()

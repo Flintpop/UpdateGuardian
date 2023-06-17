@@ -4,13 +4,11 @@ import re
 import socket
 import sys
 
-from src.server.commands.path_functions import find_file, list_files_recursive, find_directory, \
-    change_directory_to_root_folder
+from src.server.commands.path_functions import find_file, list_files_recursive, find_directory
 from src.server.config import Infos
 from src.server.environnement.http_server_setup import run_server
-from src.server.environnement.setup_static_ip import is_static_ip, get_network_adapters, set_static_ip
 from src.server.environnement.server_logs import log, log_error, log_new_lines
-from src.server.warn_admin.mails import test_credential
+from src.server.environnement.setup_static_ip import is_static_ip, get_network_adapters, set_static_ip
 
 launch_infos_filename: str = "launch_infos.json"
 
@@ -124,11 +122,9 @@ def server_setup() -> bool:
         "been registered...", print_formatted=False)
 
     if not run_server():
-        log_error("Error with the http server. The database may be empty, or something else went wrong.")
+        log_error("Error with the http server. The database may be empty, or something else went wrong.",
+                  print_formatted=False)
         return False
-
-    if not setup_email_config_done():
-        setup_email_config()
 
     return True
 
@@ -264,34 +260,3 @@ def update_powershell_client_script_ip(ip: str):
                   "privileges.\nFurthermore, make sure that the powershell script name "
                   f"{Infos.powershell_client_script_installer_name} exists in the {Infos.PROJECT_NAME} root folder.")
         raise FileNotFoundError
-
-
-def setup_email_config():
-    log("Setting up email configuration...", print_formatted=False)
-    log("This works with google mails, and with the \"application password\" feature. If you want to use another "
-        "email provider, you may have to modify the code yourself.", print_formatted=False)
-    log("Please enter the following information to set up the email configuration.", print_formatted=False)
-    log("Note : If you don't want to set up the email configuration, just press enter for each field.\n",
-        print_formatted=False)
-    email = input("Email : ")
-    password = input("Password : ")
-    if email == "" and password == "":
-        log("Skipping email configuration...", print_formatted=False)
-        Infos.email_send = False
-        return
-
-    if email == "" or password == "":
-        log_error("You must enter both email and password.")
-        setup_email_config()
-        return
-
-    if not test_credential(mail=email, password_to_test=password):
-        log_error("Invalid email or password. Please try again.")
-        setup_email_config()
-        return
-
-    Infos.email_send = True
-
-    change_directory_to_root_folder()
-    with open(Infos.email_infos_json, "w") as f:
-        json.dump({"email": email, "password": password}, f, indent=4)

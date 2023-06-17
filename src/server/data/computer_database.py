@@ -3,7 +3,6 @@ import json
 from src.server.commands.path_functions import find_file, change_directory_to_root_folder
 from src.server.config import Infos
 from src.server.data.computer import Computer
-from src.server.data.local_network_data import Data
 from threading import Lock
 
 from src.server.ssh.ssh_keygen import gen_keys_and_save_them
@@ -25,7 +24,7 @@ class ComputerDatabase:
         Creates a new ComputerDatabase object. This object is used to store all the computers in the database.
         It loads the computers from the computers_database.json file.
         """
-        self.data = Data()
+        self.max_number_of_simultaneous_updates = 0
         self.__computers: list[Computer] = []
         self.computers_json: dict = {}
 
@@ -175,6 +174,14 @@ class ComputerDatabase:
                 res.append(computer)
         return len(res)
 
+    def get_updated_computers(self):
+        computers: list[Computer] = []
+        for computer in self.__computers:
+            if computer.updated_successfully and not computer.no_updates:
+                computers.append(computer)
+
+        return computers
+
     def get_number_of_failed_computers(self):
         res = []
         for computer in self.__computers:
@@ -200,6 +207,20 @@ class ComputerDatabase:
             string_representation += f"\tIPv4 : \t{computer.ipv4}\n"
             string_representation += f"\tUSER : \t{computer.username}\n"
         return string_representation
+
+    def get_max_number_of_simultaneous_updates(self):
+        if self.max_number_of_simultaneous_updates == 0:
+            config_filename: str = find_file("config.py")
+            if config_filename is None:
+                json.dump({"max_computers_per_iteration": 2}, open("config.py", "w"), indent=4)
+                self.max_number_of_simultaneous_updates = 2
+                return self.max_number_of_simultaneous_updates
+
+            with open(config_filename, "w") as f:
+                config_file = json.load(f)
+                self.max_number_of_simultaneous_updates = int(config_file.get("max_computers_per_iteration", 2))
+
+        return self.max_number_of_simultaneous_updates
 
 
 if __name__ == '__main__':

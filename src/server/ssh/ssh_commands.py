@@ -39,32 +39,15 @@ def reboot_remote_pc(ssh: paramiko.SSHClient) -> None:
     ssh.exec_command(reboot_command)
 
 
-def manage_ssh_output(stdout: str, stderr: str) -> str | None:
+def is_pc_on(computer: 'Computer', port: int = 22, timeout: float = 5.0,
+             print_log_connected: bool = True) -> bool:
     """
-    Prints the stdout and stderr and returns the stdout if there is no stderr.
-    :param stdout: A string containing the stdout of an ssh command.
-    :param stderr: A string containing the stderr of an ssh command.
-    :return: None if there is an error, stdout otherwise.
-    """
-    if stderr:
-        print("Stderr:")
-        print(stderr)
-        return None
-    if stdout:
-        print("Stdout:")
-        print(stdout)
-    return stdout
-
-
-def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float = 5.0,
-                            print_log_connected: bool = True) -> bool:
-    """
-    Give true if the ssh server is available on the computer.
-    :param computer: The computer to test the ssh server availability.
-    :param port: The port to test the ssh server availability.
-    :param timeout: The timeout to test the ssh server availability.
-    :param print_log_connected: If True, the computer will log when it is connected to the ssh server.
-    :return: True if the ssh server is available on the computer, False otherwise.
+    Give true if the pc is on
+    :param computer: The computer to test
+    :param port: The port to test
+    :param timeout: The timeout to test
+    :param print_log_connected: If True, the computer will log when it is connected to the socket
+    :return: True if the pc can connect to the socket on the computer parameter, False otherwise.
     """
     ip: str = computer.ipv4
     start = time.time()
@@ -75,7 +58,7 @@ def is_ssh_server_available(computer: 'Computer', port: int = 22, timeout: float
             try:
                 sock.connect((ip, port))
                 if print_log_connected:
-                    computer.log(f"Connected to {ip} of {computer.hostname}")
+                    computer.log(f"Connected to {ip} of {computer.hostname} via sockets")
                 return True
             except socket.timeout:
                 time.sleep(0.1)
@@ -118,19 +101,23 @@ def wait_and_reconnect(computer: 'Computer', ip: str, username: str, private_key
 
     while time.time() - start_time < timeout and not connected:
         try:
-            if not is_ssh_server_available(computer=computer, timeout=retry_interval):
+            if not is_pc_on(computer=computer, timeout=retry_interval):
                 continue
             success_count = 0
-            for _ in range(attempts):  # check connection stability 10 times
-                ssh.connect(ip, username=username, pkey=private_key, timeout=retry_interval)
+            for _ in range(attempts):  # check connection stability n times
+                computer.connect_ssh_procedures()
                 success_count += 1
                 time.sleep(0.2)
 
-            if success_count == attempts:  # if all 10 connection attempts succeeded
+            if success_count >= attempts:  # if all n connection attempts succeeded
                 connected = True
+                computer.log("Connected to remote computer via SSH.")
+
                 break
         except (paramiko.ssh_exception.NoValidConnectionsError, socket.timeout, paramiko.ssh_exception.SSHException,
-                OSError):
+                OSError) as e:
+            computer.log(f"SSH server is not available yet, trying again in 10 seconds.\nHere is the exception:\n{e}",
+                         "warning")
             time.sleep(retry_interval)
         except Exception as e:
             computer.log(f"Unknown error occurred: {e}\nTraceback: \n{e.__traceback__}", "warning")

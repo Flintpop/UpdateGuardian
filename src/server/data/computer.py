@@ -11,7 +11,7 @@ from src.server.commands.install_client_files_and_dependencies import python_scr
 from src.server.commands.path_functions import list_files_recursive, find_directory, change_directory_to_root_folder
 from src.server.config import Infos
 from src.server.environnement.server_logs import ComputerLogger
-from src.server.ssh.ssh_commands import is_ssh_server_available, stdout_err_execute_ssh_command, wait_and_reconnect, \
+from src.server.ssh.ssh_commands import is_pc_on, stdout_err_execute_ssh_command, wait_and_reconnect, \
     download_file_ssh
 from src.server.wake_on_lan.wake_on_lan_utils import send_wol
 from src.server.warn_admin.mails import send_error_email
@@ -61,6 +61,8 @@ class Computer:
         self.updated_successfully: bool = False
 
         self.updates_string: list[str] = []
+        self.error: str | None = None
+        self.traceback: str | None = None
 
     def update(self) -> bool:
         # noinspection PyBroadException
@@ -79,15 +81,15 @@ class Computer:
             if not self.install_prerequisites_client():
                 return self.log_error("Could not install prerequisites on the client... Cannot Update.")
 
-            # self.log_add_vertical_space()
-            # res, up = self.install_update()
-            # if not res:
-            #     return self.log_error("Could not install update on client.")
-            #
-            # self.no_updates = False
-            #
-            # if up is not None:
-            #     self.no_updates = True
+            self.log_add_vertical_space()
+            res, up = self.install_update()
+            if not res:
+                return self.log_error("Could not install update on client.")
+
+            self.no_updates = False
+
+            if up is not None:
+                self.no_updates = True
 
             self.log_add_vertical_space()
             if not self.shutdown():
@@ -100,24 +102,21 @@ class Computer:
             self.log_raw("\n" + ComputerLogger.get_header_style_string("ERROR"))
             self.log_error(f"Unhandled error. Could not update computer {self.hostname}: ")
             self.log_add_vertical_space(1)
-            trace_back_str: str = traceback.format_exc()
-            self.log_error(f"Here is the traceback:\n{trace_back_str}")
+
+            self.traceback: str = traceback.format_exc()
+            self.error = e
+
+            self.log_error(f"Here is the traceback:\n{self.traceback}")
             if Infos.email_send:
-                send_error_email(computer=self, error=str(e), traceback=trace_back_str)
+                send_error_email(computer=self, error=str(self.error), traceback=self.traceback)
+
             return False
 
     def connect(self):
         self.log(message=f"Connecting to {self.hostname} computer via SSH...")
         try:
-            self.__private_key = self.get_private_key()
-            if not self.__private_key:
-                self.log_error("Could not get private key... Cannot connect.")
-                return False
+            self.connect_ssh_procedures()
 
-            self.ssh_session = paramiko.SSHClient()
-            self.ssh_session.set_missing_host_key_policy(paramiko.RejectPolicy())
-            self.ssh_session.load_host_keys(os.path.join(os.environ["USERPROFILE"], ".ssh", "known_hosts"))
-            self.ssh_session.connect(self.hostname, username=self.username, pkey=self.__private_key)
             self.log(f"Connected via SSH to computer {self.hostname}.")
             return True
         except paramiko.AuthenticationException as e:
@@ -140,6 +139,17 @@ class Computer:
             self.log_error(f"Here is the traceback: \n{traceback.format_exc()}\n")
             return False
 
+    def connect_ssh_procedures(self):
+        self.__private_key = self.get_private_key()
+        if not self.__private_key:
+            self.log_error("Could not get private key... Cannot connect.")
+            return False
+
+        self.ssh_session = paramiko.SSHClient()
+        self.ssh_session.set_missing_host_key_policy(paramiko.RejectPolicy())
+        self.ssh_session.load_host_keys(os.path.join(os.environ["USERPROFILE"], ".ssh", "known_hosts"))
+        self.ssh_session.connect(self.hostname, username=self.username, pkey=self.__private_key)
+
     def connect_if_awake(self) -> bool:
         if not self.is_pc_awake():
             self.log("Waking up the pc...")
@@ -154,7 +164,7 @@ class Computer:
         return True
 
     def is_pc_awake(self) -> bool:
-        if not is_ssh_server_available(computer=self, timeout=5):
+        if not is_pc_on(computer=self, timeout=5):
             self.log("The pc is off.")
             return False
         self.log("The pc is on.")
@@ -168,7 +178,7 @@ class Computer:
         """
         start_time: float = time.time()
         while start_time + timeout > time.time():
-            if not is_ssh_server_available(computer=self, timeout=3, print_log_connected=False):
+            if not is_pc_on(computer=self, timeout=3, print_log_connected=False):
                 self.log("The pc is off.")
                 return True
         return False
@@ -180,7 +190,7 @@ class Computer:
         """
         send_wol(mac_address=self.mac_address, ip_address=self.ipv4)
 
-        if not is_ssh_server_available(self, timeout=20):
+        if not is_pc_on(self, timeout=20):
             self.log_error("Error, the pc is still off.")
             return False
 
@@ -256,9 +266,7 @@ class Computer:
 
             with open(json_filename, "r") as f:
                 json_res: dict = json.load(f)
-                print_json: str = json_res.__str__().replace("{", "{\n\t").replace("}", "\n}\n")
-                print_json: str = print_json.replace(", ", ",\n\t").replace("[", "[\n\t").replace("]", "\n\t]")
-                self.log(f"Here is the json file content:\n{print_json}", new_lines=1)
+                self.log(f"Here is the json file content:\n{json.dumps(json_res, indent=4)}", new_lines=1)
 
             os.remove(json_filename)
 
@@ -305,7 +313,7 @@ class Computer:
         Download the log file from the client.
         :return: True if the log file has been downloaded, False otherwise.
         """
-        if not is_ssh_server_available(self, timeout=20):
+        if not is_pc_on(self, timeout=20):
             self.log_error("Error, the pc is not connectable, could not download log file.")
             return False
 
