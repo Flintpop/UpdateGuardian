@@ -114,30 +114,31 @@ class ComputerDatabase:
                                     f"It should have been created at the" "setup phase. Please check the setup process,"
                                     " and restart the program.")
 
-        cls.__load_computers_from_json(computer_database, computers_data_json_file)
+        cls.__load_computers_from_json(computer_database, computers_data_json_file, init_logger=True)
 
         return computer_database
 
     @classmethod
-    def load_computer_data_if_exists(cls):
+    def load_computer_data_if_exists(cls, init_logger=False) -> "ComputerDatabase":
         computer_database = ComputerDatabase()
         computers_data_json_file = find_file(cls.json_computers_database_filename, show_print=False)
         if computers_data_json_file is None:
             return computer_database
 
-        cls.__load_computers_from_json(computer_database, computers_data_json_file)
+        cls.__load_computers_from_json(computer_database, computers_data_json_file, init_logger=init_logger)
 
         return computer_database
 
     @classmethod
-    def __load_computers_from_json(cls, computer_database: "ComputerDatabase", json_file_path: str) -> None:
+    def __load_computers_from_json(cls, computer_database: "ComputerDatabase", json_file_path: str,
+                                   init_logger) -> None:
         with open(json_file_path, "r") as file:
             computer_database.computers_json = json.loads(file.read())
 
         # Add all the computers to the database, using the Computer class.
         for computer_hostname in computer_database.computers_json:
             new_computer_dict = computer_database.computers_json[computer_hostname]
-            new_computer = Computer(new_computer_dict, init_logger=True)
+            new_computer = Computer(new_computer_dict, init_logger=init_logger)
             computer_database.add_computer(new_computer)
 
     def get_number_of_computers(self) -> int:

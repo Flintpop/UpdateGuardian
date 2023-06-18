@@ -57,6 +57,8 @@ def setup_email_config(already_asked: bool = False) -> None:
         keyring.set_password("UpdateGuardian", email, password)
         json.dump({"email": email, "send_mail": True}, f, indent=4)
 
+    log("Email configuration set up successfully !", print_formatted=False, new_lines=2)
+
 
 def load_email_infos() -> bool:
     global email, password
@@ -95,7 +97,6 @@ def load_email_infos() -> bool:
         log_error(f"The password for the email {email} was not found in the windows credential secure system.\n"
                   f"Please enter the password for the email {email} : ", print_formatted=False)
         return False
-    log('The password is retrieved successfully', print_formatted=False)
     if not are_credentials_valid(mail=email, password_to_test=password):
         email = ""
         password = ""

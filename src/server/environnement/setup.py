@@ -99,6 +99,16 @@ def setup_email_config_done() -> bool:
     with open(email_infos_file, "r") as f:
         data = json.load(f)
         email = data.get("email", None)
+        email_send = data.get("send_mail", None)
+
+        if email_send is None:
+            log_error("Error: The send_mail key is missing in the email_infos.json file.", print_formatted=False)
+            return False
+        if email_send is True and email is None:
+            log_error("Error: The email key is missing in the email_infos.json file.", print_formatted=False)
+            return False
+        if email_send is False:
+            return True
         if email is None:
             log_error("Error: The email is not saved in the email_infos.json file.", print_formatted=False)
             return False

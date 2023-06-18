@@ -5,6 +5,7 @@ import warnings
 import os
 
 from src.server.commands.path_functions import change_directory_to_root_folder
+from src.server.update.update_project import check_for_update_and_restart
 from src.server.warn_admin.mails import setup_email_config
 
 # If running as a PyInstaller bundle
@@ -152,4 +153,5 @@ def main_loop() -> None:
 
 
 if __name__ == '__main__':
+    check_for_update_and_restart()
     main_loop()

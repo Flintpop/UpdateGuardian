@@ -157,6 +157,7 @@ def run_server(server_class=HTTPServer, handler_class=MyRequestHandler, port=800
     httpd = server_class(server_address, handler_class)
     log(f"Starting server on port {port}", print_formatted=False)
 
+    MyRequestHandler.computer_database = ComputerDatabase.load_computer_data_if_exists()
     server_thread = threading.Thread(target=httpd.serve_forever)
     server_thread.start()
 
