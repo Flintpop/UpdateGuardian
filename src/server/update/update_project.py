@@ -16,7 +16,11 @@ def check_for_update_and_restart(args=""):
     # Fetch the remote repository
     repo.remotes.origin.fetch()
 
-    current_branch = repo.active_branch
+    current_branch = repo.active_branch    # Check if there are any local modifications
+
+    if repo.is_dirty():
+        log('Stashing changes...', print_formatted=False)
+        repo.git.stash()
 
     # Reset the local repository's main branch to match the remote repository stable branch
     repo.git.checkout('main')
@@ -43,4 +47,7 @@ def check_for_update_and_restart(args=""):
             sys.exit(0)
     else:
         log('No new updates.', print_formatted=False)
+        # Return to the original branch and restore the stash
+        log('Restoring changes...', print_formatted=False)
         repo.git.checkout(current_branch)
+        repo.git.stash.apply()

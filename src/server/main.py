@@ -42,20 +42,20 @@ lock = Lock()
 
 def execute_job_force() -> None:
     with lock:
-        log("Checking for updates...")
+        log("Checking for updates...", print_formatted=False)
         check_for_update_and_restart("--force")
 
-        log("Force executing scheduled task...")
+        log("Force executing scheduled task...", print_formatted=False)
         log_new_lines(2)
         start_program()
 
 
 def execute_job() -> None:
     with lock:
-        log("Checking for updates...")
+        log("Checking for updates...", print_formatted=False)
         check_for_update_and_restart("--force")
 
-        log("Executing scheduled task...")
+        log("Executing scheduled task...", print_formatted=False)
 
         log_new_lines(2)
 
