@@ -4,9 +4,6 @@ import threading
 import warnings
 import os
 
-from src.server.commands.path_functions import change_directory_to_root_folder
-from src.server.update.update_project import check_for_update_and_restart
-from src.server.warn_admin.mails import setup_email_config
 
 # If running as a PyInstaller bundle
 if getattr(sys, 'frozen', False):
@@ -18,8 +15,12 @@ else:
     sys.path.append(os.path.abspath('src/server'))
     os.chdir(os.path.dirname(os.path.abspath(__file__)))  # Change to the script's directory
 
+
 # noinspection PyUnresolvedReferences
 import add_paths  # Import and execute add_paths.py to update sys.path
+from src.server.commands.path_functions import change_directory_to_root_folder
+from src.server.update.update_project import check_for_update_and_restart
+from src.server.warn_admin.mails import setup_email_config
 
 from pytz_deprecation_shim import PytzUsageWarning
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -29,26 +30,36 @@ from data.computer_database import ComputerDatabase
 from environnement.modify_settings import modify_settings
 from environnement.setup import server_setup, get_launch_time, setup_email_config_done
 from environnement.server_logs import log, log_new_lines
+from threading import Lock
 
 function_executed: bool = False
 
 warnings.filterwarnings("ignore", category=PytzUsageWarning)
 
 stopped: bool = False
+lock = Lock()
 
 
-def execute_job_force():
-    log("Force executing scheduled task...")
-    log_new_lines(2)
-    start_program()
+def execute_job_force() -> None:
+    with lock:
+        log("Checking for updates...")
+        check_for_update_and_restart("--force")
+
+        log("Force executing scheduled task...")
+        log_new_lines(2)
+        start_program()
 
 
 def execute_job() -> None:
-    log("Executing scheduled task...")
+    with lock:
+        log("Checking for updates...")
+        check_for_update_and_restart("--force")
 
-    log_new_lines(2)
+        log("Executing scheduled task...")
 
-    start_program()
+        log_new_lines(2)
+
+        start_program()
 
 
 def start_program():
@@ -78,6 +89,7 @@ def launch_software() -> None:
     except (KeyboardInterrupt, SystemExit):
         scheduler.shutdown()
         log("Program stopped.")
+        raise
 
 
 def force_start_execute_job():
@@ -153,5 +165,15 @@ def main_loop() -> None:
 
 
 if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true")
+    args = parser.parse_args()
+
+    if args.force:
+        execute_job_force()
+        exit(0)
+
     check_for_update_and_restart()
     main_loop()
