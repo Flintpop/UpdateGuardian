@@ -8,7 +8,7 @@ pytz==2023.3
 WMI~=1.5.1
 psutil~=5.9.5
 pytz_deprecation_shim~=0.1.0
-pywin32~=306
+pywin32
 win32security~=2.1.0
-keyring>=23.13.1
+keyring==24.1.0
 gitpython

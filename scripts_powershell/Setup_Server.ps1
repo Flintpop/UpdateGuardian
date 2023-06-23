@@ -62,27 +62,79 @@ function Install-Python
         exit 1
     }
 }
+
+function Clone-Repository
+{
+    try
+    {
+        $repoUrl = "https://github.com/flintpop/updateguardian"
+        $destinationPath = "$env:USERPROFILE\UpdateGuardian"
+        if (-Not(Test-Path -Path $destinationPath))
+        {
+            Write-Host "Cloning repository..."
+            git clone $repoUrl $destinationPath
+        }
+        else
+        {
+            Write-Host "Repository is already cloned"
+        }
+    }
+    catch
+    {
+        Write-Host "Failed to clone repository due to $_"
+        Read-Host "Press any key to exit..."
+        exit 1
+    }
+}
+
+function Install-Python-Dependencies
+{
+    try
+    {
+        Write-Host "Upgrading pip..."
+        python.exe -m pip install --upgrade pip
+        Write-Host "Installing Python dependencies..."
+        $destinationPath = "$env:USERPROFILE\UpdateGuardian"
+        pip install -r "$destinationPath\requirements.txt"
+    }
+    catch
+    {
+        Write-Host "Failed to install Python dependencies due to $_"
+        Read-Host "Press any key to exit..."
+        exit 1
+    }
+}
+
+
+function Start-UpdateGuardian
+{
+    try
+    {
+        Write-Host "Starting UpdateGuardian..."
+        $destinationPath = "$env:USERPROFILE\UpdateGuardian"
+        python "$destinationPath\src\server\main.py"
+    }
+    catch
+    {
+        Write-Host "Failed to start UpdateGuardian due to $_"
+        Read-Host "Press any key to exit..."
+        exit 1
+    }
+}
+
 try
 {
     Install-Chocolatey
     Install-Git
     Install-Python
-    $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "InstallPart2.ps1"
-    Write-Host "Script Path: $scriptPath"
-    if (Test-Path $scriptPath)
-    {
-        Write-Host "Starting second installation process with file $scriptPath..."
-        Start-Sleep -s 1
-        Start-Process powershell -ArgumentList "-File `"$scriptPath`" -Verb RunAs" -Wait
-        Read-Host "Installation process completed, press enter to exit..."
-        exit 0
-    }
-    else
-    {
-        Write-Host "Failed to find second installation script at $scriptPath"
-        Read-Host "Press Enter to exit"
-        exit 1
-    }
+
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+
+    Clone-Repository
+    Install-Python-Dependencies
+    Start-UpdateGuardian
+    Read-Host "Press Enter to exit"
+    exit 0
 }
 catch
 {
