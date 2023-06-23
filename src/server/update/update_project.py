@@ -19,7 +19,6 @@ def check_for_update_and_restart(args=""):
     current_branch = repo.active_branch    # Check if there are any local modifications
 
     if repo.is_dirty():
-        log('Stashing changes...', print_formatted=False)
         repo.git.stash()
 
     # Reset the local repository's main branch to match the remote repository stable branch
@@ -48,6 +47,9 @@ def check_for_update_and_restart(args=""):
     else:
         log('No new updates.', print_formatted=False)
         # Return to the original branch and restore the stash
-        log('Restoring changes...', print_formatted=False)
         repo.git.checkout(current_branch)
-        repo.git.stash.apply()
+        stash = repo.git.stash('list')
+        if stash:
+            # The latest stash is at stash@{0}, the next one at stash@{1}, and so on
+            # So we will pop the latest stash
+            repo.git.stash('pop')

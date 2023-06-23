@@ -119,7 +119,6 @@ def setup_email_config_done() -> bool:
             log_error("Error: The password for the email is not saved in the keyring.", print_formatted=False)
             return False
 
-    log("Email configuration done.", print_formatted=False)
     return True
 
 
