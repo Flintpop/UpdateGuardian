@@ -5,7 +5,7 @@
 - [UpdateGuardian](#updateguardian)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
-    - [⚠️ UpdateGuardian is in beta. Expept bugs, even though it has been heavily tested](#️-updateguardian-is-in-beta-expept-bugs-even-though-it-has-been-heavily-tested)
+    - [⚠️ UpdateGuardian is in beta. Expect bugs, even though it has been heavily tested](#️-updateguardian-is-in-beta-expept-bugs-even-though-it-has-been-heavily-tested)
   - [Main Features](#main-features)
   - [Prerequisites](#prerequisites)
   - [Installation and Configuration](#installation-and-configuration)
