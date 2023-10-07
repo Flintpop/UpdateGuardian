@@ -42,26 +42,32 @@ These are the current features :
 - Installer
 - Modular
 
+The text is generally understandable but could benefit from some revisions for clarity and coherence. Here's a rephrased version:
+
 ## Prerequisites
 
-If you accept the default things that will be installed, here are the only prerequisites :
+If you go with the default installation options, the following prerequisites are required:
 
-- Windows 10 or 11 **wired** local network with wake on lan. If WOL is not available, you will have to manually turn on the pcs to update your network. Later on, a feature that uses smart plug could be imagined.
-- A windows pc that will act like a server. Can be turned on 24/7 and plan the rollout or you can manually force updates.
-- An internet connection
-- A check of the firewall with ssh, port 22 and 8000 not blocked on the local network for the windows pc that acts like a server.
+- Windows 10 or 11: Must be part of a **wired** local network with Wake-on-LAN (WoL) support. If WoL is not available, you'll need to manually power on the PCs for network updates.
+- Server PC: A Windows machine that can act as a server, either running 24/7 for scheduled rollouts or manually triggered for updates.
+- Internet Connection: Required for updates and remote access.
+- Firewall Configuration: The server PC must allow SSH traffic, specifically on ports 22 and 8000 within the local network.
 
-Here are what the program will install or activate on each remote pc :
+### Software Installed or Activated on Local Client PCs
 
-- Python, but only for the admin user
-- SSH server
-- PSWindowsUpdate powershell module
-- The dependencies of PSWindowsUpdate
-- Some python packages
-- Modification of some Windows firewall rules
-- Activation, if possible, of wake on lan
+The program will handle the installation or activation of:
 
-For the server, here is what the installer will install :
+- Python (admin user only)
+- SSH Server
+- PSWindowsUpdate PowerShell module
+- Dependencies for PSWindowsUpdate
+- Various Python packages
+- Modifications to some Windows Firewall rules
+- Wake-on-LAN (if supported)
+
+### Software Installed on the Server
+
+The installer will set up:
 
 - Chocolatey package manager
 - Git
