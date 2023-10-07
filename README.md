@@ -5,7 +5,7 @@
 - [UpdateGuardian](#updateguardian)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
-    - [⚠️ UpdateGuardian is in beta. Expept bugs, even though it has been heavily tested](#️-updateguardian-is-in-beta-expept-bugs-even-though-it-has-been-heavily-tested)
+    - [⚠️ UpdateGuardian is in beta. Expect bugs, even though it has been heavily tested](#️-updateguardian-is-in-beta-expept-bugs-even-though-it-has-been-heavily-tested)
   - [Main Features](#main-features)
   - [Prerequisites](#prerequisites)
   - [Installation and Configuration](#installation-and-configuration)
@@ -16,9 +16,9 @@
   - [Contributions](#contributions)
   - [License](#license)
 
-## Introduction
+## Introduction 
 
-### ⚠️ UpdateGuardian is in beta. Expept bugs, even though it has been heavily tested
+### ⚠️ UpdateGuardian is in beta. Expect bugs, even though it has been heavily tested
 
 <br>
 UpdateGuardian is an automation system for updating a local network of Windows 10 PCs, designed to streamline and secure
@@ -50,6 +50,9 @@ If you accept the default things that will be installed, here are the only prere
 - A windows pc that will act like a server. Can be turned on 24/7 and plan the rollout or you can manually force updates.
 - An internet connection
 - A check of the firewall with ssh, port 22 and 8000 not blocked on the local network for the windows pc that acts like a server.
+- All interacting PCs must have static IP addresses
+
+## Installation and Configuration 
 
 Here are what the program will install or activate on each remote pc :
 
@@ -66,21 +69,28 @@ For the server, here is what the installer will install :
 - Chocolatey package manager
 - Git
 - Python
+- Python packages
 
-## Installation and Configuration
-
-First, make sure all pcs have a static ip address, and better if they are linked to the mac address.
+First, again, make sure all pcs have a static ip address, and better if they are linked to the mac address.
 
 After this, make sure the pc can communicate with each other, and that the port 8000 is not blocked (only local network, and for the server not the gateway)
 
-Work in progress. Start both installer (Install.ps1, Install something else.ps1 and start the python script main.py in src/server/ folder)
+Open a powershell shell as admin and type `Set-ExecutionPolicy Unrestricted -Scope CurrentUser`. Then type "A" or any key to accept all changes.
 
-Then, after all pc clients have completed the installation process, write "stop" to the server. You should see all pc in the printed database.
+Start the installer Setup_Server.ps1 that you can download in the latest release, or in the main branch in the "scripts_powershell" folder.
+
+Then, type "y" when you are ready and copy the Client_Setup.ps1 to a usb stick. Start this file on each clients.
+
+Then, after all clients have completed the installation process, write "stop" to the server. You should see all pc in the printed database.
 If you want to update now, type "force" and then enter.
 
 If you want to manually install the server, just download the code and run it with python 3.11. Older python version **MAY** work.
 
-To change some settings, modify the json files in the root folder.
+## Usage
+
+To start a manual update of the project, type "force" in the menu.
+
+To change some settings, go into "settings" menu when launching the software, and / or modify the json files in the root folder.
 
 For now, there is :
 
@@ -90,13 +100,21 @@ For now, there is :
 
 Everything will be merged in config.json later on
 
-## Usage
+You can add or remove pc in the database with the settings menu.
 
-Work in progress.
+You can redo the email configuration in the settings. You can also change the launch time in the same menu.
 
 ## Project Architecture
 
-Work in progress.
+Client-Server centralized approach. 
+
+Usage of : 
+- Wake on lan via IP address and mac address
+- Then SSH with pubkey authentification
+- Many verifications
+- Python and powershell usage on client
+- Temporary scheduled task to have the highest privileges to update the pc
+- PSWindowsUpdate
 
 ## Tests
 
@@ -112,7 +130,7 @@ firewall to check.
 
 Make also sure that the server and the clients are in the same subnet.
 
-This is a work in progress project, so there is no support for now.
+Open a issue if you find it necessary. Make sure it is the software and not your network the cause of the problem.
 
 ## Contributions
 
