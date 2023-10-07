@@ -5,11 +5,22 @@ from src.server.Exceptions.DecodingExceptions import DecodingError
 
 
 def execute_and_get_all_decoded_streams_ssh(ssh: paramiko.SSHClient, command: str) -> tuple[str, str, str]:
+    """
+    Execute a command and get the output, input and error streams properly decoded.
+    :param ssh: The SSH session.
+    :param command: The command to execute.
+    :return: The output, input and error streams properly decoded.
+    """
     stdin, stdout, stderr = ssh.exec_command(command)
     return decode_all_ssh_streams(stdin, stdout, stderr)
 
 
 def decode_stream(stream) -> str | None:
+    """
+    Decode a stream.
+    :param stream: The stream to decode.
+    :return: The decoded stream.
+    """
     if stream is None or stream == b'':
         return None
 

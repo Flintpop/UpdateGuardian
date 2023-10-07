@@ -29,12 +29,23 @@ def stdout_err_execute_ssh_command(ssh: paramiko.SSHClient, command: str) -> tup
 
 
 def does_path_exists_ssh(ssh: paramiko.SSHClient, file_path: str) -> bool:
+    """
+    Checks if a file / path exists on the remote computer.
+    :param ssh: SSH Session.
+    :param file_path: The path to check.
+    :return: True if the path exists, False otherwise.
+    """
     stdin, stdout, stderr = ssh.exec_command(f"if exist {file_path} (echo True) else (echo False)")
     result = decode_stream(stdout.read())
     return True if result == 'True' else False
 
 
 def reboot_remote_pc(ssh: paramiko.SSHClient) -> None:
+    """
+    Reboots the remote computer by executing 'shutdown /r /t 2' on it.
+    :param ssh: SSH Session.
+    :return: None
+    """
     reboot_command = 'shutdown /r /t 2'
     ssh.exec_command(reboot_command)
 
@@ -79,26 +90,26 @@ def is_pc_on(computer: 'Computer', port: int = 22, timeout: float = 5.0,
                 return False
 
 
-def wait_and_reconnect(computer: 'Computer', ip: str, username: str, private_key: paramiko.pkey,
-                       timeout: int = 300, retry_interval: int = 10) -> bool:
+def wait_and_reconnect(computer: 'Computer', timeout: int = 300, retry_interval: int = 10) -> bool:
     """
     Waits for the ssh server to be available and reconnects to it.
     :param computer: The computer to wait and reconnect to.
-    :param ip: The ip of the computer to wait and reconnect to.
-    :param username: The username to use to reconnect to the computer.
-    :param private_key: The private key to use to reconnect to the computer.
     :param timeout: How long to wait for the ssh server to be available.
     :param retry_interval: How long to wait between each attempt to connect to the ssh server.
     :return: A boolean, True if the ssh server is available and the computer is reconnected to it, False otherwise.
     """
     ssh: paramiko.SSHClient = computer.ssh_session
+    # Close the ssh session to avoid an error
     ssh.close()
+
     start_time = time.time()
     connected = False
+
     original_logging_level = logging.getLogger("paramiko").level
     logging.getLogger("paramiko").setLevel(logging.NOTSET)
     attempts: int = 5
 
+    # Try to connect to the ssh server every retry_interval seconds until timeout is reached
     while time.time() - start_time < timeout and not connected:
         try:
             if not is_pc_on(computer=computer, timeout=retry_interval):
@@ -183,6 +194,12 @@ def delete_file_ssh(ssh: paramiko.SSHClient, file_path: str) -> bool:
 
 
 def download_file_ssh(ssh: paramiko.SSHClient, local_file_path: str, remote_file_path: str) -> bool:
+    """
+    Downloads a file from the remote computer.
+    :param ssh: The ssh session to use to download the file.
+    :param local_file_path: The path of the downloaded file ON the local computer.
+    :param remote_file_path: The path of the file to download ON the remote computer.
+    """
     original_logging_level = logging.getLogger("paramiko").level
     logging.getLogger("paramiko").setLevel(logging.CRITICAL)
     # noinspection PyBroadException
@@ -197,6 +214,16 @@ def download_file_ssh(ssh: paramiko.SSHClient, local_file_path: str, remote_file
 
 
 def send_file_ssh(ssh: paramiko.SSHClient, local_path: str, remote_path: str) -> bool:
+    """
+    Sends a file to the remote computer.
+    The file will be sent to the remote_path folder, and will keep its original name.
+
+    :param ssh: SSH session to the remote computer.
+    :param local_path: The local path of the file to send.
+    :param remote_path: The remote path of the folder where the file will be sent.
+    :return: True if the file was sent successfully, False otherwise.
+    """
+
     # noinspection PyBroadException
     try:
         sftp = ssh.open_sftp()
@@ -224,6 +251,11 @@ def send_files_ssh(ssh: paramiko.SSHClient, local_paths: list[str], remote_path:
 
 
 def sha256(file: str) -> str:
+    """
+    Calculates the sha256 hash of a file.
+    :param file: The path of the file to hash.
+    :return: The sha256 hash of the file.
+    """
     hasher = hashlib.sha256()
     with open(file, 'rb') as f:
         buf = f.read()
@@ -232,26 +264,34 @@ def sha256(file: str) -> str:
 
 
 def is_client_file_different(computer: 'Computer', remote_file_path: str, local_file_path: str) -> bool:
-    # Créer une session SFTP en utilisant la session SSH existante
+    """
+    Checks if a file on the remote computer is different from a local file.
+    :param computer: The computer on which to check the file.
+    :param remote_file_path: The path of the file on the remote computer.
+    :param local_file_path: The path of the file on the local computer.
+    :return: True if the files are different, False otherwise.
+    """
+    # Create the sftp session
     ssh: paramiko.SSHClient = computer.ssh_session
     sftp = ssh.open_sftp()
 
     try:
-        # Récupérer le contenu du fichier distant
+        # Get the remote file content
         with sftp.open(remote_file_path, 'rb') as remote_file:
             contenu_distant = remote_file.read()
 
-        # Calculer le résumé cryptographique du fichier distant
+        # Calculate the cryptographic summary of the remote file
         hachage_distant = hashlib.sha256(contenu_distant).hexdigest()
 
-        # Calculer le résumé cryptographique du fichier local
+        # Calculate the cryptographic summary of the local file
         hachage_local = sha256(local_file_path)
 
-        # Comparer les résumés cryptographiques
+        # Compare the two summaries
         return hachage_distant == hachage_local
 
     except FileNotFoundError:
         computer.log(f"File not found : {remote_file_path} or {local_file_path}", level="warning")
+        # False because the file is not on the remote computer, so it will be sent
         return False
     finally:
         sftp.close()

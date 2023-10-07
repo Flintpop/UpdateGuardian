@@ -4,6 +4,9 @@ from cryptography.fernet import Fernet
 
 
 class Encrypt:
+    """
+    Class of encryption tools
+    """
     key_file = "key.key"
 
     def __init__(self):

@@ -34,6 +34,9 @@ authorized_keys_file = os.path.join(authorized_keys_directory, authorized_keys_f
 
 # This is for Windows only
 class PowerInformation(ctypes.Structure):
+    """
+    Class that is used to get the power information on Windows.
+    """
     _fields_ = [('ACLineStatus', ctypes.c_byte),
                 ('BatteryFlag', ctypes.c_byte),
                 ('BatteryLifePercent', ctypes.c_byte),
@@ -143,6 +146,9 @@ def stop_server():
 
 
 def wait_for_stop(httpd):
+    """
+    Waits for the user to write 'stop' in the console to stop the server.
+    """
     while True:
         log("Press 'stop' to stop the server", print_formatted=False)
         cmd = input('> ')
@@ -152,6 +158,9 @@ def wait_for_stop(httpd):
 
 
 def run_server(server_class=HTTPServer, handler_class=MyRequestHandler, port=8000) -> bool:
+    """
+    Runs the HTTP server used to receive the whoami command and send the SSH public keys to the clients.
+    """
     prevent_sleep()
     server_address = ("", port)
     httpd = server_class(server_address, handler_class)
@@ -159,6 +168,7 @@ def run_server(server_class=HTTPServer, handler_class=MyRequestHandler, port=800
 
     MyRequestHandler.computer_database = ComputerDatabase.load_computer_data_if_exists()
     server_thread = threading.Thread(target=httpd.serve_forever)
+    # Start a thread with the server -- that thread will then start one more thread for each request
     server_thread.start()
 
     wait_for_stop(httpd)

@@ -23,6 +23,9 @@ from src.server.environnement.server_logs import log
 
 
 def create_known_hosts_file() -> None:
+    """
+    Creates the known_hosts file in the .ssh folder.
+    """
     user_path = os.environ["USERPROFILE"]
     known_hosts_file = open(os.path.join(user_path, ".ssh", "known_hosts"), "w")
     known_hosts_file.close()
@@ -33,7 +36,7 @@ def gen_keys_and_save_them(computer: 'Computer', host_key: str) -> None:
     Generate and saves a new ED25519 private key and its public key.
     :param computer: The computer object to which the keys will be saved.
     :param host_key: The host key to save in the ssh client that will connect to many servers.
-    :return:
+    :return: None
     """
     # Generate an RSA private key
     private_key = ed25519.Ed25519PrivateKey.generate()
