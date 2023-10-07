@@ -1,4 +1,7 @@
 class Infos:
+    """
+    Class containing information for the whole program.
+    """
     config_json_file = "config.json"
     email_infos_json = "email_infos.json"
     PROJECT_NAME: str = "UpdateGuardian"

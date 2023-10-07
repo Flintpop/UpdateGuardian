@@ -21,6 +21,10 @@ password: str
 
 
 def setup_email_config(already_asked: bool = False) -> None:
+    """
+    Sets up the email feature.
+    Checks if credentials are valid.
+    """
     if not already_asked:
         log("Setting up email configuration...\n", print_formatted=False)
         log("This works with google mails, and with the \"application password\" feature. If you want to use another "
@@ -29,8 +33,10 @@ def setup_email_config(already_asked: bool = False) -> None:
         log("Please enter the following information to set up the email configuration.", print_formatted=False)
         log("Note : If you don't want to set up the email configuration, just press enter for each field.\n",
             print_formatted=False)
+
     email = input("Email : ")
     password = input("Password : ")
+
     if email == "" and password == "":
         log("Skipping email configuration...", print_formatted=False)
         Infos.email_send = False
@@ -61,6 +67,10 @@ def setup_email_config(already_asked: bool = False) -> None:
 
 
 def load_email_infos() -> bool:
+    """
+    Loads email info from a file.
+    Returns true if it is a success, false otherwise.
+    """
     global email, password
     string_email_not_found: str = f"The file  '{Infos.email_infos_json}' was not found.\n\nTo fix it, create the " \
                                   f"file {Infos.email_infos_json} and fill it with the following informations :" \
@@ -115,6 +125,9 @@ def does_email_json_file_exists() -> bool:
 
 
 def are_credentials_valid(mail: str, password_to_test: str) -> bool:
+    """
+    Tests emails credentials
+    """
     if mail == "" or password_to_test == "":
         log_error(f"The file {Infos.email_infos_json} is not correctly filled.\n"
                   f"To fix it, fill the file {Infos.email_infos_json} with the following informations : \n"
@@ -129,6 +142,7 @@ def are_credentials_valid(mail: str, password_to_test: str) -> bool:
 
 
 def test_credential(mail: str, password_to_test: str) -> bool:
+    """Core credential test function. Depends on 'are_credentials_valid'"""
     port = 587  # For starttls
     smtp_server = "smtp.gmail.com"
 
@@ -145,6 +159,9 @@ def test_credential(mail: str, password_to_test: str) -> bool:
 
 
 def send_error_email(computer: 'Computer', error: str, traceback: str) -> None:
+    """
+    Sends an email expressing an error message.
+    """
     send_string = f"<h3>Error, {Infos.PROJECT_NAME} did not manage to update {computer.hostname} !</h3>" \
                   f"<h4>The main error is : {error}.</h4>" \
                   f"<p>The traceback : </b>{traceback}</p>"
@@ -237,6 +254,7 @@ class EmailResults:
 
 
 def send_email(message: str, subject="Unhandled subject, mail should not have been sent") -> None:
+    """Loads emails credentials. Send html formatted email to registered email settings."""
     global email, password
     load_email_infos()
     if email == "" or password == "":
