@@ -5,7 +5,7 @@
 - [UpdateGuardian](#updateguardian)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
-    - [⚠️ UpdateGuardian is in beta. Expect bugs](#️-updateguardian-is-in-beta-expept-bugs-even-though-it-has-been-heavily-tested)
+    - [⚠️ UpdateGuardian is discontinued and not reliable](#️-updateguardian-is-in-beta-expept-bugs-even-though-it-has-been-heavily-tested)
   - [Main Features](#main-features)
   - [Prerequisites](#prerequisites)
   - [Installation and Configuration](#installation-and-configuration)
@@ -18,7 +18,7 @@
 
 ## Introduction
 
-### ⚠️ UpdateGuardian is in beta. Expept bugs, even though it has been heavily tested
+### ⚠️ UpdateGuardian is discontinued and not reliable
 
 <br>
 UpdateGuardian is an automation system for updating a local network of Windows 10 PCs, designed to streamline and secure
@@ -40,9 +40,6 @@ These are the current features :
 - Centralized update management
 - Update notifications and reporting (email), logs
 - Installer
-- Modular
-
-The text is generally understandable but could benefit from some revisions for clarity and coherence. Here's a rephrased version:
 
 ## Prerequisites
 
@@ -79,7 +76,7 @@ First, make sure all pcs have a static ip address, and better if they are linked
 
 After this, make sure the pc can communicate with each other, and that the port 8000 is not blocked (only local network, and for the server not the gateway)
 
-Work in progress. Start both installer (Install.ps1, Install something else.ps1 and start the python script main.py in src/server/ folder)
+Execute Install.ps1.
 
 Then, after all pc clients have completed the installation process, write "stop" to the server. You should see all pc in the printed database.
 If you want to update now, type "force" and then enter.
@@ -94,16 +91,6 @@ For now, there is :
 - launch_infos.json
 - config.json
 
-Everything will be merged in config.json later on
-
-## Usage
-
-Work in progress.
-
-## Project Architecture
-
-Work in progress.
-
 ## Tests
 
 Unit tests are located in the "tests" folder. They are written using the unittest library.
@@ -117,8 +104,6 @@ and wake on lan. This includes the Windows firewall and the router firewall. Som
 firewall to check.
 
 Make also sure that the server and the clients are in the same subnet.
-
-This is a work in progress project, so there is no support for now.
 
 ## Contributions
 
