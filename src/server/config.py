@@ -12,10 +12,9 @@ class Infos:
     email_send: bool
 
     @staticmethod
-    def get_installer_name() -> str:
-        return "python_" + Infos.python_precise_version + ".exe"
-
-    @staticmethod
     def get_server_python_installer_name():
+        """
+        :returns: The name of the server python installer
+        """
         path: str = "python_" + Infos.python_precise_version + ".exe"
         return path

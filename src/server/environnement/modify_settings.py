@@ -9,6 +9,11 @@ done = False
 
 
 def modify_launch_time():
+    """
+    Modify the launch time of the program.
+
+    The user will be asked to enter the day and the hour of the new launch time.
+    """
     print("Modify launch time")
     print("Here is the current launch time configuration:")
     launch_time = get_launch_time()
@@ -20,6 +25,11 @@ def modify_launch_time():
 
 
 def add_host():
+    """
+    Add a host to the database.
+
+    It justs restarts the http server.
+    """
     print("By using this option, will start a http server to add new hosts.\n"
           f"Please, go to the computer you want to add and execute the powershell installer "
           f"{Infos.powershell_client_script_installer_name} :\n")
@@ -31,6 +41,11 @@ def add_host():
 
 
 def remove_host():
+    """
+    Remove a host from the database.
+
+    The user will be asked to enter the name of the host to remove.
+    """
     current_database = ComputerDatabase.load_computer_data()
     if current_database.get_number_of_computers() <= 0:
         print("There are no hosts to remove.")
@@ -58,12 +73,18 @@ def remove_host():
 
 
 def exit_settings():
+    """
+    Exit the settings menu.
+    """
     global done
     print("Exit settings called")
     done = True
 
 
 def print_infos():
+    """
+    Print the settings menu.
+    """
     log_new_lines()
     log("Modifying settings...", print_formatted=False)
     log("Type 'launch time' to modify the launch time of the program.", print_formatted=False)
@@ -73,10 +94,21 @@ def print_infos():
 
 
 def mails():
+    """
+    Modify the mail configuration.
+    """
     setup_email_config()
 
 
 def modify_settings():
+    """
+    Modify the settings of the server.
+
+    The settings are:
+    - The launch time of the program.
+    - The mail configuration.
+    - The hosts (read, delete, create).
+    """
     global done
     print_infos()
     inputs = {

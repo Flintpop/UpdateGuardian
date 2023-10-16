@@ -74,6 +74,7 @@ def gen_keys_and_save_them(computer: 'Computer', host_key: str) -> None:
     host_key_raw = paramiko.Ed25519Key(data=host_key_data_decoded)
     print()
 
+    # Add the host key to the ssh client
     user_directory: str = os.environ["USERPROFILE"]
     ssh_user_directory: str = os.path.join(user_directory, ".ssh")
     if not os.path.exists(ssh_user_directory):

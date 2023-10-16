@@ -331,6 +331,9 @@ class Computer:
         return True
 
     def wait_for_pc_to_be_online_again(self, timeout=300) -> bool:
+        """
+        Wait for the pc to be online again, and reconnect to it.
+        """
         wait_for_ssh_shutdown(self)
 
         ipaddress: str = self.ipv4
@@ -375,12 +378,21 @@ class Computer:
 
     @staticmethod
     def get_list_client_files_to_send() -> list[str]:
+        """
+        Get the list of the files to send to the client.
+
+        They are all the files in the client folder except some files that are not needed.
+        """
         files: list[str] = list_files_recursive(find_directory("client"))
         files = [file for file in files if file.endswith(".py") or file.endswith(".txt") or file.endswith(".ps1")]
         return files
 
     def get_installer_path(self) -> str:
-        installer_path: str = os.path.join(self.get_project_directory_on_client(), Infos.get_installer_name())
+        """
+        Get the path of the python .exe installer on the client.
+        """
+        installer_path: str = os.path.join(self.get_project_directory_on_client(),
+                                           Infos.get_server_python_installer_name())
         return installer_path
 
     def get_requirements_path(self) -> str:
@@ -464,12 +476,18 @@ class Computer:
         self.computer_logger.log_add_vertical_space(new_lines=new_lines, print_in_console=print_in_console)
 
     def log_raw(self, param):
+        """
+        Log a raw message.
+        """
         self.computer_logger.log_raw(param=param)
 
     def close_logger(self):
         self.computer_logger.close_logger()
 
     def remove_keys(self):
+        """
+        Remove the private and public keys of the computer.
+        """
         os.remove(self.private_key_filepath)
         os.remove(self.public_key_filepath)
 

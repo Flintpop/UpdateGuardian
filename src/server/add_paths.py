@@ -2,7 +2,8 @@
 # add_paths.py
 # Author: darwh
 # Date: 09/05/2023
-# Description: 
+# Description: Add paths to be executed before the main program
+#  So that the main program can import modules from the root directory
 # -----------------------------------------------------------
 import os
 import sys

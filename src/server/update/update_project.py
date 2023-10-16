@@ -8,6 +8,11 @@ from src.server.environnement.server_logs import log
 
 
 def check_for_update_and_restart(args=""):
+    """
+    Check for updates and restart the script if there are any.
+    :param args: The arguments to pass to the script\n
+    :return: None
+    """
     # Path to your repository
     repo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')
     repo_path = os.path.abspath(repo_path)

@@ -2,6 +2,10 @@ import random
 
 
 def generate_secureon_password() -> str:
+    """
+    Generate a SecureOn password.
+    :return: The SecureOn password.
+    """
     secureon_password = ""
 
     for _ in range(6):

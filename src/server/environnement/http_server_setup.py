@@ -78,6 +78,11 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
     # noinspection PyPep8Naming
     def do_POST(self):
+        """
+        Handles the POST requests.
+
+        The POST requests are used to receive the whoami command.
+        """
         log_new_lines()
         content_length = int(self.headers.get('Content-Length', 0))
         if content_length <= 0:
@@ -94,9 +99,11 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             self.send_error(400, "Received data is not a valid JSON.")
             return
 
+        # The MAC address is received with dashes, but the database uses colons.
         received_data["mac_address"] = received_data["mac_address"].replace("-", ":")
         host_key = received_data["host_key"]
 
+        # Tries to add the new computer to the database.
         if not self.computer_database.add_new_computer(received_data, host_key):
             log_error("Could not add the new computer to the database. It is probably already in the database.")
             log_error(f"Received data: {json.dumps(received_data, indent = 4)}")
@@ -116,6 +123,11 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
     # noinspection PyPep8Naming
     def do_GET(self):
+        """
+        Handles the GET requests.
+
+        The GET requests are used to send the SSH public keys to the clients.
+        """
         log_new_lines()
         if "/get_public_key" not in self.path:
             self.send_response(404, "Page not found.")
@@ -129,11 +141,14 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             self.send_error(404, f"Computer with hostname '{hostname}' not found.")
             return
 
+        # Get and generate the public key
         public_key = computer.get_public_key()
 
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
+
+        # Sends the public key to the client.
         self.wfile.write(public_key.encode())
 
 

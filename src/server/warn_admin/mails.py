@@ -254,7 +254,14 @@ class EmailResults:
 
 
 def send_email(message: str, subject="Unhandled subject, mail should not have been sent") -> None:
-    """Loads emails credentials. Send html formatted email to registered email settings."""
+    """
+    Loads emails credentials.
+    Send html formatted email to registered email settings.
+    Email is sent to the **same email address** as the one used.
+    :param message: The message to send
+    :param subject: The subject of the email
+    :return: None
+    """
     global email, password
     load_email_infos()
     if email == "" or password == "":
