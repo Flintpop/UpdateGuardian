@@ -22,7 +22,7 @@ def stdout_err_execute_ssh_command(ssh: paramiko.SSHClient, command: str) -> tup
     :param command: The command to execute
     :return: First stdout, then stderr. If there is no output, None is returned.
     """
-    stdin, stdout, stderr = ssh.exec_command("cmd /C \"" + command + "\"")
+    _, stdout, stderr = ssh.exec_command("cmd /C \"" + command + "\"")
     stdout = decode_stream(stdout.read())
     stderr = decode_stream(stderr.read())
     return stdout, stderr
@@ -35,7 +35,7 @@ def does_path_exists_ssh(ssh: paramiko.SSHClient, file_path: str) -> bool:
     :param file_path: The path to check.
     :return: True if the path exists, False otherwise.
     """
-    stdin, stdout, stderr = ssh.exec_command(f"if exist {file_path} (echo True) else (echo False)")
+    _, stdout, _ = ssh.exec_command(f"if exist {file_path} (echo True) else (echo False)")
     result = decode_stream(stdout.read())
     return True if result == 'True' else False
 

@@ -116,7 +116,7 @@ class ServerLogs(ComputerLogger):
     def emit(self, record, print_formatted: bool = True):
         formatted_record = self.formatter.format(record)
         if print_formatted:
-            print(formatted_record)  # Print the message to the console
+            print(formatted_record)
         else:
             print(record.message)
         try:

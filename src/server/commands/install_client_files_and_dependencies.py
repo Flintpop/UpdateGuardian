@@ -22,13 +22,13 @@ def os_windows(computer: 'Computer'):
     # Try to get OS information using 'uname' command (usually works on Unix-like systems)
     ssh: paramiko.SSHClient = computer.ssh_session
 
-    stdout, stderr = stdout_err_execute_ssh_command(ssh, "uname -a")
+    stdout, _ = stdout_err_execute_ssh_command(ssh, "uname -a")
     os_info = stdout
 
     if not os_info:
         # If 'uname' command doesn't work, try to get OS information using 'ver' command
         # (usually works on Windows systems)
-        stdout, stderr = stdout_err_execute_ssh_command(ssh, "ver")
+        stdout, _ = stdout_err_execute_ssh_command(ssh, "ver")
         os_info = stdout
 
     if not os_info:
@@ -116,11 +116,7 @@ def check_python_packages_installed(computer: 'Computer') -> bool:
 
         if not stderr and req in stdout:
             computer.log(f"{req} is installed")
-        elif stderr and "package(s) not found" in stderr.lower():
-            computer.log(f"{req} is not found. Make sure you have the correct name in requirements_client.txt",
-                         level="warning")
-            all_installed = False
-        elif stdout and "package(s) not found" in stdout.lower():
+        elif stderr or stdout and "package(s) not found" in stderr.lower():
             computer.log(f"{req} is not found. Make sure you have the correct name in requirements_client.txt",
                          level="warning")
             all_installed = False

@@ -336,11 +336,7 @@ class Computer:
         """
         wait_for_ssh_shutdown(self)
 
-        ipaddress: str = self.ipv4
-        remote_user: str = self.username
-        remote_private_key: paramiko.pkey = self.__private_key
-
-        if not wait_and_reconnect(self, ipaddress, remote_user, remote_private_key, timeout=timeout):
+        if not wait_and_reconnect(self, timeout=timeout):
             self.log_error(f"Failed to reconnect to {self.hostname}, timeout likely reached.")
             return False
         return True
