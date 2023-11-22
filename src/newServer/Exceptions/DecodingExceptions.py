@@ -1,0 +1,2 @@
+class DecodingError(Exception):
+    pass
