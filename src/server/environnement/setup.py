@@ -4,13 +4,14 @@ import re
 import socket
 import sys
 
-import keyring
+# If windows, import keyring
+if sys.platform == "win32":
+    import keyring
 
 from src.server.commands.path_functions import find_file, list_files_recursive, find_directory
 from src.server.config import Infos
 from src.server.environnement.http_server_setup import run_server
 from src.server.environnement.server_logs import log, log_error, log_new_lines
-from src.server.environnement.setup_static_ip import is_static_ip, get_network_adapters, set_static_ip
 
 launch_infos_filename: str = "launch_infos.json"
 
@@ -108,6 +109,7 @@ def setup_email_config_done() -> bool:
             log_error("Error: The email key is missing in the email_infos.json file.", print_formatted=False)
             return False
         if email_send is False:
+            # Setup done but no email registered
             return True
         if email is None:
             log_error("Error: The email is not saved in the email_infos.json file.", print_formatted=False)
@@ -115,8 +117,13 @@ def setup_email_config_done() -> bool:
         if "@" not in email or "." not in email:
             log_error("Error: The email is not valid.", print_formatted=False)
             return False
-        if keyring.get_password(service_id, email) is None:
+        if sys.platform == "win32" and keyring.get_password(service_id, email) is None:
             log_error("Error: The password for the email is not saved in the keyring.", print_formatted=False)
+            return False
+        elif sys.platform != "win32" and data.get("password", None) is None:
+            log_error("Error: The password for the email is not saved in the email_infos.json file in a linux "
+                      "environnement.",
+                      print_formatted=False)
             return False
 
     return True
@@ -211,57 +218,6 @@ def check_if_setup_needed() -> bool:
     if find_file("computers_database.json", show_print=False) is None:
         return True
     return False
-
-
-def setup_static_ip() -> bool:
-    """
-    Set up a static local ipv4 ip for the running computer.
-    :return: Nothing.
-    """
-    current_ip = get_local_ipv4_address()
-    log(f"Your current local IP address is: {current_ip}", print_formatted=False)
-
-    # check if the current IP address is already static
-    if is_static_ip(current_ip):
-        log("Your IP address is already set to a static IP address.", print_formatted=False)
-        return False
-
-    # get a list of network adapters and their IP addresses
-    adapters = get_network_adapters()
-    log("Available network adapters:", print_formatted=False)
-    for i, adapter in enumerate(adapters):
-        log(f"{i + 1}: {adapter['name']} ({adapter['ip_address']})", print_formatted=False)
-
-    # ask the user which adapter to set the static IP address for
-    selected_adapter = input("Enter the number of the adapter to set the static IP address for: ")
-    try:
-        selected_index = int(selected_adapter) - 1
-        if selected_index < 0 or selected_index >= len(adapters):
-            raise ValueError
-    except ValueError:
-        log_error("Invalid input. Setting up static IP address cancelled.", print_formatted=False)
-        return False
-
-    selected_adapter_name = adapters[selected_index]['name']
-    selected_adapter_ip = adapters[selected_index]['ip_address']
-
-    # ask the user for the new IP address
-    new_ip = input(f"Enter the new local IP address for {selected_adapter_name} "
-                   f"or press enter to keep the current IP address ({selected_adapter_ip}): ")
-
-    if not new_ip:
-        log(f"Keeping the current IP address ({selected_adapter_ip}).", print_formatted=False)
-        new_ip = selected_adapter_ip
-
-    # set the new static IP address for the selected adapter
-    if not set_static_ip(new_ip, selected_adapter_name):
-        log_error("Error: Failed to set static IP address. Please try again.")
-        return False
-
-    update_powershell_client_script_ip(new_ip)
-
-    log(f"Static IP address set for {selected_adapter_name}.", print_formatted=False)
-    return True
 
 
 def update_powershell_client_script_ip(ip: str):

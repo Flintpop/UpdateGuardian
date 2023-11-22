@@ -206,5 +206,6 @@ if __name__ == '__main__':
         exit(0)
 
     # If the --force argument is not used, the program will start the main loop.
-    check_for_update_and_restart()
+    # TODO: Make this line work on linux
+    # check_for_update_and_restart()
     main_loop()

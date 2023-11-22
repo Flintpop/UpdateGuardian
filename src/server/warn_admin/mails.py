@@ -1,10 +1,12 @@
 import json
 import smtplib
 import ssl
+import sys
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-import keyring
+if sys.platform == "win32":
+    import keyring
 
 from src.server.commands.path_functions import find_file, change_directory_to_root_folder
 from src.server.config import Infos
@@ -29,7 +31,8 @@ def setup_email_config(already_asked: bool = False) -> None:
         log("Setting up email configuration...\n", print_formatted=False)
         log("This works with google mails, and with the \"application password\" feature. If you want to use another "
             "email provider, you may have to modify the code yourself.", print_formatted=False)
-        log("The password will be stored in windows credential secure system.", print_formatted=False)
+        log("The password will be stored in windows credential secure system, or in plain text"
+            "if on Linux. If you don't like this for the latter, don't use the email system.", print_formatted=False)
         log("Please enter the following information to set up the email configuration.", print_formatted=False)
         log("Note : If you don't want to set up the email configuration, just press enter for each field.\n",
             print_formatted=False)
@@ -60,8 +63,11 @@ def setup_email_config(already_asked: bool = False) -> None:
     change_directory_to_root_folder()
     with open(Infos.email_infos_json, "w") as f:
 
-        keyring.set_password("UpdateGuardian", email, password)
-        json.dump({"email": email, "send_mail": True}, f, indent=4)
+        if sys.platform == "win32":
+            keyring.set_password("UpdateGuardian", email, password)
+            json.dump({"email": email, "send_mail": True}, f, indent=4)
+        else:
+            json.dump({"email": email, "send_mail": True, "password": password}, f, indent=4)
 
     log("Email configuration set up successfully !", print_formatted=False, new_lines=2)
 
