@@ -66,10 +66,6 @@ class ComputerDatabase:
     def get_computer(self, index: int) -> Computer:
         return self.__computers[index]
 
-    def refresh_ip_address(self, host: str, new_host: dict) -> None:
-        if host in self.computers_json:
-            self.computers_json[host]["ip"] = new_host[host]["ip"]
-
     def save_computer_data(self, hosts=None) -> None:
         """
         Save the computers data in the computers_database.json file.
