@@ -4,7 +4,7 @@ class Infos:
     """
     config_json_file = "config.json"
     email_infos_json = "email_infos.json"
-    PROJECT_NAME: str = "UpdateGuardian"
+    PROJECT_NAME: str = "updateguardian"
     python_version = "3.11"
     python_folder_name = f"Python{python_version.replace('.', '')}"
     python_precise_version = "3.11.3"
