@@ -54,9 +54,9 @@ def change_directory_to_root_folder() -> None:
         return
 
     if os.name == 'nt':
-        cond = "\\" + Infos.PROJECT_NAME.lower() + "\\" not in os.getcwd().lower()
+        cond = "\\" + Infos.PROJECT_NAME + "\\" not in os.getcwd()
     else:
-        cond = "/" + Infos.PROJECT_NAME.lower() + "/" not in os.getcwd().lower()
+        cond = "/" + Infos.PROJECT_NAME + "/" not in os.getcwd()
 
     if cond:
         print("Name of the project not found in the current nested directory. Please change directory to the "
@@ -65,13 +65,13 @@ def change_directory_to_root_folder() -> None:
 
     root_folder = get_resource_path('')
     root_folder_str = root_folder.decode('utf-8') if isinstance(root_folder, bytes) else root_folder
-    wrong_name_caps = root_folder_str != Infos.PROJECT_NAME
-    if wrong_name_caps:
-        os.rename(root_folder_str, Infos.PROJECT_NAME)
-        main_file: str = ServerPath.join(os.path.dirname(os.path.abspath(__file__)), '..', 'main.py')
-        main_file = os.path.abspath(main_file)
-        subprocess.call([sys.executable, main_file])
-        sys.exit(0)
+    # wrong_name_caps = root_folder_str != Infos.PROJECT_NAME
+    # if wrong_name_caps:
+    #     os.rename(root_folder_str, Infos.PROJECT_NAME)
+    #     main_file: str = ServerPath.join(os.path.dirname(os.path.abspath(__file__)), '..', 'main.py')
+    #     main_file = os.path.abspath(main_file)
+    #     subprocess.call([sys.executable, main_file])
+    #     sys.exit(0)
     project_directory = os.path.join(root_folder_str.split(Infos.PROJECT_NAME)[0], Infos.PROJECT_NAME)
 
     # Change the working directory to the project_directory
