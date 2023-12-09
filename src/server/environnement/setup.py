@@ -33,7 +33,7 @@ def get_local_ipv4_address():
 
 
 def get_all_files_from_server() -> list[str]:
-    directory = find_directory("UpdateGuardian")
+    directory = find_directory(Infos.PROJECT_NAME)
     files = list_files_recursive(directory)
     cur_sep = os.path.sep
     exceptions = ["HEAD", ".gitignore", ".git"]
