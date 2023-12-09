@@ -53,9 +53,9 @@ def change_directory_to_root_folder() -> None:
         return
 
     if os.name == 'nt':
-        cond = "\\" + Infos.PROJECT_NAME + "\\" not in os.getcwd()
+        cond = "\\" + Infos.PROJECT_NAME.lower() + "\\" not in os.getcwd().lower()
     else:
-        cond = "/" + Infos.PROJECT_NAME + "/" not in os.getcwd()
+        cond = "/" + Infos.PROJECT_NAME.lower() + "/" not in os.getcwd().lower()
 
     if cond:
         print("Name of the project not found in the current nested directory. Please change directory to the "
