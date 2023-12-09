@@ -1,12 +1,11 @@
 import json
 import smtplib
 import ssl
-import sys
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-if sys.platform == "win32":
-    import keyring
+import jeepney.wrappers
+import keyring
 
 from src.server.commands.path_functions import find_file, change_directory_to_root_folder
 from src.server.config import Infos
@@ -31,20 +30,18 @@ def setup_email_config(already_asked: bool = False) -> None:
         log("Setting up email configuration...\n", print_formatted=False)
         log("This works with google mails, and with the \"application password\" feature. If you want to use another "
             "email provider, you may have to modify the code yourself.", print_formatted=False)
-        log("The password will be stored in windows credential secure system, or in plain text"
-            "if on Linux. If you don't like this for the latter, don't use the email system.", print_formatted=False)
         log("Please enter the following information to set up the email configuration.", print_formatted=False)
         log("Note : If you don't want to set up the email configuration, just press enter for each field.\n",
             print_formatted=False)
 
     email = input("Email : ")
     password = input("Password : ")
+    change_directory_to_root_folder()
 
     if email == "" and password == "":
         log("Skipping email configuration...", print_formatted=False)
         Infos.email_send = False
-        with open(Infos.email_infos_json, "w") as f:
-            json.dump({"email": "", "send_mail": False}, f, indent=4)
+        write_email_infos("", False)
 
         return
 
@@ -60,16 +57,28 @@ def setup_email_config(already_asked: bool = False) -> None:
 
     Infos.email_send = True
 
-    change_directory_to_root_folder()
-    with open(Infos.email_infos_json, "w") as f:
-
-        if sys.platform == "win32":
-            keyring.set_password("UpdateGuardian", email, password)
-            json.dump({"email": email, "send_mail": True}, f, indent=4)
-        else:
-            json.dump({"email": email, "send_mail": True, "password": password}, f, indent=4)
+    try:
+        keyring.set_password("UpdateGuardian", email, password)
+    except jeepney.wrappers.DBusErrorResponse or keyring.core.fail.NoKeyringError:
+        log_error("Error while saving the password. The keyring service does not work."
+                  "Please fix it before trying to use the email system.", print_formatted=False)
+        write_email_infos("", False)
+        return
+    write_email_infos(email, True)
 
     log("Email configuration set up successfully !", print_formatted=False, new_lines=2)
+
+
+def write_email_infos(email: str, send_mail: bool, password: str = None) -> None:
+    """
+    Writes the email infos to a file.
+    """
+    if password is None:
+        with open(Infos.email_infos_json, "w", encoding="utf-8") as f:
+            json.dump({"email": email, "send_mail": send_mail}, f, indent=4)
+    else:
+        with open(Infos.email_infos_json, "w", encoding="utf-8") as f:
+            json.dump({"email": email, "password": password, "send_mail": send_mail}, f, indent=4)
 
 
 def load_email_infos() -> bool:
@@ -97,7 +106,6 @@ def load_email_infos() -> bool:
         return False
 
     email = email_content.get("email", "")
-    import keyring
 
     if email == "" or not email:
         setup_email_config()
@@ -215,8 +223,8 @@ class EmailResults:
             str: The details of the updated computers in HTML format.
         """
         if self.total_updatable_computers > 0 and self.n_updated_computers > 0:
-            self.send_string += f"<h4>{self.n_updated_computers}/{self.total_updatable_computers} computers have been updated " \
-                                "successfully.</h4>"
+            self.send_string += f"<h4>{self.n_updated_computers}/{self.total_updatable_computers} " \
+                                f"computers have been updated successfully.</h4>"
             self.send_string += "<p>Here is the list: </p>"
 
             updated_computers = self.database.get_updated_computers()
@@ -240,7 +248,8 @@ class EmailResults:
             str: The details of the failed computers in HTML format.
         """
         if self.n_updated_computers != self.total_updatable_computers:
-            self.send_string += f"<h4>{self.total_failures} of computers were not able to be updated. An error occurred.</h4>"
+            self.send_string += f"<h4>{self.total_failures} of computers were not able to be updated." \
+                                f" An error occurred.</h4>"
             self.send_string += "<p>Here is the list: </p>"
             for computer in self.database.get_not_updated_computers():
                 self.send_string += f"<p>{self.list_string} <b>{computer.hostname}</b>: {computer.error}</p>"

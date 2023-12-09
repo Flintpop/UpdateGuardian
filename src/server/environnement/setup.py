@@ -4,7 +4,6 @@ import re
 import socket
 import sys
 
-# If windows, import keyring
 if sys.platform == "win32":
     import keyring
 
@@ -97,8 +96,8 @@ def setup_email_config_done() -> bool:
         log_error("Error: The file email_infos.json is missing.", print_formatted=False)
         return False
 
-    with open(email_infos_file, "r") as f:
-        data = json.load(f)
+    with open(email_infos_file, "r", encoding="utf-8") as file:
+        data = json.load(file)
         email = data.get("email", None)
         email_send = data.get("send_mail", None)
 
@@ -117,10 +116,10 @@ def setup_email_config_done() -> bool:
         if "@" not in email or "." not in email:
             log_error("Error: The email is not valid.", print_formatted=False)
             return False
-        if sys.platform == "win32" and keyring.get_password(service_id, email) is None:
+        if keyring.get_password(service_id, email) is None:
             log_error("Error: The password for the email is not saved in the keyring.", print_formatted=False)
             return False
-        elif sys.platform != "win32" and data.get("password", None) is None:
+        elif data.get("password", None) is None:
             log_error("Error: The password for the email is not saved in the email_infos.json file in a linux "
                       "environnement.",
                       print_formatted=False)

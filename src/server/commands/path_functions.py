@@ -2,6 +2,7 @@ import os.path
 import re
 import sys
 
+from server.data.server_join_path import ServerPath
 from src.server.config import Infos
 
 
@@ -29,7 +30,7 @@ def is_path_valid(path: str) -> bool:
 
 
 def go_back_one_dir(path: str) -> str:
-    path = os.path.join(path, "..", "")
+    path = ServerPath.join(path, "..", "")
     return os.path.abspath(path)
 
 

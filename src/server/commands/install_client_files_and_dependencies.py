@@ -69,7 +69,7 @@ def check_python_installed(computer: 'Computer') -> bool:
 
     computer.log("Python folder exists")
     for executable in python_executables:
-        executable_path = os.path.join(folder_path, executable)
+        executable_path = computer.join_path(folder_path, executable)
         if does_path_exists_ssh(computer.ssh_session, executable_path):
             computer.log(f"Python executable {executable} exists")
             return True

@@ -44,14 +44,6 @@ class Data:
     def get_data_json(self) -> dict:
         return self.data_json
 
-    @staticmethod
-    def __is_valid_ipv4_address(address):
-        try:
-            ipaddress.IPv4Address(address)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
     def get_max_number_of_simultaneous_updates(self) -> int:
         return self.data_json.get("max_computers_per_iteration")
 
@@ -66,11 +58,12 @@ class Data:
         :return: The string path of the python scripts folder on the client computer
         """
         path_chose_by_user: str = self.data_json.get("python_client_script_path")
+        from server.data.computer import Computer
         if path_chose_by_user == "":
-            return os.path.join(r'C:\Users', self.data_json.get("remote_user")[user_index], Infos.PROJECT_NAME)
+            return Computer.join_path(r'C:\Users', self.data_json.get("remote_user")[user_index], Infos.PROJECT_NAME)
 
-        return os.path.join(self.data_json.get("python_client_script_path"),
-                            self.data_json.get("remote_user")[user_index], Infos.PROJECT_NAME)
+        return Computer.join_path(self.data_json.get("python_client_script_path"),
+                                  self.data_json.get("remote_user")[user_index], Infos.PROJECT_NAME)
 
     @staticmethod
     def is_path_valid(path: str) -> bool:

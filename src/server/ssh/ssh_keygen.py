@@ -16,6 +16,8 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat,
 
 from typing import TYPE_CHECKING
 
+from server.data.server_join_path import ServerPath
+
 if TYPE_CHECKING:
     from src.server.data.computer import Computer
 
@@ -27,7 +29,7 @@ def create_known_hosts_file() -> None:
     Creates the known_hosts file in the .ssh folder.
     """
     user_path = os.environ["USERPROFILE"]
-    known_hosts_file = open(os.path.join(user_path, ".ssh", "known_hosts"), "w")
+    known_hosts_file = open(ServerPath.join(user_path, ".ssh", "known_hosts"), "w")
     known_hosts_file.close()
 
 
