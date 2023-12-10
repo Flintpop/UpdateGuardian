@@ -147,7 +147,7 @@ class Computer:
 
         self.ssh_session = paramiko.SSHClient()
         self.ssh_session.set_missing_host_key_policy(paramiko.RejectPolicy())
-        self.ssh_session.load_host_keys(Computer.join_path(os.environ["USERPROFILE"], ".ssh", "known_hosts"))
+        self.ssh_session.load_host_keys(ServerPath.join(ServerPath.get_home_path(), ".ssh", "known_hosts"))
         self.ssh_session.connect(self.hostname, username=self.username, pkey=self.__private_key)
 
     def connect_if_awake(self) -> bool:
