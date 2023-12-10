@@ -2,6 +2,7 @@ class Infos:
     """
     Class containing information for the whole program.
     """
+    REQUIREMENTS_CLIENT_FILENAME = "requirements_client.txt"
     config_json_file = "config.json"
     email_infos_json = "email_infos.json"
     PROJECT_NAME: str = "updateguardian"

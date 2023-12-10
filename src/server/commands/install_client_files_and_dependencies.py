@@ -99,7 +99,7 @@ def check_python_packages_installed(computer: 'Computer') -> bool:
     :return: True if packages are installed, False if at least one is lacking
     """
     ssh: paramiko.SSHClient = computer.ssh_session
-    requirements_file_path: str = find_file(os.path.basename(computer.get_requirements_path()))
+    requirements_file_path: str = find_file(Infos.REQUIREMENTS_CLIENT_FILENAME)
     computer.log("Checking if requirements_client.txt packages are installed...")
 
     with open(requirements_file_path, 'r') as file:
