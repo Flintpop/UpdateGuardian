@@ -336,7 +336,7 @@ def refresh_env_variables(computer: 'Computer') -> bool:
     ipaddress, remote_user, remote_computer_private_key = computer.ipv4, computer.username, computer.get_private_key()
     wait_for_ssh_shutdown(computer)
 
-    if not wait_and_reconnect(computer, ipaddress, remote_user, remote_computer_private_key):
+    if not wait_and_reconnect(computer, timeout=600):
         computer.log_error("Failed to reconnect to remote computer.")
         return False
 

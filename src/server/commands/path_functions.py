@@ -1,6 +1,5 @@
 import os.path
 import re
-import subprocess
 import sys
 
 from server.data.server_join_path import ServerPath

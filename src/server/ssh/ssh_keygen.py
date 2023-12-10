@@ -7,7 +7,6 @@
 import base64
 import os
 import stat
-import subprocess
 
 import paramiko
 from cryptography.hazmat.primitives import serialization
