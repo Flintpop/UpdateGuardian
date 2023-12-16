@@ -241,9 +241,11 @@ def process_json_file(file_path):
 
 
 def get_updates_info() -> dict | None:
+    # TODO: Bug here, the program is stuck in an infinite loop, the json file is not created but actually it is.
+    #  The program is stuck in the loop because the file cannot be recognized as existing.
     global counter
     already_printed: bool = False
-    json_file_path: str = "C:/Temp/UpdateGuardian/update_status.json"
+    json_file_path: str = "C:\\Temp\\UpdateGuardian\\update_status.json"
     while True:
         if check_file_exists(json_file_path, already_printed):
             already_printed = True
