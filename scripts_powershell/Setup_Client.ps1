@@ -274,7 +274,7 @@ function Set-RightsSSHServerFiles
 }
 
 Write-Host ""
-$server_ip = "192.168.1.103"
+$server_ip = "192.168.1.27"
 
 
 # Ensure the script is running with administrative privileges
@@ -396,6 +396,109 @@ Write-Output ""
 Write-Output "The OpenSSH Server has been installed and configured."
 Write-Host ""
 
+Write-Host "Installing a module to automatically update the pc..."
+
+Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser -confirm:$false -Force
+
+if (!(Get-Module -ListAvailable -Name PSWindowsUpdate))
+{
+    try
+    {
+        Install-PackageProvider NuGet -Force;
+        Set-PSRepository PSGallery -InstallationPolicy Trusted
+        Install-Module SQLServer -Repository PSGallery
+        # Check if the module is in the wrong scope (CurrentUser)
+        $module = Get-Module -ListAvailable -Name PSWindowsUpdate | Where-Object { $_.ModuleBase -like "$HOME\Documents\*" }
+        if ($null -ne $module)
+        {
+            Uninstall-Module PSWindowsUpdate -Force -ErrorAction Stop
+            Write-Host "Module PSWindowsUpdate uninstalled from user scope successfully." -ForegroundColor Yellow
+        }
+        Install-Module PSWindowsUpdate -Force -Scope AllUsers -ErrorAction Stop
+        Write-Host "Module PSWindowsUpdate installed successfully." -ForegroundColor Green
+    }
+    catch
+    {
+        Write-Host "Error: $( $_.Exception.Message )" -ForegroundColor Red
+        Read-Host "Press any key to stop the program"
+        exit 1
+    }
+}
+else
+{
+    Write-Host "Module PSWindowsUpdate already installed."
+}
+
+# Enable Wake on LAN for Ethernet adapters that support it
+Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription -match "Ethernet" } | ForEach-Object {
+    $AdapterName = $_.Name
+
+    if (Test-WoLSupport -AdapterName $AdapterName)
+    {
+        Write-Host "Enabling Wake on LAN for adapter: $AdapterName"
+        try
+        {
+            $PowerManagement = Get-PowerManagement -NetworkAdapterName $AdapterName -ErrorAction Stop
+            if ($PowerManagement)
+            {
+                Set-PowerManagement -NetworkAdapterName $AdapterName -WakeOnMagicPacket $True -ErrorAction Stop
+            }
+        }
+        catch
+        {
+            Write-Host "Failed to enable Wake on LAN for adapter: $AdapterName" -ForegroundColor Red
+        }
+    }
+    else
+    {
+        Write-Host "Wake on LAN not supported by adapter: $AdapterName" -ForegroundColor Yellow
+    }
+}
+
+$wolEnabled = $false
+
+# Check for enabled Ethernet adapters with WoL support
+Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription -match "Ethernet" } | ForEach-Object {
+    $AdapterName = $_.Name
+    if (Test-WoLSupport -AdapterName $AdapterName)
+    {
+        $wolEnabled = $true
+    }
+}
+
+if (!$wolEnabled)
+{
+    Write-Host "No enabled Ethernet adapters with Wake on LAN support found." -ForegroundColor Yellow
+    Write-Host "If you have an Ethernet adapter that supports Wake on LAN, make sure it is enabled and run the script again." -ForegroundColor Yellow
+} else {
+    # Wol firewall rule on remote PC on port 7 and 9 and on windows 10
+    $RuleName = "Wake-on-LAN"
+    $LocalPorts = "7,9"
+    $Protocol = "UDP"
+    $Profiles = "Domain,Private,Public"
+    $Action = "Allow"
+    $LocalIPAddress = $ipv4_address
+
+    # Check if the rule already exists
+    $ExistingRule = Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue
+
+    if (-not$ExistingRule)
+    {
+        # Create a new inbound rule for Wake-on-LAN
+        $NewRule = New-NetFirewallRule -DisplayName $RuleName -Direction Inbound -Protocol $Protocol `
+        -LocalPort $LocalPorts -Action $Action -Profile $Profiles.Split(",") `
+        -Enabled True -Description "Rule for allowing Wake-on-LAN magic packets from a specific local IP address"
+        Write-Host "Wake-on-LAN rule created successfully."
+
+        # Set the rule to allow traffic only from the specified local IP address
+        Set-NetFirewallRule -Name $NewRule.Name -RemoteAddress $LocalIPAddress
+    }
+    else
+    {
+        Write-Host "Wake-on-LAN rule already exists."
+    }
+}
+
 # Get the computer name
 $computer_name = $env:COMPUTERNAME
 
@@ -486,112 +589,6 @@ catch
     Write-Host "Error: $( $_.Exception.Message )" -ForegroundColor Red
     Read-Host "Press any key to stop the program"
     exit 1
-}
-
-
-Write-Host "Installing a module to automatically update the pc..."
-
-Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser -confirm:$false -Force
-
-if (!(Get-Module -ListAvailable -Name PSWindowsUpdate))
-{
-    try
-    {
-        Install-PackageProvider NuGet -Force;
-        Set-PSRepository PSGallery -InstallationPolicy Trusted
-        Install-Module SQLServer -Repository PSGallery
-        # Check if the module is in the wrong scope (CurrentUser)
-        $module = Get-Module -ListAvailable -Name PSWindowsUpdate | Where-Object { $_.ModuleBase -like "$HOME\Documents\*" }
-        if ($null -ne $module)
-        {
-            Uninstall-Module PSWindowsUpdate -Force -ErrorAction Stop
-            Write-Host "Module PSWindowsUpdate uninstalled from user scope successfully." -ForegroundColor Yellow
-        }
-        Install-Module PSWindowsUpdate -Force -Scope AllUsers -ErrorAction Stop
-        Write-Host "Module PSWindowsUpdate installed successfully." -ForegroundColor Green
-    }
-    catch
-    {
-        Write-Host "Error: $( $_.Exception.Message )" -ForegroundColor Red
-        Read-Host "Press any key to stop the program"
-        exit 1
-    }
-}
-else
-{
-    Write-Host "Module PSWindowsUpdate already installed."
-}
-
-# Enable Wake on LAN for Ethernet adapters that support it
-Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription -match "Ethernet" } | ForEach-Object {
-    $AdapterName = $_.Name
-
-    if (Test-WoLSupport -AdapterName $AdapterName)
-    {
-        Write-Host "Enabling Wake on LAN for adapter: $AdapterName"
-        try
-        {
-            $PowerManagement = Get-PowerManagement -NetworkAdapterName $AdapterName -ErrorAction Stop
-            if ($PowerManagement)
-            {
-                Set-PowerManagement -NetworkAdapterName $AdapterName -WakeOnMagicPacket $True -ErrorAction Stop
-            }
-        }
-        catch
-        {
-            Write-Host "Failed to enable Wake on LAN for adapter: $AdapterName" -ForegroundColor Red
-        }
-    }
-    else
-    {
-        Write-Host "Wake on LAN not supported by adapter: $AdapterName" -ForegroundColor Yellow
-    }
-}
-
-$wolEnabled = $false
-
-# Check for enabled Ethernet adapters with WoL support
-Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.InterfaceDescription -match "Ethernet" } | ForEach-Object {
-    $AdapterName = $_.Name
-    if (Test-WoLSupport -AdapterName $AdapterName)
-    {
-        $wolEnabled = $true
-    }
-}
-
-if (!$wolEnabled)
-{
-    Write-Host "No enabled Ethernet adapters with Wake on LAN support found." -ForegroundColor Yellow
-    Write-Host "If you have an Ethernet adapter that supports Wake on LAN, make sure it is enabled and run the script again." -ForegroundColor Yellow
-    Read-Host "Press any key to stop the program"
-    exit 1
-}
-
-# Wol firewall rule on remote PC on port 7 and 9 and on windows 10
-$RuleName = "Wake-on-LAN"
-$LocalPorts = "7,9"
-$Protocol = "UDP"
-$Profiles = "Domain,Private,Public"
-$Action = "Allow"
-$LocalIPAddress = $ipv4_address
-
-# Check if the rule already exists
-$ExistingRule = Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue
-
-if (-not$ExistingRule)
-{
-    # Create a new inbound rule for Wake-on-LAN
-    $NewRule = New-NetFirewallRule -DisplayName $RuleName -Direction Inbound -Protocol $Protocol `
-        -LocalPort $LocalPorts -Action $Action -Profile $Profiles.Split(",") `
-        -Enabled True -Description "Rule for allowing Wake-on-LAN magic packets from a specific local IP address"
-    Write-Host "Wake-on-LAN rule created successfully."
-
-    # Set the rule to allow traffic only from the specified local IP address
-    Set-NetFirewallRule -Name $NewRule.Name -RemoteAddress $LocalIPAddress
-}
-else
-{
-    Write-Host "Wake-on-LAN rule already exists."
 }
 
 Read-Host "Press any keys to end this installation process..."

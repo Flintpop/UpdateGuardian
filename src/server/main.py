@@ -4,7 +4,6 @@ import threading
 import warnings
 import os
 
-
 # If running as a PyInstaller bundle
 if getattr(sys, 'frozen', False):
     # Add the directory containing your modules to sys.path
@@ -14,7 +13,6 @@ else:
     # Add the directory containing your modules to sys.path
     sys.path.append(os.path.abspath('src/server'))
     os.chdir(os.path.dirname(os.path.abspath(__file__)))  # Change to the script's directory
-
 
 # noinspection PyUnresolvedReferences
 import add_paths  # Import and execute add_paths.py to update sys.path
@@ -41,6 +39,10 @@ lock = Lock()
 
 
 def execute_job_force() -> None:
+    """
+    Forces the execution of the automation update program
+    :returns: None
+    """
     with lock:
         log("Checking for updates...", print_formatted=False)
         check_for_update_and_restart("--force")
@@ -51,6 +53,10 @@ def execute_job_force() -> None:
 
 
 def execute_job() -> None:
+    """
+    Executes the automation update program
+    :returns: None
+    """
     with lock:
         log("Checking for updates...", print_formatted=False)
         check_for_update_and_restart("--force")
@@ -62,7 +68,11 @@ def execute_job() -> None:
         start_program()
 
 
-def start_program():
+def start_program() -> None:
+    """
+    Load data for the program and start the main loop.
+    :returns: None
+    """
     computer_database: ComputerDatabase = ComputerDatabase.load_computer_data()
     computer_database.load_email_infos()
 
@@ -71,6 +81,10 @@ def start_program():
 
 
 def launch_software() -> None:
+    """
+    Launches the scheduler for the program to update on a specific date and time
+    :returns: None
+    """
     scheduled_time = get_launch_time()
 
     day, hour = scheduled_time['day'], scheduled_time['hour']
@@ -97,16 +111,19 @@ def force_start_execute_job():
 
 
 def stop_code():
+    """Used to stop in the main loop"""
     global stopped
     stopped = True
 
 
-def list_computers():
+def list_computers() -> None:
+    """Prints the list of computers in the database"""
     computer_database: ComputerDatabase = ComputerDatabase.load_computer_data()
     print(computer_database)
 
 
-def shutdown_all_computers():
+def shutdown_all_computers() -> None:
+    """Calls shutdown_all_computers() method after having loaded the data from scratch"""
     log("Shutting down all computers...")
     computer_database: ComputerDatabase = ComputerDatabase.load_computer_data()
     computer_database.shutdown_all_computers()
@@ -114,6 +131,9 @@ def shutdown_all_computers():
 
 
 def settings_thread() -> None:
+    """
+    Thread used to change settings by the user.
+    """
     log("Program started, settings loaded", print_formatted=False)
     log_new_lines()
     global stopped
@@ -132,6 +152,7 @@ def settings_thread() -> None:
         print("Type 'exit' to exit the program.\n")
         try:
             usr_input = input("> ")
+
             switcher = {
                 "settings": modify_settings,
                 "force": force_start_execute_job,
@@ -139,6 +160,7 @@ def settings_thread() -> None:
                 "shutdown": shutdown_all_computers,
                 "exit": stop_code
             }
+
             switcher.get(usr_input, lambda: print("Invalid input."))()
         except KeyboardInterrupt:
             log("Program stopped.", print_formatted=False)
@@ -147,6 +169,11 @@ def settings_thread() -> None:
 
 
 def main_loop() -> None:
+    """
+    Checks server setup, mail config and then starts the settings thread, and continue with
+    starting the scheduler.
+    :returns: None
+    """
     if not server_setup():
         exit(1)
 
@@ -167,13 +194,18 @@ def main_loop() -> None:
 if __name__ == '__main__':
     import argparse
 
+    # Using arguments for automated software updates via GitHub and pull command.
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
+    # If the --force argument is used, the program will force start the scheduled to task to continue
+    # the update.
     if args.force:
         execute_job_force()
         exit(0)
 
-    check_for_update_and_restart()
+    # If the --force argument is not used, the program will start the main loop.
+    # TODO: Make this line work on linux
+    # check_for_update_and_restart()
     main_loop()

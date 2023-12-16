@@ -4,6 +4,7 @@ import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+import jeepney.wrappers
 import keyring
 
 from src.server.commands.path_functions import find_file, change_directory_to_root_folder
@@ -21,21 +22,26 @@ password: str
 
 
 def setup_email_config(already_asked: bool = False) -> None:
+    """
+    Sets up the email feature.
+    Checks if credentials are valid.
+    """
     if not already_asked:
         log("Setting up email configuration...\n", print_formatted=False)
         log("This works with google mails, and with the \"application password\" feature. If you want to use another "
             "email provider, you may have to modify the code yourself.", print_formatted=False)
-        log("The password will be stored in windows credential secure system.", print_formatted=False)
         log("Please enter the following information to set up the email configuration.", print_formatted=False)
         log("Note : If you don't want to set up the email configuration, just press enter for each field.\n",
             print_formatted=False)
+
     email = input("Email : ")
     password = input("Password : ")
+    change_directory_to_root_folder()
+
     if email == "" and password == "":
         log("Skipping email configuration...", print_formatted=False)
         Infos.email_send = False
-        with open(Infos.email_infos_json, "w") as f:
-            json.dump({"email": "", "send_mail": False}, f, indent=4)
+        write_email_infos("", False)
 
         return
 
@@ -51,16 +57,35 @@ def setup_email_config(already_asked: bool = False) -> None:
 
     Infos.email_send = True
 
-    change_directory_to_root_folder()
-    with open(Infos.email_infos_json, "w") as f:
-
+    try:
         keyring.set_password("UpdateGuardian", email, password)
-        json.dump({"email": email, "send_mail": True}, f, indent=4)
+    except jeepney.wrappers.DBusErrorResponse or keyring.core.fail.NoKeyringError:
+        log_error("Error while saving the password. The keyring service does not work."
+                  "Please fix it before trying to use the email system.", print_formatted=False)
+        write_email_infos("", False)
+        return
+    write_email_infos(email, True)
 
     log("Email configuration set up successfully !", print_formatted=False, new_lines=2)
 
 
+def write_email_infos(email: str, send_mail: bool, password: str = None) -> None:
+    """
+    Writes the email infos to a file.
+    """
+    if password is None:
+        with open(Infos.email_infos_json, "w", encoding="utf-8") as f:
+            json.dump({"email": email, "send_mail": send_mail}, f, indent=4)
+    else:
+        with open(Infos.email_infos_json, "w", encoding="utf-8") as f:
+            json.dump({"email": email, "password": password, "send_mail": send_mail}, f, indent=4)
+
+
 def load_email_infos() -> bool:
+    """
+    Loads email info from a file.
+    Returns true if it is a success, false otherwise.
+    """
     global email, password
     string_email_not_found: str = f"The file  '{Infos.email_infos_json}' was not found.\n\nTo fix it, create the " \
                                   f"file {Infos.email_infos_json} and fill it with the following informations :" \
@@ -81,7 +106,6 @@ def load_email_infos() -> bool:
         return False
 
     email = email_content.get("email", "")
-    import keyring
 
     if email == "" or not email:
         setup_email_config()
@@ -115,6 +139,9 @@ def does_email_json_file_exists() -> bool:
 
 
 def are_credentials_valid(mail: str, password_to_test: str) -> bool:
+    """
+    Tests emails credentials
+    """
     if mail == "" or password_to_test == "":
         log_error(f"The file {Infos.email_infos_json} is not correctly filled.\n"
                   f"To fix it, fill the file {Infos.email_infos_json} with the following informations : \n"
@@ -129,6 +156,7 @@ def are_credentials_valid(mail: str, password_to_test: str) -> bool:
 
 
 def test_credential(mail: str, password_to_test: str) -> bool:
+    """Core credential test function. Depends on 'are_credentials_valid'"""
     port = 587  # For starttls
     smtp_server = "smtp.gmail.com"
 
@@ -145,6 +173,9 @@ def test_credential(mail: str, password_to_test: str) -> bool:
 
 
 def send_error_email(computer: 'Computer', error: str, traceback: str) -> None:
+    """
+    Sends an email expressing an error message.
+    """
     send_string = f"<h3>Error, {Infos.PROJECT_NAME} did not manage to update {computer.hostname} !</h3>" \
                   f"<h4>The main error is : {error}.</h4>" \
                   f"<p>The traceback : </b>{traceback}</p>"
@@ -192,8 +223,8 @@ class EmailResults:
             str: The details of the updated computers in HTML format.
         """
         if self.total_updatable_computers > 0 and self.n_updated_computers > 0:
-            self.send_string += f"<h4>{self.n_updated_computers}/{self.total_updatable_computers} computers have been updated " \
-                                "successfully.</h4>"
+            self.send_string += f"<h4>{self.n_updated_computers}/{self.total_updatable_computers} " \
+                                f"computers have been updated successfully.</h4>"
             self.send_string += "<p>Here is the list: </p>"
 
             updated_computers = self.database.get_updated_computers()
@@ -217,7 +248,8 @@ class EmailResults:
             str: The details of the failed computers in HTML format.
         """
         if self.n_updated_computers != self.total_updatable_computers:
-            self.send_string += f"<h4>{self.total_failures} of computers were not able to be updated. An error occurred.</h4>"
+            self.send_string += f"<h4>{self.total_failures} of computers were not able to be updated." \
+                                f" An error occurred.</h4>"
             self.send_string += "<p>Here is the list: </p>"
             for computer in self.database.get_not_updated_computers():
                 self.send_string += f"<p>{self.list_string} <b>{computer.hostname}</b>: {computer.error}</p>"
@@ -237,6 +269,14 @@ class EmailResults:
 
 
 def send_email(message: str, subject="Unhandled subject, mail should not have been sent") -> None:
+    """
+    Loads emails credentials.
+    Send html formatted email to registered email settings.
+    Email is sent to the **same email address** as the one used.
+    :param message: The message to send
+    :param subject: The subject of the email
+    :return: None
+    """
     global email, password
     load_email_infos()
     if email == "" or password == "":

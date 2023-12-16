@@ -5,12 +5,17 @@ import subprocess
 
 
 def is_secureon_password_valid(secureon_password: str) -> bool:
-    # Vérifier que le mot de passe SecureOn a 12 caractères hexadécimaux et les sépare par des deux-points
+    """
+    Check if the given SecureOn password is valid.
+    :param secureon_password: The SecureOn password to check
+    :return: True if the password is valid, False otherwise
+    """
+    # Check if the password is the right length
     length_secureon_password = 17
     if len(secureon_password) != length_secureon_password:
         return False
 
-    # Utiliser une expression régulière pour vérifier le format
+    # Check if the password is in the right format using a regex
     regex_pattern = r"^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$"
     match = re.match(regex_pattern, secureon_password)
 
@@ -18,6 +23,12 @@ def is_secureon_password_valid(secureon_password: str) -> bool:
 
 
 def send_wol_with_secureon(mac_address: str, secureon_password: str) -> None:
+    """
+    Send a Wake-on-LAN packet to the given MAC address with the given SecureOn password.
+    :param mac_address: The MAC address to send the packet to
+    :param secureon_password: The SecureOn password to use
+    :return: None
+    """
     # Vérifier l'intégrité du mot de passe SecureOn
     if not is_secureon_password_valid(secureon_password):
         raise ValueError("Le mot de passe SecureOn est invalide.")
@@ -27,11 +38,21 @@ def send_wol_with_secureon(mac_address: str, secureon_password: str) -> None:
 
 
 def send_wol(mac_address: str, ip_address: str, port: int = 9) -> bool:
+    """
+    Send a Wake-on-LAN packet to the given MAC address.
+    :returns: True if the packet was successfully sent, False otherwise
+    """
     send_magic_packet(mac_address, ip_address=ip_address, port=port)
     return True
 
 
 def ping_ip(ip_address: str) -> bool:
+    """
+    Send a ping to the given IP address.
+
+    :param ip_address: The IP address to ping
+    :return: True if the ping was successful, False otherwise
+    """
     if platform.system() == 'Windows':
         ping_command = ['ping', '-n', '1', '-w', '1000', ip_address]
     else:
@@ -46,7 +67,10 @@ def ping_ip(ip_address: str) -> bool:
     return True
 
 
-def get_gateway_ip():
+def get_gateway_ip() -> str:
+    """
+    :return: The IP address of the router
+    """
     router_ip = None
 
     try:

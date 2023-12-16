@@ -2,6 +2,7 @@ import os.path
 import re
 import sys
 
+from server.data.server_join_path import ServerPath
 from src.server.config import Infos
 
 
@@ -29,7 +30,7 @@ def is_path_valid(path: str) -> bool:
 
 
 def go_back_one_dir(path: str) -> str:
-    path = os.path.join(path, "..", "")
+    path = ServerPath.join(path, "..", "")
     return os.path.abspath(path)
 
 
@@ -63,6 +64,13 @@ def change_directory_to_root_folder() -> None:
 
     root_folder = get_resource_path('')
     root_folder_str = root_folder.decode('utf-8') if isinstance(root_folder, bytes) else root_folder
+    # wrong_name_caps = root_folder_str != Infos.PROJECT_NAME
+    # if wrong_name_caps:
+    #     os.rename(root_folder_str, Infos.PROJECT_NAME)
+    #     main_file: str = ServerPath.join(os.path.dirname(os.path.abspath(__file__)), '..', 'main.py')
+    #     main_file = os.path.abspath(main_file)
+    #     subprocess.call([sys.executable, main_file])
+    #     sys.exit(0)
     project_directory = os.path.join(root_folder_str.split(Infos.PROJECT_NAME)[0], Infos.PROJECT_NAME)
 
     # Change the working directory to the project_directory

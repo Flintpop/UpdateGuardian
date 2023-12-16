@@ -4,10 +4,16 @@ import git
 import os
 import sys
 
+from server.data.server_join_path import ServerPath
 from src.server.environnement.server_logs import log
 
 
 def check_for_update_and_restart(args=""):
+    """
+    Check for updates and restart the script if there are any.
+    :param args: The arguments to pass to the script\n
+    :return: None
+    """
     # Path to your repository
     repo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')
     repo_path = os.path.abspath(repo_path)
@@ -36,7 +42,7 @@ def check_for_update_and_restart(args=""):
 
         # Restart the script
         log("Restarting software...", print_formatted=False)
-        main_file: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'main.py')
+        main_file: str = ServerPath.join(os.path.dirname(os.path.abspath(__file__)), '..', 'main.py')
         main_file = os.path.abspath(main_file)
         if args == "--force":
             subprocess.call([sys.executable, main_file, args])

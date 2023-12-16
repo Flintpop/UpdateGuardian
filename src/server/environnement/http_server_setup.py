@@ -12,6 +12,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 
+from server.data.server_join_path import ServerPath
 from src.server.commands.path_functions import find_directory
 from typing import TYPE_CHECKING
 
@@ -24,7 +25,7 @@ from src.server.environnement.server_logs import log, log_error, log_new_lines
 authorized_keys_filename = "authorized_keys.json"
 authorized_keys_directory = find_directory("ssh_keys")
 if authorized_keys_directory is None:
-    os.mkdir(os.path.join("src", "server", "data", "ssh_keys"))
+    os.mkdir(ServerPath.join("src", "server", "data", "ssh_keys"))
 authorized_keys_directory = find_directory("ssh_keys")
 if authorized_keys_directory is None:
     log_error("Could not create the 'ssh_keys' directory.")
@@ -34,6 +35,9 @@ authorized_keys_file = os.path.join(authorized_keys_directory, authorized_keys_f
 
 # This is for Windows only
 class PowerInformation(ctypes.Structure):
+    """
+    Class that is used to get the power information on Windows.
+    """
     _fields_ = [('ACLineStatus', ctypes.c_byte),
                 ('BatteryFlag', ctypes.c_byte),
                 ('BatteryLifePercent', ctypes.c_byte),
@@ -47,7 +51,10 @@ class LastInputInfo(ctypes.Structure):
 
 
 def set_sleep_timeout(ac_dc, timeout):
-    os.system(f'powercfg -change -standby-timeout-{ac_dc} {timeout}')
+    if os.name == 'nt':
+        os.system(f'powercfg -change -standby-timeout-{ac_dc} {timeout}')
+    else:
+        log_error("Set sleep timeout function is only available on Windows.")
 
 
 def prevent_sleep():
@@ -75,6 +82,11 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
     # noinspection PyPep8Naming
     def do_POST(self):
+        """
+        Handles the POST requests.
+
+        The POST requests are used to receive the whoami command.
+        """
         log_new_lines()
         content_length = int(self.headers.get('Content-Length', 0))
         if content_length <= 0:
@@ -91,16 +103,18 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             self.send_error(400, "Received data is not a valid JSON.")
             return
 
+        # The MAC address is received with dashes, but the database uses colons.
         received_data["mac_address"] = received_data["mac_address"].replace("-", ":")
         host_key = received_data["host_key"]
 
+        # Tries to add the new computer to the database.
         if not self.computer_database.add_new_computer(received_data, host_key):
             log_error("Could not add the new computer to the database. It is probably already in the database.")
-            log_error(f"Received data: {json.dumps(received_data, indent = 4)}")
+            log_error(f"Received data: {json.dumps(received_data, indent=4)}")
             log_error(f"Current database:\n {self.computer_database}")
             return
 
-        log(f"Received data: {json.dumps(received_data, indent = 4)}", print_formatted=False)
+        log(f"Received data: {json.dumps(received_data, indent=4)}", print_formatted=False)
         log(f"Current database:\n {self.computer_database}", print_formatted=False)
 
         self.send_response(200)
@@ -113,6 +127,11 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
     # noinspection PyPep8Naming
     def do_GET(self):
+        """
+        Handles the GET requests.
+
+        The GET requests are used to send the SSH public keys to the clients.
+        """
         log_new_lines()
         if "/get_public_key" not in self.path:
             self.send_response(404, "Page not found.")
@@ -126,11 +145,14 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             self.send_error(404, f"Computer with hostname '{hostname}' not found.")
             return
 
+        # Get and generate the public key
         public_key = computer.get_public_key()
 
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
+
+        # Sends the public key to the client.
         self.wfile.write(public_key.encode())
 
 
@@ -143,6 +165,9 @@ def stop_server():
 
 
 def wait_for_stop(httpd):
+    """
+    Waits for the user to write 'stop' in the console to stop the server.
+    """
     while True:
         log("Press 'stop' to stop the server", print_formatted=False)
         cmd = input('> ')
@@ -152,6 +177,9 @@ def wait_for_stop(httpd):
 
 
 def run_server(server_class=HTTPServer, handler_class=MyRequestHandler, port=8000) -> bool:
+    """
+    Runs the HTTP server used to receive the whoami command and send the SSH public keys to the clients.
+    """
     prevent_sleep()
     server_address = ("", port)
     httpd = server_class(server_address, handler_class)
@@ -159,6 +187,7 @@ def run_server(server_class=HTTPServer, handler_class=MyRequestHandler, port=800
 
     MyRequestHandler.computer_database = ComputerDatabase.load_computer_data_if_exists()
     server_thread = threading.Thread(target=httpd.serve_forever)
+    # Start a thread with the server -- that thread will then start one more thread for each request
     server_thread.start()
 
     wait_for_stop(httpd)

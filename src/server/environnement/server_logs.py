@@ -104,6 +104,9 @@ class ComputerLogger:
 
 
 class ServerLogs(ComputerLogger):
+    """
+    Class to log messages from the server.
+    """
     def __init__(self, logs_filename: str = "server_logs.log"):
         change_directory_to_root_folder()
         logs_filename = os.path.join("logs", logs_filename)
@@ -113,7 +116,7 @@ class ServerLogs(ComputerLogger):
     def emit(self, record, print_formatted: bool = True):
         formatted_record = self.formatter.format(record)
         if print_formatted:
-            print(formatted_record)  # Print the message to the console
+            print(formatted_record)
         else:
             print(record.message)
         try:

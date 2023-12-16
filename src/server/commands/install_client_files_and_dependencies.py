@@ -22,13 +22,13 @@ def os_windows(computer: 'Computer'):
     # Try to get OS information using 'uname' command (usually works on Unix-like systems)
     ssh: paramiko.SSHClient = computer.ssh_session
 
-    stdout, stderr = stdout_err_execute_ssh_command(ssh, "uname -a")
+    stdout, _ = stdout_err_execute_ssh_command(ssh, "uname -a")
     os_info = stdout
 
     if not os_info:
         # If 'uname' command doesn't work, try to get OS information using 'ver' command
         # (usually works on Windows systems)
-        stdout, stderr = stdout_err_execute_ssh_command(ssh, "ver")
+        stdout, _ = stdout_err_execute_ssh_command(ssh, "ver")
         os_info = stdout
 
     if not os_info:
@@ -69,7 +69,7 @@ def check_python_installed(computer: 'Computer') -> bool:
 
     computer.log("Python folder exists")
     for executable in python_executables:
-        executable_path = os.path.join(folder_path, executable)
+        executable_path = computer.join_path(folder_path, executable)
         if does_path_exists_ssh(computer.ssh_session, executable_path):
             computer.log(f"Python executable {executable} exists")
             return True
@@ -99,7 +99,7 @@ def check_python_packages_installed(computer: 'Computer') -> bool:
     :return: True if packages are installed, False if at least one is lacking
     """
     ssh: paramiko.SSHClient = computer.ssh_session
-    requirements_file_path: str = find_file(os.path.basename(computer.get_requirements_path()))
+    requirements_file_path: str = find_file(Infos.REQUIREMENTS_CLIENT_FILENAME)
     computer.log("Checking if requirements_client.txt packages are installed...")
 
     with open(requirements_file_path, 'r') as file:
@@ -116,11 +116,7 @@ def check_python_packages_installed(computer: 'Computer') -> bool:
 
         if not stderr and req in stdout:
             computer.log(f"{req} is installed")
-        elif stderr and "package(s) not found" in stderr.lower():
-            computer.log(f"{req} is not found. Make sure you have the correct name in requirements_client.txt",
-                         level="warning")
-            all_installed = False
-        elif stdout and "package(s) not found" in stdout.lower():
+        elif stderr or stdout and "package(s) not found" in stderr.lower():
             computer.log(f"{req} is not found. Make sure you have the correct name in requirements_client.txt",
                          level="warning")
             all_installed = False
@@ -340,7 +336,7 @@ def refresh_env_variables(computer: 'Computer') -> bool:
     ipaddress, remote_user, remote_computer_private_key = computer.ipv4, computer.username, computer.get_private_key()
     wait_for_ssh_shutdown(computer)
 
-    if not wait_and_reconnect(computer, ipaddress, remote_user, remote_computer_private_key):
+    if not wait_and_reconnect(computer, timeout=600):
         computer.log_error("Failed to reconnect to remote computer.")
         return False
 
