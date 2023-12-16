@@ -5,3 +5,9 @@ class Computer:
         self.hostname = hostname
         self.mac_address = mac_address
         self.username = username
+
+    def log(self, param):
+        pass
+
+    def log_error(self, param):
+        pass
