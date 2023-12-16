@@ -81,7 +81,9 @@ def is_pc_on(computer: 'Computer', port: int = 22, timeout: float = 5.0,
 
                 computer.log(f"Trying again, timeout left is {(timeout - (time.time() - start)).__round__(2)}")
             except OSError as e:
-                if last_os_error_msg == e:
+                skip_logging: bool = last_os_error_msg == e or "connexion refused" in e.__str__().lower() \
+                                     or "connexion aborted" in e.__str__().lower()
+                if skip_logging:
                     continue
                 computer.log(f"OSError occurred: {e}")
                 last_os_error_msg = e

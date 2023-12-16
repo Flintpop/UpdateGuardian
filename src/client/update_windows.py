@@ -252,7 +252,9 @@ def get_updates_info() -> dict | None:
             time.sleep(1)
             continue
 
-        print_and_log_client("File exists, processing...")
+        if already_printed:
+            print_and_log_client("File exists, processing...")
+            already_printed = False
 
         try:
             if check_file_empty(json_file_path):
