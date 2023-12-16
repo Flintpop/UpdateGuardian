@@ -218,12 +218,12 @@ def process_data_json_updates_results(data: dict):
     return False, None
 
 
-def file_exists(file_path, already_printed: bool):
+def file_exists(file_path: str, already_printed: bool) -> bool:
     if file_path is None or file_path == "":
         return False
     if not os.path.isfile(file_path):
         if not already_printed:
-            print_and_log_client("File does not exist. Waiting for file to be created...")
+            print_and_log_client(f"File {file_path} does not exist. Waiting for file to be created...")
         return False
     return True
 
@@ -243,8 +243,6 @@ def process_json_file(file_path):
 
 
 def get_updates_info() -> dict | None:
-    # TODO: Bug here, the program is stuck in an infinite loop, the json file is not created but actually it is.
-    #  The program is stuck in the loop because the file cannot be recognized as existing.
     global counter
     already_printed: bool = False
     json_file_path: str = "C:\\Temp\\updateguardian\\update_status.json"
