@@ -1,8 +1,5 @@
 import logging
 import os
-import hashlib
-import socket
-import time
 from dataclasses import dataclass
 
 import chardet
@@ -10,6 +7,7 @@ import paramiko
 
 from typing import TYPE_CHECKING
 
+from newServer.ssh.connect import SSHConnect
 from src.newServer.Exceptions.DecodingExceptions import DecodingError
 
 if TYPE_CHECKING:
@@ -32,8 +30,8 @@ class SSHCommandResult:
     """
 
     def __init__(self, stdout: str, stderr: str):
-        self.stdout = ""
-        self.stderr = ""
+        self.stdout = stdout
+        self.stderr = stderr
 
 
 class SSHCommandExecutor(ISSHCommand):
@@ -55,7 +53,7 @@ class SSHCommandExecutor(ISSHCommand):
     def __decode_stream(stream) -> str | None:
         """
         Decode a stream.
-        :param stream: The stream used to decode.
+        :param stream: Stream used to decode.
         :return: The decoded stream.
         """
         if stream is None or stream == b'':
@@ -198,3 +196,20 @@ class SSHCommands:
             sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
         sftp.close()
         return True
+
+    def connect_ssh(self, computer):
+        pass
+
+    def close_ssh_session(self):
+        self.__ssh.close()
+
+    def get_sftp(self) -> paramiko.SFTPClient:
+        return self.__ssh.open_sftp()
+
+
+class SSHCommandsFactory:
+    @staticmethod
+    def create(computer: 'Computer') -> SSHCommands:
+        ssh_connect = SSHConnect(computer)
+        ssh: paramiko.SSHClient = ssh_connect.connect(computer)
+        return SSHCommands(SSHCommandExecutor(ssh))

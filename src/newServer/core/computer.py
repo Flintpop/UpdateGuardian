@@ -1,13 +1,19 @@
+import logging
+from dataclasses import dataclass
 
+
+@dataclass
 class Computer:
-    def __init__(self, ipv4: str, hostname: str, mac_address: str, username: str) -> None:
-        self.ipv4: str = ipv4
-        self.hostname = hostname
-        self.mac_address = mac_address
-        self.username = username
+    ipv4: str
+    hostname: str
+    mac_address: str
+    username: str
 
-    def log(self, param):
+    def log(self, message, level=logging.INFO):
         pass
 
-    def log_error(self, param):
-        pass
+    def log_error(self, message):
+        self.log(message, logging.ERROR)
+
+    def get_ipv4(self):
+        return self.ipv4
