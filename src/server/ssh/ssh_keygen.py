@@ -7,7 +7,6 @@
 import base64
 import os
 import stat
-import subprocess
 
 import paramiko
 from cryptography.hazmat.primitives import serialization
@@ -15,6 +14,8 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat, NoEncryption
 
 from typing import TYPE_CHECKING
+
+from server.data.server_join_path import ServerPath
 
 if TYPE_CHECKING:
     from src.server.data.computer import Computer
@@ -26,8 +27,8 @@ def create_known_hosts_file() -> None:
     """
     Creates the known_hosts file in the .ssh folder.
     """
-    user_path = os.environ["USERPROFILE"]
-    known_hosts_file = open(os.path.join(user_path, ".ssh", "known_hosts"), "w")
+    user_path = ServerPath.get_home_path()
+    known_hosts_file = open(ServerPath.join(user_path, ".ssh", "known_hosts"), "w")
     known_hosts_file.close()
 
 
@@ -75,22 +76,22 @@ def gen_keys_and_save_them(computer: 'Computer', host_key: str) -> None:
     print()
 
     # Add the host key to the ssh client
-    user_directory: str = os.environ["USERPROFILE"]
-    ssh_user_directory: str = os.path.join(user_directory, ".ssh")
+    user_directory: str = ServerPath.get_home_path()
+    ssh_user_directory: str = ServerPath.join(user_directory, ".ssh")
     if not os.path.exists(ssh_user_directory):
         log("The .ssh folder does not exists, creating it...", "warning", print_formatted=False)
         os.mkdir(ssh_user_directory)
         create_known_hosts_file()
 
-    if not os.path.exists(os.path.join(ssh_user_directory, "known_hosts")):
+    if not os.path.exists(ServerPath.join(ssh_user_directory, "known_hosts")):
         log("The known_hosts file does not exists, creating it...", "warning", print_formatted=False)
         create_known_hosts_file()
 
     ssh_client = paramiko.SSHClient()
-    ssh_client.load_host_keys(os.path.join(ssh_user_directory, "known_hosts"))  # Load the existing known_hosts file
+    ssh_client.load_host_keys(ServerPath.join(ssh_user_directory, "known_hosts"))  # Load the existing known_hosts file
     ssh_client.get_host_keys().add(computer.hostname, 'ssh-ed25519', host_key_raw)
 
-    ssh_client.save_host_keys(os.path.join(user_directory, ".ssh", "known_hosts"))  # Save the updated known_hosts file
+    ssh_client.save_host_keys(ServerPath.join(user_directory, ".ssh", "known_hosts"))  # Save the updated known_hosts file
 
     log(f"Private and public ed25519 keys have been generated and saved to files and ssh-agent "
         f"for computer {computer.hostname}.", print_formatted=False)

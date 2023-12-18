@@ -12,6 +12,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 
+from server.data.server_join_path import ServerPath
 from src.server.commands.path_functions import find_directory
 from typing import TYPE_CHECKING
 
@@ -24,7 +25,7 @@ from src.server.environnement.server_logs import log, log_error, log_new_lines
 authorized_keys_filename = "authorized_keys.json"
 authorized_keys_directory = find_directory("ssh_keys")
 if authorized_keys_directory is None:
-    os.mkdir(os.path.join("src", "server", "data", "ssh_keys"))
+    os.mkdir(ServerPath.join("src", "server", "data", "ssh_keys"))
 authorized_keys_directory = find_directory("ssh_keys")
 if authorized_keys_directory is None:
     log_error("Could not create the 'ssh_keys' directory.")
@@ -50,7 +51,10 @@ class LastInputInfo(ctypes.Structure):
 
 
 def set_sleep_timeout(ac_dc, timeout):
-    os.system(f'powercfg -change -standby-timeout-{ac_dc} {timeout}')
+    if os.name == 'nt':
+        os.system(f'powercfg -change -standby-timeout-{ac_dc} {timeout}')
+    else:
+        log_error("Set sleep timeout function is only available on Windows.")
 
 
 def prevent_sleep():
@@ -106,11 +110,11 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         # Tries to add the new computer to the database.
         if not self.computer_database.add_new_computer(received_data, host_key):
             log_error("Could not add the new computer to the database. It is probably already in the database.")
-            log_error(f"Received data: {json.dumps(received_data, indent = 4)}")
+            log_error(f"Received data: {json.dumps(received_data, indent=4)}")
             log_error(f"Current database:\n {self.computer_database}")
             return
 
-        log(f"Received data: {json.dumps(received_data, indent = 4)}", print_formatted=False)
+        log(f"Received data: {json.dumps(received_data, indent=4)}", print_formatted=False)
         log(f"Current database:\n {self.computer_database}", print_formatted=False)
 
         self.send_response(200)

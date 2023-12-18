@@ -16,7 +16,7 @@
   - [Contributions](#contributions)
   - [License](#license)
 
-## Introduction 
+## Introduction
 
 ### ⚠️ UpdateGuardian is in beta. Expect bugs, even though it has been heavily tested
 
@@ -44,7 +44,12 @@ These are the current features :
 
 ## Prerequisites
 
-If you accept the default things that will be installed, here are the only prerequisites :
+If you go with the default installation options, the following prerequisites are required:
+
+- Windows 10 or 11: Must be part of a **wired** local network with Wake-on-LAN (WoL) support. If WoL is not available, you'll need to manually power on the PCs for network updates.
+- Server PC: A Windows machine that can act as a server, either running 24/7 for scheduled rollouts or manually triggered for updates.
+- Internet Connection: Required for updates and remote access.
+- Firewall Configuration: The server PC must allow SSH traffic, specifically on ports 22 and 8000 within the local network.
 
 - Windows 10 or 11 **wired** local network with wake on lan. If WOL is not available, you will have to manually turn on the pcs to update your network. Later on, a feature that uses smart plug could be imagined.
 - A windows pc that will act like a server. Can be turned on 24/7 and plan the rollout or you can manually force updates.
@@ -54,17 +59,19 @@ If you accept the default things that will be installed, here are the only prere
 
 ## Installation and Configuration 
 
-Here are what the program will install or activate on each remote pc :
+The program will handle the installation or activation of:
 
-- Python, but only for the admin user
-- SSH server
-- PSWindowsUpdate powershell module
-- The dependencies of PSWindowsUpdate
-- Some python packages
-- Modification of some Windows firewall rules
-- Activation, if possible, of wake on lan
+- Python (admin user only)
+- SSH Server
+- PSWindowsUpdate PowerShell module
+- Dependencies for PSWindowsUpdate
+- Various Python packages
+- Modifications to some Windows Firewall rules
+- Wake-on-LAN (if supported)
 
-For the server, here is what the installer will install :
+### Software Installed on the Server
+
+The installer will set up:
 
 - Chocolatey package manager
 - Git
@@ -98,8 +105,6 @@ For now, there is :
 - launch_infos.json
 - config.json
 
-Everything will be merged in config.json later on
-
 You can add or remove pc in the database with the settings menu.
 
 You can redo the email configuration in the settings. You can also change the launch time in the same menu.
@@ -108,11 +113,11 @@ You can redo the email configuration in the settings. You can also change the la
 
 Client-Server centralized approach. 
 
-Usage of : 
+Update Cycle : 
 - Wake on lan via IP address and mac address
 - Then SSH with pubkey authentification
 - Many verifications
-- Python and powershell usage on client
+- Python and powershell usage on client pc
 - Temporary scheduled task to have the highest privileges to update the pc
 - PSWindowsUpdate
 

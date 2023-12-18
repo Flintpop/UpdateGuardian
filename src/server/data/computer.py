@@ -6,6 +6,7 @@ import traceback
 import paramiko
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
+from server.data.server_join_path import ServerPath
 from src.server.commands.install_client_files_and_dependencies import python_scripts, python_installation, \
     python_path, python_packages, wait_for_ssh_shutdown
 from src.server.commands.path_functions import list_files_recursive, find_directory, change_directory_to_root_folder
@@ -39,18 +40,17 @@ class Computer:
         self.__private_key: Ed25519PrivateKey | None = None
         self.__public_key: Ed25519PublicKey | None = None
 
-        self.private_key_filepath: str = os.path.join(find_directory("ssh_keys"), f"private_key_{self.hostname}")
-        self.public_key_filepath: str = os.path.join(find_directory("ssh_keys"), f"public_key_{self.hostname}.pub")
+        self.private_key_filepath: str = Computer.join_path(find_directory("ssh_keys"), f"private_key_{self.hostname}")
+        self.public_key_filepath: str = ServerPath.join(find_directory("ssh_keys"), f"public_key_{self.hostname}.pub")
 
         self.check_informations_integrity()
 
-        self.client_project_folder: str = os.path.join(self.get_project_directory_on_client(), self.username,
-                                                       Infos.PROJECT_NAME)
+        self.client_project_folder: str = Computer.join_path(self.get_project_directory_on_client(), self.username,
+                                                             Infos.PROJECT_NAME)
 
         change_directory_to_root_folder()
         self.logs_filename = "logs"
-        self.logs_filename = os.path.join(self.logs_filename,
-                                          f"{self.hostname}.log")
+        self.logs_filename = ServerPath.join(self.logs_filename, f"{self.hostname}.log")
 
         if init_logger:
             self.computer_logger = ComputerLogger(self.logs_filename)
@@ -147,7 +147,7 @@ class Computer:
 
         self.ssh_session = paramiko.SSHClient()
         self.ssh_session.set_missing_host_key_policy(paramiko.RejectPolicy())
-        self.ssh_session.load_host_keys(os.path.join(os.environ["USERPROFILE"], ".ssh", "known_hosts"))
+        self.ssh_session.load_host_keys(ServerPath.join(ServerPath.get_home_path(), ".ssh", "known_hosts"))
         self.ssh_session.connect(self.hostname, username=self.username, pkey=self.__private_key)
 
     def connect_if_awake(self) -> bool:
@@ -257,8 +257,8 @@ class Computer:
             self.log(f"Stdout : \n{stdout}")
 
             json_filename: str = f"results-{self.hostname}.json"
-            remote_file_path: str = os.path.join(self.get_project_directory_on_client(),
-                                                 json_filename.replace(f"-{self.hostname}", ""))
+            remote_file_path: str = Computer.join_path(self.get_project_directory_on_client(),
+                                                       json_filename.replace(f"-{self.hostname}", ""))
 
             if not download_file_ssh(self.ssh_session, json_filename, remote_file_path):
                 self.log_error("Could not download the json file.")
@@ -322,8 +322,8 @@ class Computer:
             return False
 
         self.log("Downloading log file from the client...")
-        local_path: str = os.path.join(self.logs_filename, "..", f"update_windows-{self.hostname}-ERROR-LOGS.log")
-        remote_file_path: str = os.path.join(self.get_project_directory_on_client(), "update_windows.log")
+        local_path: str = ServerPath.join(self.logs_filename, "..", f"update_windows-{self.hostname}-ERROR-LOGS.log")
+        remote_file_path: str = Computer.join_path(self.get_project_directory_on_client(), "update_windows.log")
         if not download_file_ssh(self.ssh_session, local_path, remote_file_path):
             self.log_error("Error while downloading the log file from the client.")
             return False
@@ -363,7 +363,7 @@ class Computer:
         and that the home directory is in "C:\\Users\\" on Windows.
         :return: The string of the project directory on the client.
         """
-        return os.path.join(self.get_home_directory_on_client(), Infos.PROJECT_NAME)
+        return Computer.join_path(self.get_home_directory_on_client(), Infos.PROJECT_NAME)
 
     def get_home_directory_on_client(self) -> str:
         """
@@ -387,7 +387,7 @@ class Computer:
         """
         Get the path of the python .exe installer on the client.
         """
-        installer_path: str = os.path.join(self.get_project_directory_on_client(),
+        installer_path: str = Computer.join_path(self.get_project_directory_on_client(),
                                            Infos.get_server_python_installer_name())
         return installer_path
 
@@ -396,7 +396,7 @@ class Computer:
         Get the path of the requirements file on the client.
         :return:
         """
-        requirements_path: str = os.path.join(self.get_project_directory_on_client(), "requirements_client.txt")
+        requirements_path: str = Computer.join_path(self.get_project_directory_on_client(), "requirements_client.txt")
         return requirements_path
 
     def get_main_script_path(self) -> str:
@@ -404,7 +404,7 @@ class Computer:
         Get the path of the main script on the client.
         :return: The path of the "main_client.py" script on the client.
         """
-        return os.path.join(self.get_project_directory_on_client(), "main_client.py")
+        return Computer.join_path(self.get_project_directory_on_client(), "main_client.py")
 
     def get_private_key(self) -> paramiko.PKey | None:
         """
@@ -484,8 +484,11 @@ class Computer:
         """
         Remove the private and public keys of the computer.
         """
-        os.remove(self.private_key_filepath)
-        os.remove(self.public_key_filepath)
+        try:
+            os.remove(self.private_key_filepath)
+            os.remove(self.public_key_filepath)
+        except FileNotFoundError:
+            self.log("Could not remove keys, they do not exist.")
 
     def __str__(self):
         str_repr = f"Computer {self.hostname}:\n"
@@ -493,3 +496,26 @@ class Computer:
         str_repr += "\tmac_address: " + self.mac_address + "\n"
         str_repr += "\tusername: " + self.username + "\n"
         return str_repr
+
+    @staticmethod
+    def join_path(*args) -> str:
+        """
+        Join the paths using Windows-style path separator.
+
+        Computer class should represent a Windows computer, so we need to replace Linux-style path separators with
+        Windows-style path separators, and then join the paths using Windows-style path separator.
+        """
+        # Replace empty components with a backslash
+        args = ['\\' if arg == '' else arg for arg in args]
+        # Join the paths
+        joined_path = os.path.join(*args)
+        # Replace Linux-style path separators with Windows-style path separators
+        windows_path = joined_path.replace('/', '\\')
+
+        replaced_all_duplicated_backslashes = False
+        while not replaced_all_duplicated_backslashes:
+            if '\\\\' in windows_path:
+                windows_path = windows_path.replace('\\\\', '\\')
+            else:
+                replaced_all_duplicated_backslashes = True
+        return windows_path

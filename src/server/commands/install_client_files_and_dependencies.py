@@ -69,7 +69,7 @@ def check_python_installed(computer: 'Computer') -> bool:
 
     computer.log("Python folder exists")
     for executable in python_executables:
-        executable_path = os.path.join(folder_path, executable)
+        executable_path = computer.join_path(folder_path, executable)
         if does_path_exists_ssh(computer.ssh_session, executable_path):
             computer.log(f"Python executable {executable} exists")
             return True
@@ -99,7 +99,7 @@ def check_python_packages_installed(computer: 'Computer') -> bool:
     :return: True if packages are installed, False if at least one is lacking
     """
     ssh: paramiko.SSHClient = computer.ssh_session
-    requirements_file_path: str = find_file(os.path.basename(computer.get_requirements_path()))
+    requirements_file_path: str = find_file(Infos.REQUIREMENTS_CLIENT_FILENAME)
     computer.log("Checking if requirements_client.txt packages are installed...")
 
     with open(requirements_file_path, 'r') as file:
@@ -336,7 +336,7 @@ def refresh_env_variables(computer: 'Computer') -> bool:
     ipaddress, remote_user, remote_computer_private_key = computer.ipv4, computer.username, computer.get_private_key()
     wait_for_ssh_shutdown(computer)
 
-    if not wait_and_reconnect(computer, ipaddress, remote_user, remote_computer_private_key):
+    if not wait_and_reconnect(computer, timeout=600):
         computer.log_error("Failed to reconnect to remote computer.")
         return False
 
