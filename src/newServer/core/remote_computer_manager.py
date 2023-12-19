@@ -123,7 +123,8 @@ class RemoteComputerManager:
             return hachage_distant == hachage_local
 
         except FileNotFoundError:
-            self.remote_computer.log(f"File not found : {remote_file_path} or {local_file_path}", level="warning")
+            self.remote_computer.log(f"File not found for this path : {remote_file_path} "
+                                     f"The local path that is not checked : {local_file_path}", level="warning")
             # False because the file is not on the remote computer, so it will be sent
             return False
         finally:

@@ -1,5 +1,7 @@
 import os
 
+from newServer.infrastructure.config import Infos
+
 
 class ServerPath:
     """
@@ -13,3 +15,16 @@ class ServerPath:
     @staticmethod
     def get_home_path():
         return os.path.expanduser("~")
+
+    @staticmethod
+    def get_project_root_path():
+        path: str = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        if not path.endswith(Infos.PROJECT_NAME):
+            raise EnvironmentError(f"The project root path is not correct : {path}"
+                                   f"It does not end with {Infos.PROJECT_NAME}")
+
+        return path
+
+    @staticmethod
+    def get_log_path():
+        return ServerPath.join(ServerPath.get_project_root_path(), "logs")

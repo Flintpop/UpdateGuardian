@@ -1,7 +1,7 @@
 import logging
 import os
 
-from server.commands.path_functions import find_directory
+from newServer.infrastructure.paths import ServerPath
 
 
 class ComputerLogger:
@@ -16,7 +16,7 @@ class ComputerLogger:
         self.current_log_message: str = ""
 
     def setup_logger(self, new_msg_header: str) -> logging.Logger:
-        if find_directory("logs") is None:
+        if not os.path.isdir(ServerPath.get_log_path()):
             os.mkdir("logs")
 
         logger = logging.getLogger(self.logs_filename)
