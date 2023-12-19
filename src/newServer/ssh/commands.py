@@ -5,14 +5,10 @@ from dataclasses import dataclass
 import chardet
 import paramiko
 
-from typing import TYPE_CHECKING
+from paramiko.sftp_client import SFTPClient
 
-from newServer.ssh.connect import SSHConnect
-from src.newServer.Exceptions.DecodingExceptions import DecodingError
-
-if TYPE_CHECKING:
-    from src.server.data.computer import Computer
-
+from newServer.core.remote_computer import RemoteComputer
+from src.newServer.exceptions.DecodingExceptions import DecodingError
 
 from abc import ABC, abstractmethod
 
@@ -28,10 +24,8 @@ class SSHCommandResult:
     """
     A dataclass containing the stdout and stderr outputs of a command executed on a remote computer.
     """
-
-    def __init__(self, stdout: str, stderr: str):
-        self.stdout = stdout
-        self.stderr = stderr
+    stdout: str
+    stderr: str
 
 
 class SSHCommandExecutor(ISSHCommand):
@@ -40,7 +34,8 @@ class SSHCommandExecutor(ISSHCommand):
 
     def execute(self, command: str) -> SSHCommandResult:
         """
-        Executes a command on the remote computer and returns the stdout and stderr outputs decoded in the correct format.
+        Executes a command on the remote computer and returns the stdout and stderr outputs decoded in the correct
+        format.
         :param command: The command to execute
         :return: An object SSHCommandResult containing the stdout and stderr outputs decoded in the correct format.
         """
@@ -76,26 +71,26 @@ class SSHCommands:
     """
 
     def __init__(self, ssh_command_executor: SSHCommandExecutor):
-        self.__ssh = ssh_command_executor.ssh
-        self.__execute_command: SSHCommandExecutor.execute = SSHCommandExecutor.execute
+        self.__execute_command: SSHCommandExecutor.execute = ssh_command_executor.execute
+        self.__ssh: paramiko.SSHClient = ssh_command_executor.ssh
 
     def does_path_exists(self, file_path: str) -> bool:
         result = self.__execute_command(f"if exist {file_path} (echo True) else (echo False)")
         return True if result == 'True' else False
 
-    def reboot_remote_pc(self) -> None:
+    def reboot(self) -> None:
         """
         Reboots the remote computer by executing 'shutdown /r /t 2' on it.
         """
         self.__execute_command("shutdown /r /t 2")
 
-    def shutdown_remote_pc(self) -> None:
+    def shutdown(self) -> None:
         """
         Shuts down the remote computer by executing 'shutdown /s /t 2' on it.
         """
         self.__execute_command("shutdown /s /t 2")
 
-    def create_folder(self, computer: 'Computer', folder_path: str) -> bool:
+    def create_folder(self, computer: 'RemoteComputer', folder_path: str) -> bool:
         """
         Creates a folder on the remote computer.
         :param computer: The computer on which to create the folder.
@@ -117,32 +112,33 @@ class SSHCommands:
 
         return True
 
-    def delete_folder(self, folder_path: str) -> bool:
+    def delete_folder(self, computer: 'RemoteComputer', folder_path: str) -> bool:
         """
         Deletes a folder on the remote computer.
+        :param computer: The computer on which to delete the folder.
         :param folder_path: The path of the folder to delete ON the remote computer.
         :return: True if the folder was deleted, False otherwise.
         """
         stdout, stderr = self.__execute_command(f"rmdir {folder_path}")
 
         if stderr:
-            print(f"Error while deleting the folder {folder_path}: {stderr}")
+            computer.log_error(f"Error while deleting the folder {folder_path}: {stderr}")
             return False
 
         if stdout:
-            print(f"Stdout : {stdout}")
+            computer.log(f"Stdout : {stdout}")
 
         return True
 
-    def delete_file(self, file_path: str) -> bool:
+    def delete_file(self, computer: 'RemoteComputer', file_path: str) -> bool:
         stdout, stderr = self.__execute_command(f"del {file_path}")
 
         if stderr:
-            print(f"Error while deleting the file {file_path}: {stderr}")
+            computer.log_error(f"Error while deleting the file {file_path}: {stderr}")
             return False
 
         if stdout:
-            print(f"Stdout : {stdout}")
+            computer.log(f"Stdout : {stdout}")
 
         return True
 
@@ -156,7 +152,7 @@ class SSHCommands:
         logging.getLogger("paramiko").setLevel(logging.CRITICAL)
         # noinspection PyBroadException
         try:
-            sftp = self.__ssh.open_sftp()
+            sftp: SFTPClient = self.__ssh.open_sftp()
             sftp.get(remote_file_path, local_file_path)
             sftp.close()
         except Exception:
@@ -197,19 +193,8 @@ class SSHCommands:
         sftp.close()
         return True
 
-    def connect_ssh(self, computer):
-        pass
-
     def close_ssh_session(self):
         self.__ssh.close()
 
     def get_sftp(self) -> paramiko.SFTPClient:
         return self.__ssh.open_sftp()
-
-
-class SSHCommandsFactory:
-    @staticmethod
-    def create(computer: 'Computer') -> SSHCommands:
-        ssh_connect = SSHConnect(computer)
-        ssh: paramiko.SSHClient = ssh_connect.connect(computer)
-        return SSHCommands(SSHCommandExecutor(ssh))
