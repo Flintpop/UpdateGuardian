@@ -9,12 +9,13 @@ if TYPE_CHECKING:
 
 
 class SSHKeyManager:
-    def __init__(self, computer: 'Computer', log_error: callable):
+    def __init__(self, computer: 'Computer', log_error: callable, log: callable):
         self.__private_key: paramiko.PKey | None = None
         self.__public_key: str | None = None
         self.private_key_filepath: str = os.path.join("keys", f"private_key_{computer.hostname}")
         self.public_key_filepath: str = os.path.join("keys", f"public_key_{computer.hostname}.pub")
         self.log_error = log_error
+        self.log = log
 
     def get_private_key(self) -> paramiko.PKey | None:
         """
@@ -47,3 +48,13 @@ class SSHKeyManager:
                                "phase.")
                 return None
         return self.__public_key
+
+    def remove_keys(self):
+        """
+        Remove the private and public keys of the computer.
+        """
+        try:
+            os.remove(self.private_key_filepath)
+            os.remove(self.public_key_filepath)
+        except FileNotFoundError:
+            self.log("Could not remove keys, they do not exist.")

@@ -13,7 +13,7 @@ class RemoteComputer:
         self.__computer = computer
         self.logs_filename = f"{computer.hostname}.log"
         self.computer_logger = None
-        self.ssh_key_manager = SSHKeyManager(computer, self.log_error)
+        self.ssh_key_manager = SSHKeyManager(computer, self.log_error, self.log)
         self.ssh_session: paramiko.SSHClient | None = None
 
         if init_logger:
@@ -74,8 +74,20 @@ class RemoteComputer:
     def log_add_vertical_space(self, new_lines: int = 1, print_in_console: bool = False):
         self.computer_logger.log_add_vertical_space(new_lines=new_lines, print_in_console=print_in_console)
 
-    def get_username(self):
+    def get_username(self) -> str:
         return self.__computer.username
 
-    def get_mac_address(self):
+    def get_mac_address(self) -> str:
         return self.__computer.mac_address
+
+    def get_private_key_filepath(self) -> str:
+        return self.ssh_key_manager.private_key_filepath
+
+    def get_public_key_filepath(self) -> str:
+        return self.ssh_key_manager.public_key_filepath
+
+    def get_logs_filename(self):
+        return self.logs_filename
+
+    def get_ssh_key_manager(self):
+        return self.ssh_key_manager

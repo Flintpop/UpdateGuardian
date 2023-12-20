@@ -1,5 +1,3 @@
-import traceback
-
 import paramiko
 
 from newServer.infrastructure.paths import ServerPath
@@ -8,7 +6,7 @@ from newServer.core.computer import Computer
 
 class SSHConnect:
     @staticmethod
-    def private_key_connexion(computer: 'Computer', private_key) -> paramiko.SSHClient | False:
+    def private_key_connexion(computer: 'Computer', private_key) -> paramiko.SSHClient or False:
         """
         Connect to a computer via SSH.
         Nothing is checked here, the connection is made with the given parameters.

@@ -8,11 +8,14 @@ import paramiko
 from newServer.core.remote_computer import RemoteComputer
 from newServer.factory.ssh_commands_factory import SSHCommandsFactory
 from newServer.security.encryption import Hasher
+from newServer.wake_on_lan.wake_on_lan_utils import send_wol
 from src.newServer.ssh.commands import SSHCommands
 
 
 class RemoteComputerManager:
     def __init__(self, computer: 'RemoteComputer') -> None:
+        self.no_updates = None
+        self.updated_successfully = None
         self.remote_computer: 'RemoteComputer' = computer
         self.ssh_commands: 'SSHCommands' = SSHCommandsFactory.create(computer.get_ssh_session())
 
@@ -204,5 +207,65 @@ class RemoteComputerManager:
         """
         self.ssh_commands.close_ssh_session()
 
+    def connect_if_awake(self) -> bool:
+        if not self.is_pc_on(timeout=20):
+            self.log("Waking up the pc...")
+            if not self.awake_pc():
+                self.log("Could not awake computer...", "warning")
+                return False
+
+        self.log_add_vertical_space()
+        if not self.remote_computer.connect():
+            self.log("Could not connect to computer...", "warning")
+            return False
+        return True
+
+    def awake_pc(self):
+        """
+        Turn on the pc to update windows.
+        :return: True if the pc is on, False otherwise.
+        """
+        send_wol(mac_address=self.get_mac_address(), ip_address=self.get_ipv4())
+
+        if not self.is_pc_on(timeout=20):
+            self.log_error("Error, the pc is still off.")
+            return False
+
+        self.log("The pc is awake...")
+        return True
+
     def get_sftp(self) -> paramiko.SFTPClient:
         return self.ssh_commands.get_sftp()
+
+    def get_private_key_filepath(self):
+        return self.remote_computer.get_private_key_filepath()
+
+    def get_public_key_filepath(self):
+        return self.remote_computer.get_public_key_filepath()
+
+    def get_hostname(self):
+        return self.remote_computer.get_hostname()
+
+    def get_mac_address(self):
+        return self.remote_computer.get_mac_address()
+
+    def get_logs_filename(self):
+        return self.remote_computer.get_logs_filename()
+
+    def get_ipv4(self):
+        return self.remote_computer.get_ipv4()
+
+    def get_username(self):
+        return self.remote_computer.get_username()
+
+    def remove_keys(self):
+        self.remote_computer.get_ssh_key_manager().remove_keys()
+
+    def log(self, message: str, level: str = "info", new_lines: int = 0):
+        self.remote_computer.log(message=message, level=level, new_lines=new_lines)
+
+    def log_error(self, message: str, new_lines: int = 0):
+        self.remote_computer.log_error(msg=message, new_lines=new_lines)
+
+    def log_add_vertical_space(self, new_lines: int = 1, print_in_console: bool = False):
+        self.remote_computer.log_add_vertical_space(new_lines=new_lines, print_in_console=print_in_console)
