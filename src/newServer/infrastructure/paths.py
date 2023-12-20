@@ -50,3 +50,12 @@ class ServerPath:
     @staticmethod
     def get_email_infos_json_file():
         return ServerPath.join(ServerPath.get_project_root_path(), Infos.email_infos_json)
+
+    @staticmethod
+    def get_launch_time_filename():
+        return ServerPath.join(ServerPath.get_project_root_path(), Infos.launch_time_filename)
+
+    @staticmethod
+    def get_powershell_client_script_installer_path():
+        return ServerPath.join(ServerPath.get_project_root_path(), "scripts_powershell",
+                               Infos.powershell_client_script_installer_name)

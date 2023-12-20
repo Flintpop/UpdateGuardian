@@ -7,8 +7,13 @@ from email.mime.text import MIMEText
 import jeepney.wrappers
 import keyring
 
-from newServer.core.remote_computer_manager import RemoteComputerManager
-from newServer.core.remote_computers_database import RemoteComputerDatabase
+# Circular import, need the type checking thing to work, so import type_checking
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from newServer.core.remote_computer_manager import RemoteComputerManager
+    from newServer.core.remote_computers_database import RemoteComputerDatabase
 from newServer.logs_management.server_logger import log, log_error
 from src.newServer.infrastructure.paths import ServerPath
 from src.newServer.infrastructure.config import Infos
@@ -181,7 +186,7 @@ def send_error_email(computer: 'RemoteComputerManager', error: str, traceback: s
 
 
 class EmailResults:
-    def __init__(self, database: "RemoteComputerDatabase"):
+    def __init__(self, database: 'RemoteComputerDatabase'):
         """
         Initialize EmailResults class with a database.
 
