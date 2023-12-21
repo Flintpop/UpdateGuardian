@@ -269,3 +269,9 @@ class RemoteComputerManager:
 
     def log_add_vertical_space(self, new_lines: int = 1, print_in_console: bool = False):
         self.remote_computer.log_add_vertical_space(new_lines=new_lines, print_in_console=print_in_console)
+
+    def log_raw(self, message):
+        self.remote_computer.get_logger().log_raw(message=message)
+
+    def connect(self):
+        return self.remote_computer.connect()

@@ -4,7 +4,7 @@ from newServer.application.cli import Cli
 from newServer.application.scheduler_manager import SchedulerManager
 from newServer.infrastructure.setup_manager import SetupManager
 from newServer.logs_management.server_logger import log_error
-from newServer.update_management.update_manager import UpdateManager
+from newServer.update_management.network_update_manager import UpdateManager
 
 
 class Program:
