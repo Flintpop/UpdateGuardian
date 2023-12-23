@@ -31,8 +31,8 @@ def check_all_files_exists(computer: 'Computer') -> bool:
     """
     Checks if all the installation files exists on the remote computer.
     It compares all .py and .txt files in the client folder, with the files on the remote computer
-    in the %USERPROFILE%/Infos.project_name folder
-    :param computer: The computer to check on if the files exists.
+    in the %USERPROFILE%/Infos.project_name folder.
+    :param computer: The computer to check on if the files exist.
     :return: True if all the files exists, False otherwise.
     """
     import os

@@ -4,6 +4,7 @@ from newServer.core.remote_computer_manager import RemoteComputerManager
 from newServer.infrastructure.config import Infos
 from newServer.logs_management.computer_logger import ComputerLogger
 from newServer.report.mails import send_error_email
+from newServer.update_management.computer_dependencies_manager import ComputerDependenciesManager
 
 
 class ComputerUpdateManager:
@@ -81,19 +82,20 @@ class ComputerUpdateManager:
         return True
 
     def prerequisites_installed(self):
-        if not python_scripts(computer=self):
+        computer_dependencies_manager = ComputerDependenciesManager(self.computer)
+        if not computer_dependencies_manager.python_scripts(computer=self):
             return False
 
         self.log_add_vertical_space()
-        if not python_installation(computer=self):
+        if not computer_dependencies_manager.python_installation(computer=self):
             return False
 
         self.log_add_vertical_space()
-        if not python_path(computer=self):
+        if not computer_dependencies_manager.python_path(computer=self):
             return False
 
         self.log_add_vertical_space()
-        if not python_packages(computer=self):
+        if not computer_dependencies_manager.python_packages(computer=self):
             return False
 
         self.log_add_vertical_space()

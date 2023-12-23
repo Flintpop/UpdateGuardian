@@ -7,6 +7,7 @@ import paramiko
 
 from newServer.core.remote_computer import RemoteComputer
 from newServer.factory.ssh_commands_factory import SSHCommandsFactory
+from newServer.infrastructure.paths import ServerPath, ClientPath
 from newServer.security.encryption import Hasher
 from newServer.wake_on_lan.wake_on_lan_utils import send_wol
 from src.newServer.ssh.commands import SSHCommands
@@ -14,10 +15,9 @@ from src.newServer.ssh.commands import SSHCommands
 
 class RemoteComputerManager:
     def __init__(self, computer: 'RemoteComputer') -> None:
-        self.no_updates = None
-        self.updated_successfully = None
         self.remote_computer: 'RemoteComputer' = computer
         self.ssh_commands: 'SSHCommands' = SSHCommandsFactory.create(computer.get_ssh_session())
+        self.paths = ClientPath(self.get_hostname(), self.get_username())
 
     def is_pc_on(self, port: int = 22, timeout: float = 5.0, print_log_connected: bool = True) -> bool:
         """
@@ -234,6 +234,28 @@ class RemoteComputerManager:
         self.log("The pc is awake...")
         return True
 
+    def download_log_file_ssh(self) -> bool:
+        """
+        Download the log file from the client.
+        :return: True if the log file has been downloaded, False otherwise.
+        """
+        if not self.is_pc_on(timeout=20):
+            self.log_error("Error, the pc is not connectable, could not download log file.")
+            return False
+
+        if not self.connect():
+            self.log_error("Could not connect via SSH to the client.")
+            return False
+
+        self.log("Downloading log file from the client...")
+        local_path: str = ServerPath.get_error_logs_path(self.get_hostname(), self.get_logs_filename())
+        remote_file_path: str = ClientPath.join(self.paths.get_project_directory(), "update_windows.log")
+        if not self.ssh_commands.download_file(local_path, remote_file_path):
+            self.log_error("Error while downloading the log file from the client.")
+            return False
+        self.log("Log file downloaded from the client.")
+        return True
+
     def get_sftp(self) -> paramiko.SFTPClient:
         return self.ssh_commands.get_sftp()
 
@@ -275,3 +297,6 @@ class RemoteComputerManager:
 
     def connect(self):
         return self.remote_computer.connect()
+
+    def get_ssh_session(self):
+        return self.remote_computer.get_ssh_session()

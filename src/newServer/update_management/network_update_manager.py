@@ -58,7 +58,7 @@ class UpdateManager:
             log_error("Skipping this computer...")
             return
 
-        if remote_computer_manager.no_updates:
+        if computer.no_updates:
             log("Computer " + remote_computer_manager.get_hostname() + " has no updates.")
             return
         log("Computer " + remote_computer_manager.get_hostname() + " updated successfully!")

@@ -9,6 +9,7 @@ class ServerPath:
     Class that joins paths for the server.
     A simple wrapper for os.path.join, along with some utility methods.
     """
+
     @staticmethod
     def join(*args):
         return os.path.join(*args)
@@ -59,3 +60,87 @@ class ServerPath:
     def get_powershell_client_script_installer_path():
         return ServerPath.join(ServerPath.get_project_root_path(), "scripts_powershell",
                                Infos.powershell_client_script_installer_name)
+
+    @staticmethod
+    def get_error_logs_path(hostname: str, logs_filename: str):
+        return ServerPath.join(ServerPath.get_log_folder_path(), logs_filename, f"update_windows-{hostname}"
+                                                                                f"-ERROR-LOGS.log")
+
+    @staticmethod
+    def get_client_files():
+        """
+        Gets all the useful files that can be uploaded to the client.
+        This includes .py files, and .txt files only.
+        :return: A list of all the files that can be uploaded to the client.
+        """
+        import os
+        files: list[str] = [file for file in list_files_recursive(ServerPath.get_client_folder()) if
+                            file.endswith(".py")
+                            or file.endswith(".txt")]
+        files = [os.path.basename(file) for file in files]
+        files = [os.path.join(ServerPath.get_project_root_path(), "client", file) for file in files]
+        return files
+
+    @staticmethod
+    def get_client_folder():
+        return ServerPath.join(ServerPath.get_project_root_path(), "client")
+
+
+class ClientPath:
+    def __init__(self, hostname: str, username: str):
+        self.hostname: str = hostname
+        self.username: str = username
+
+    @staticmethod
+    def join(*args) -> str:
+        """
+        Join the paths using Windows-style path separator.
+
+        Computer class should represent a Windows computer, so we need to replace Linux-style path separators with
+        Windows-style path separators, and then join the paths using Windows-style path separator.
+        """
+        # Replace empty components with a backslash
+        args = ['\\' if arg == '' else arg for arg in args]
+        # Join the paths
+        joined_path = os.path.join(*args)
+        # Replace Linux-style path separators with Windows-style path separators
+        windows_path = joined_path.replace('/', '\\')
+
+        replaced_all_duplicated_backslashes = False
+        while not replaced_all_duplicated_backslashes:
+            if '\\\\' in windows_path:
+                windows_path = windows_path.replace('\\\\', '\\')
+            else:
+                replaced_all_duplicated_backslashes = True
+        return windows_path
+
+    def get_project_directory(self):
+        return ClientPath.join(self.get_home_directory(), Infos.PROJECT_NAME)
+
+    def get_home_directory(self):
+        return "C:\\Users\\" + self.username
+
+
+def list_files_recursive(directory: str) -> list[str]:
+    all_files = []
+
+    for root, _, files in os.walk(directory):
+        for file in files:
+            add_file(all_files, file, root)
+
+    return all_files
+
+
+def add_file(all_files: list[str], file: str, root: str) -> None:
+    dir_exceptions = ["__pycache__", ".git", ".idea", ".vscode", "venv", ".gitignore", "__init__.py"]
+    if file not in all_files:
+        file_path = os.path.join(root, file)
+        add_var = True
+
+        for exception in dir_exceptions:
+            if file_path.__contains__(exception):
+                add_var = False
+                break
+
+        if add_var:
+            all_files.append(file_path)
