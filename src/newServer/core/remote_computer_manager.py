@@ -10,14 +10,22 @@ from newServer.factory.ssh_commands_factory import SSHCommandsFactory
 from newServer.infrastructure.paths import ServerPath, ClientPath
 from newServer.security.encryption import Hasher
 from newServer.wake_on_lan.wake_on_lan_utils import send_wol
-from src.newServer.ssh.commands import SSHCommands
+from src.newServer.ssh.commands import SSHCommands, SSHCommandResult
 
 
 class RemoteComputerManager:
     def __init__(self, computer: 'RemoteComputer') -> None:
         self.remote_computer: 'RemoteComputer' = computer
         self.ssh_commands: 'SSHCommands' = SSHCommandsFactory.create(computer.get_ssh_session())
-        self.paths = ClientPath(self.get_hostname(), self.get_username())
+        self.paths: 'ClientPath' = ClientPath(self.get_hostname(), self.get_username())
+
+    def execute_command(self, command: str) -> SSHCommandResult:
+        """
+        Executes a command on the remote computer.
+        :param command: The command to execute.
+        :return: True if the command was executed successfully, False otherwise.
+        """
+        return self.ssh_commands.execute_command(command)
 
     def is_pc_on(self, port: int = 22, timeout: float = 5.0, print_log_connected: bool = True) -> bool:
         """
@@ -57,6 +65,34 @@ class RemoteComputerManager:
                 except Exception as e:
                     self.remote_computer.log_error(f"Unknown error occurred: {e}\nTraceback: \n{e.__traceback__}")
                     return False
+
+    def wait_for_ssh_shutdown(self) -> None:
+        """
+        Wait for the SSH server to be down.
+        :return: Nothing
+        """
+        ssh_server_shutdown = False
+        self.log("Waiting for SSH server to be down...")
+        self.force_close_ssh_session()
+        self.close_ssh_session()
+        while not ssh_server_shutdown:
+            ssh_server_shutdown = not self.is_pc_on(print_log_connected=False)
+        self.log("SSH server is down, waiting for it to be up again...")
+
+    def force_close_ssh_session(self):
+        """
+        Stops the sshd service on the remote computer.
+        :return: True if the service was stopped, False otherwise.
+        """
+        self.log("Stopping sshd service...")
+
+        _, stderr = self.execute_command("powershell -Command \"Stop-Service sshd\"")
+        if stderr:
+            self.log_error("Failed to stop sshd service. \nStderr: \n" + stderr)
+            return False
+
+        self.log("Sshd service stopped.")
+        return True
 
     def wait_and_reconnect(self, timeout: int = 300, retry_interval: int = 10) -> bool:
         """
@@ -220,6 +256,9 @@ class RemoteComputerManager:
             return False
         return True
 
+    def is_os_windows(self, computer: 'RemoteComputer') -> bool:
+        return self.ssh_commands.is_os_windows(computer)
+
     def awake_pc(self):
         """
         Turn on the pc to update windows.
@@ -300,3 +339,6 @@ class RemoteComputerManager:
 
     def get_ssh_session(self):
         return self.remote_computer.get_ssh_session()
+
+    def get_remote_computer(self):
+        return self.remote_computer

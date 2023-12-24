@@ -84,7 +84,7 @@ def check_python_in_path(computer: 'Computer') -> bool:
     # Check if 'python' command is available
     stdout, stderr = stdout_err_execute_ssh_command(computer.ssh_session, "where python")
 
-    if not stderr and "python" in stdout:
+    if not stderr and "python" in stdout.lower():
         computer.log("Python is path.")
         return True
     else:
@@ -227,7 +227,8 @@ def check_python_path_set(computer: 'Computer') -> bool:
         computer.log_error("Python is not set correctly in path, because it may be there despite the fact that it is"
                            " installed.")
         computer.log_error(f"Here is the path variable: \n{stdout}")
-        computer.log_error("Please check the path manually, and if it is correct, please reinstall python manually.")
+        computer.log_error("Please check the path manually, and if it is correct. Please reinstall python manually"
+                           "if necessary.")
         return False
 
 
@@ -282,7 +283,7 @@ def install_python(computer: 'Computer', second_attempt=False) -> bool:
         if not second_attempt:
             computer.log("The installer may be corrupted. Trying to install python again...")
             send_python_installer(computer)
-            time.sleep(0.1)  # To make sure that the installer is sent before trying to install it
+            time.sleep(0.5)  # To make sure that the installer is sent before trying to install it
             return install_python(computer, second_attempt=True)
         return False
 

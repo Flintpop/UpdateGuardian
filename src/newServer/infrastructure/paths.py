@@ -85,6 +85,18 @@ class ServerPath:
     def get_client_folder():
         return ServerPath.join(ServerPath.get_project_root_path(), "client")
 
+    @staticmethod
+    def get_python_installer():
+        """
+        :returns: The name of the server python installer
+        """
+        path: str = "python_" + Infos.python_precise_version + ".exe"
+        return ServerPath.join(ServerPath.get_project_root_path(), path)
+
+    @staticmethod
+    def get_requirement_file():
+        return ServerPath.join(ServerPath.get_project_root_path(), "client", Infos.REQUIREMENTS_CLIENT_FILENAME)
+
 
 class ClientPath:
     def __init__(self, hostname: str, username: str):
@@ -119,6 +131,12 @@ class ClientPath:
 
     def get_home_directory(self):
         return "C:\\Users\\" + self.username
+
+    def get_installer_path(self):
+        return ClientPath.join(self.get_project_directory(), ServerPath.get_python_installer())
+
+    def get_requirements_file(self):
+        return ClientPath.join(self.get_project_directory(), Infos.REQUIREMENTS_CLIENT_FILENAME())
 
 
 def list_files_recursive(directory: str) -> list[str]:

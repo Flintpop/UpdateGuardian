@@ -74,6 +74,17 @@ class SSHCommands:
         self.__execute_command: SSHCommandExecutor.execute = ssh_command_executor.execute
         self.__ssh: paramiko.SSHClient = ssh_command_executor.ssh
 
+    def execute_command(self, command: str) -> SSHCommandResult:
+        """
+        Executes a command on the remote computer and returns the stdout and stderr outputs decoded in the correct
+        format.
+        :param command: The command to execute
+        :return: An object SSHCommandResult containing the stdout and stderr outputs
+        decoded in the correct format.
+        """
+        return self.__execute_command(command)
+
+
     def does_path_exists(self, file_path: str) -> bool:
         result = self.__execute_command(f"if exist {file_path} (echo True) else (echo False)")
         return True if result == 'True' else False
@@ -198,3 +209,22 @@ class SSHCommands:
 
     def get_sftp(self) -> paramiko.SFTPClient:
         return self.__ssh.open_sftp()
+
+    def is_os_windows(self, computer: 'RemoteComputer') -> bool:
+        # Try to get OS information using 'uname' command (usually works on Unix-like systems)
+        res: SSHCommandResult = self.__execute_command("uname -a")
+        os_info = res.stdout
+
+        if not os_info:
+            # If 'uname' command doesn't work, try to get OS information using 'ver' command
+            # (usually works on Windows systems)
+            res = self.__execute_command("ver")
+            os_info = res.stdout
+
+        if not os_info:
+            computer.log("Failed to get OS information.", level="warning")
+            return True
+        if "windows" in os_info.lower():
+            return True
+
+        return False

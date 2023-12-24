@@ -83,19 +83,19 @@ class ComputerUpdateManager:
 
     def prerequisites_installed(self):
         computer_dependencies_manager = ComputerDependenciesManager(self.computer)
-        if not computer_dependencies_manager.python_scripts(computer=self):
+        if not computer_dependencies_manager.python_scripts():
             return False
 
         self.log_add_vertical_space()
-        if not computer_dependencies_manager.python_installation(computer=self):
+        if not computer_dependencies_manager.python_installation():
             return False
 
-        self.log_add_vertical_space()
-        if not computer_dependencies_manager.python_path(computer=self):
-            return False
+        # self.log_add_vertical_space()
+        # if not computer_dependencies_manager.python_path(computer=self):
+        #     return False
 
         self.log_add_vertical_space()
-        if not computer_dependencies_manager.python_packages(computer=self):
+        if not computer_dependencies_manager.python_packages():
             return False
 
         self.log_add_vertical_space()

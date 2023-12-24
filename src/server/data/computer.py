@@ -388,7 +388,7 @@ class Computer:
         Get the path of the python .exe installer on the client.
         """
         installer_path: str = Computer.join_path(self.get_project_directory_on_client(),
-                                           Infos.get_server_python_installer_name())
+                                                 Infos.get_server_python_installer_name())
         return installer_path
 
     def get_requirements_path(self) -> str:
