@@ -138,6 +138,9 @@ class ClientPath:
     def get_requirements_file(self):
         return ClientPath.join(self.get_project_directory(), Infos.REQUIREMENTS_CLIENT_FILENAME())
 
+    def get_main_script(self):
+        return ClientPath.join(self.get_project_directory(), Infos.client_main_python_script)
+
 
 def list_files_recursive(directory: str) -> list[str]:
     all_files = []

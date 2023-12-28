@@ -2,6 +2,7 @@ class Infos:
     """
     Class containing information for the whole program.
     """
+    client_main_python_script = "main_client.py"
     launch_time_filename = "launch_time.json"
     REQUIREMENTS_CLIENT_FILENAME = "requirements_client.txt"
     config_json_file = "config.json"
