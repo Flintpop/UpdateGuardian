@@ -2,8 +2,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import threading
 import time
 
-from newServer.infrastructure.setup_manager import SetupManager
-from newServer.update_management.network_update_manager import UpdateManager
+from src.newServer.infrastructure.setup_manager import SetupManager
+from src.newServer.update_management.network_update_manager import UpdateManager
 
 
 class SchedulerManager:

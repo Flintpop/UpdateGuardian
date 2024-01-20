@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 
-from newServer.infrastructure.paths import ServerPath
+from src.newServer.infrastructure.paths import ServerPath
 
 
 class TestYourClass(unittest.TestCase):

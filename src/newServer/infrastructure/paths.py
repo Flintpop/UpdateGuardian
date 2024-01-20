@@ -1,6 +1,6 @@
 import os
 
-from newServer.infrastructure.config import Infos
+from src.newServer.infrastructure.config import Infos
 
 
 class ServerPath:

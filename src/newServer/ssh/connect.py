@@ -1,7 +1,7 @@
 import paramiko
 
-from newServer.infrastructure.paths import ServerPath
-from newServer.core.computer import Computer
+from src.newServer.infrastructure.paths import ServerPath
+from src.newServer.core.computer import Computer
 
 
 class SSHConnect:

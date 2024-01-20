@@ -1,7 +1,7 @@
 import logging
 
-from newServer.infrastructure.paths import ServerPath
-from newServer.logs_management.computer_logger import ComputerLogger
+from src.newServer.infrastructure.paths import ServerPath
+from src.newServer.logs_management.computer_logger import ComputerLogger
 
 
 class ServerLogs(ComputerLogger):

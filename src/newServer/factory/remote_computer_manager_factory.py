@@ -1,9 +1,10 @@
-from newServer.core.computer import Computer
-from newServer.core.remote_computer import RemoteComputer
-from newServer.core.remote_computer_manager import RemoteComputerManager
+from src.newServer.core.computer import Computer
+from src.newServer.core.remote_computer import RemoteComputer
+from src.newServer.core.remote_computer_manager import RemoteComputerManager
+from src.newServer.factory.HostFactory import HostFactory
 
 
-class RemoteComputerManagerFactory:
+class RemoteComputerManagerFactory(HostFactory):
     """
     This class is responsible for creating a RemoteComputerManager object.
     The object can be created with two possible contexts:

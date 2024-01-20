@@ -7,7 +7,7 @@ import paramiko
 
 from paramiko.sftp_client import SFTPClient
 
-from newServer.core.remote_computer import RemoteComputer
+from src.newServer.core.remote_computer import RemoteComputer
 from src.newServer.exceptions.DecodingExceptions import DecodingError
 
 from abc import ABC, abstractmethod

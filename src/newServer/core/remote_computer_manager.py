@@ -5,11 +5,11 @@ import time
 
 import paramiko
 
-from newServer.core.remote_computer import RemoteComputer
-from newServer.factory.ssh_commands_factory import SSHCommandsFactory
-from newServer.infrastructure.paths import ServerPath, ClientPath
-from newServer.security.encryption import Hasher
-from newServer.wake_on_lan.wake_on_lan_utils import send_wol
+from src.newServer.core.remote_computer import RemoteComputer
+from src.newServer.factory.ssh_commands_factory import SSHCommandsFactory
+from src.newServer.infrastructure.paths import ServerPath, ClientPath
+from src.newServer.security.encryption import Hasher
+from src.newServer.wake_on_lan.wake_on_lan_utils import send_wol
 from src.newServer.ssh.commands import SSHCommands, SSHCommandResult
 
 

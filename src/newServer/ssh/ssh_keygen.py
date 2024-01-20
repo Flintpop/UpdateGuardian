@@ -16,10 +16,10 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat,
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from newServer.core.remote_computer_manager import RemoteComputerManager
-from server.data.server_join_path import ServerPath
+    from src.newServer.core.remote_computer_manager import RemoteComputerManager
+from src.newServer.infrastructure.paths import ServerPath
 
-from src.server.environnement.server_logs import log
+from src.newServer.logs_management.server_logger import log
 
 
 def create_known_hosts_file() -> None:

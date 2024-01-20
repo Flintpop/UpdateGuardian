@@ -4,11 +4,11 @@ import socket
 
 import keyring
 
-from newServer.infrastructure.config import Infos
-from newServer.infrastructure.http_server_setup import run_server
-from newServer.infrastructure.paths import ServerPath
-from newServer.logs_management.server_logger import log_error, log, log_new_lines
-from newServer.report.mails import setup_email_config
+from src.newServer.infrastructure.config import Infos
+from src.newServer.infrastructure.http_server_setup import run_server
+from src.newServer.infrastructure.paths import ServerPath
+from src.newServer.logs_management.server_logger import log_error, log, log_new_lines
+from src.newServer.report.mails import setup_email_config
 
 
 def load_launch_time() -> dict:

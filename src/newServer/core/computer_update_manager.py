@@ -1,5 +1,5 @@
-from newServer.core.remote_computers_database import RemoteComputerDatabase
-from newServer.logs_management.server_logger import log
+from src.newServer.core.remote_computers_database import RemoteComputerDatabase
+from src.newServer.logs_management.server_logger import log
 
 
 class ComputerDatabaseManager:

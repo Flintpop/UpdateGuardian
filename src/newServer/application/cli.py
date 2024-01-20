@@ -1,14 +1,14 @@
-from newServer.application.cli_settings import modify_settings
-from newServer.core.computer_update_manager import ComputerDatabaseManager
-from newServer.infrastructure.setup_manager import load_launch_time
-from newServer.logs_management.server_logger import log, log_new_lines
-from newServer.update_management.network_update_manager import UpdateManager
+from src.newServer.application.cli_settings import modify_settings
+from src.newServer.core.computer_update_manager import ComputerDatabaseManager
+from src.newServer.infrastructure.setup_manager import load_launch_time
+from src.newServer.logs_management.server_logger import log, log_new_lines
+from src.newServer.update_management.network_update_manager import UpdateManager
 
 
 class Cli:
     def __init__(self, update_manager: 'UpdateManager'):
         self.stopped = False
-        self.update_manager = update_manager
+        self.update_manager: 'UpdateManager' = update_manager
 
     def start(self):
         """

@@ -1,11 +1,11 @@
 import os
 import time
 
-from newServer.core.remote_computer_manager import RemoteComputerManager
-from newServer.exceptions.FilesExceptionsSSH import FileCreationError
-from newServer.infrastructure.config import Infos
-from newServer.infrastructure.paths import ServerPath
-from newServer.ssh.commands import SSHCommandResult
+from src.newServer.core.remote_computer_manager import RemoteComputerManager
+from src.newServer.exceptions.FilesExceptionsSSH import FileCreationError
+from src.newServer.infrastructure.config import Infos
+from src.newServer.infrastructure.paths import ServerPath
+from src.newServer.ssh.commands import SSHCommandResult
 
 
 class ComputerDependenciesManager:

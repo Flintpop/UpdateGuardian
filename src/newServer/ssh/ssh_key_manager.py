@@ -5,7 +5,7 @@ import paramiko
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from newServer.core.computer import Computer
+    from src.newServer.core.computer import Computer
 
 
 class SSHKeyManager:

@@ -3,12 +3,12 @@ import os.path
 
 from threading import Lock
 
-from newServer.core.remote_computer_manager import RemoteComputerManager
-from newServer.factory.remote_computer_manager_factory import RemoteComputerManagerFactory
-from newServer.infrastructure.paths import ServerPath
-from newServer.report.mails import load_email_infos
-from newServer.ssh.ssh_keygen import gen_keys_and_save_them
-from newServer.infrastructure.config import Infos
+from src.newServer.core.remote_computer_manager import RemoteComputerManager
+from src.newServer.factory.remote_computer_manager_factory import RemoteComputerManagerFactory
+from src.newServer.infrastructure.paths import ServerPath
+from src.newServer.report.mails import load_email_infos
+from src.newServer.ssh.ssh_keygen import gen_keys_and_save_them
+from src.newServer.infrastructure.config import Infos
 
 
 class RemoteComputerDatabase:
@@ -25,11 +25,11 @@ class RemoteComputerDatabase:
         It loads the computers from the computers_database.json file.
         """
         self.max_number_of_simultaneous_updates = 0
-        self.__computers: list[RemoteComputerManager] = []
+        self.computers: list[RemoteComputerManager] = []
         self.computers_json: dict = {}
 
     def add_computer(self, computer: RemoteComputerManager) -> None:
-        self.__computers.append(computer)
+        self.computers.append(computer)
 
     def add_new_computer(self, dict_computer: dict, host_key) -> bool:
         """
@@ -47,24 +47,24 @@ class RemoteComputerDatabase:
         return True
 
     def remove_computer(self, hostname: str) -> bool:
-        for computer in self.__computers:
+        for computer in self.computers:
             if computer.get_hostname() == hostname:
                 computer.remove_keys()
-                self.__computers.remove(computer)
+                self.computers.remove(computer)
                 self.computers_json.pop(hostname)
                 return True
         return False
 
     def find_computer(self, hostname: str) -> RemoteComputerManager:
-        for computer in self.__computers:
+        for computer in self.computers:
             if computer.get_hostname() == hostname:
                 return computer
 
     def get_computers(self) -> list[RemoteComputerManager]:
-        return self.__computers
+        return self.computers
 
     def get_computer(self, index: int) -> RemoteComputerManager:
-        return self.__computers[index]
+        return self.computers[index]
 
     def save_computer_data(self, hosts=None) -> None:
         """
@@ -74,12 +74,10 @@ class RemoteComputerDatabase:
         """
 
         # Read the current data from the file
-        json_database_path: str = ServerPath.join(ServerPath.get_project_root_path(),
-                                                  ServerPath.json_computers_database_filename)
+        json_database_path: str = ServerPath.get_database_path()
 
         if hosts is not None:
             # Save the new data to the file
-            # change_directory_to_root_folder()
             with open(json_database_path, "w") as f:
                 json.dump(hosts, f, indent=4)
                 return
@@ -146,56 +144,11 @@ class RemoteComputerDatabase:
             computer_database.add_computer(new_computer)
 
     def get_number_of_computers(self) -> int:
-        return len(self.__computers)
+        return len(self.computers)
 
-    def get_successfully_number_of_updated_computers(self) -> int:
-        res = 0
-        for computer in self.__computers:
-            if computer.updated_successfully and not computer.no_updates:
-                res += 1
-
-        return res
-
-    def get_not_updated_computers(self):
-        res = []
-        for computer in self.__computers:
-            if not computer.updated_successfully:
-                res.append(computer)
-
-        return res
-
-    def get_computers_without_new_updates(self):
-        res = []
-        for computer in self.__computers:
-            if computer.no_updates and computer.updated_successfully:
-                res.append(computer)
-
-        return res
-
-    def get_number_of_updatable_computers(self):
-        res = []
-        for computer in self.__computers:
-            if computer.no_updates is not None and not computer.no_updates:
-                res.append(computer)
-        return len(res)
-
-    def get_updated_computers(self):
-        computers: list[RemoteComputerManager] = []
-        for computer in self.__computers:
-            if computer.updated_successfully and not computer.no_updates:
-                computers.append(computer)
-
-        return computers
-
-    def get_number_of_failed_computers(self):
-        res = []
-        for computer in self.__computers:
-            if not computer.updated_successfully:
-                res.append(computer)
-        return len(res)
 
     def shutdown_all_computers(self):
-        for computer in self.__computers:
+        for computer in self.computers:
             if not computer.connect_if_awake():
                 continue
             computer.shutdown()
@@ -206,7 +159,7 @@ class RemoteComputerDatabase:
 
     def __str__(self) -> str:
         string_representation = "########## Computer Database ##########\n\n"
-        for computer in self.__computers:
+        for computer in self.computers:
             string_representation += f"{computer.get_hostname()}\n"
             string_representation += f"\tMAC  : \t{computer.get_mac_address()}\n"
             string_representation += f"\tLOGS : \t{computer.get_logs_filename()}\n"

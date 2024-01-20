@@ -12,9 +12,9 @@ import keyring
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from newServer.core.remote_computer_manager import RemoteComputerManager
-    from newServer.core.remote_computers_database import RemoteComputerDatabase
-from newServer.logs_management.server_logger import log, log_error
+    from src.newServer.core.remote_computer_manager import RemoteComputerManager
+    from src.newServer.update_management.network_update_manager import UpdateManager
+from src.newServer.logs_management.server_logger import log, log_error
 from src.newServer.infrastructure.paths import ServerPath
 from src.newServer.infrastructure.config import Infos
 
@@ -75,10 +75,10 @@ def write_email_infos(email: str, send_mail: bool, password: str = None) -> None
     Writes the email infos to a file.
     """
     if password is None:
-        with open(Infos.email_infos_json, "w", encoding="utf-8") as f:
+        with open(ServerPath.get_email_infos_json_file(), "w", encoding="utf-8") as f:
             json.dump({"email": email, "send_mail": send_mail}, f, indent=4)
     else:
-        with open(Infos.email_infos_json, "w", encoding="utf-8") as f:
+        with open(ServerPath.get_email_infos_json_file(), "w", encoding="utf-8") as f:
             json.dump({"email": email, "password": password, "send_mail": send_mail}, f, indent=4)
 
 
@@ -186,7 +186,7 @@ def send_error_email(computer: 'RemoteComputerManager', error: str, traceback: s
 
 
 class EmailResults:
-    def __init__(self, database: 'RemoteComputerDatabase'):
+    def __init__(self, database: 'UpdateManager'):
         """
         Initialize EmailResults class with a database.
 

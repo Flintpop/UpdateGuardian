@@ -2,17 +2,17 @@ import json
 import os
 import traceback
 
-from newServer.core.remote_computer_manager import RemoteComputerManager
-from newServer.infrastructure.config import Infos
-from newServer.logs_management.computer_logger import ComputerLogger
-from newServer.report.mails import send_error_email
-from newServer.ssh.commands import SSHCommandResult
-from newServer.update_management.computer_dependencies_manager import ComputerDependenciesManager
+from src.newServer.core.remote_computer_manager import RemoteComputerManager
+from src.newServer.infrastructure.config import Infos
+from src.newServer.logs_management.computer_logger import ComputerLogger
+from src.newServer.report.mails import send_error_email
+from src.newServer.ssh.commands import SSHCommandResult
+from src.newServer.update_management.computer_dependencies_manager import ComputerDependenciesManager
 
 
 class ComputerUpdateManager:
     def __init__(self, computer: 'RemoteComputerManager'):
-        self.computer = computer
+        self.computer: 'RemoteComputerManager' = computer
         self.log = computer.log
         self.log_raw = computer.log_raw
         self.log_add_vertical_space = computer.log_add_vertical_space
@@ -185,3 +185,6 @@ class ComputerUpdateManager:
             self.log_error(f"Failed to reconnect to {self.hostname}, timeout likely reached.")
             return False
         return True
+
+    def get_hostname(self):
+        return self.hostname

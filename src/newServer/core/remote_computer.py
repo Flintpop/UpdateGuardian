@@ -2,10 +2,10 @@ import traceback
 
 import paramiko
 
-from newServer.core.computer import Computer
-from newServer.logs_management.computer_logger import ComputerLogger
-from newServer.ssh.connect import SSHConnect
-from newServer.ssh.ssh_key_manager import SSHKeyManager
+from src.newServer.core.computer import Computer
+from src.newServer.logs_management.computer_logger import ComputerLogger
+from src.newServer.ssh.connect import SSHConnect
+from src.newServer.ssh.ssh_key_manager import SSHKeyManager
 
 
 class RemoteComputer:

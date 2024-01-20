@@ -1,9 +1,9 @@
-from newServer.core.remote_computers_database import RemoteComputerDatabase
-from newServer.infrastructure.config import Infos
-from newServer.infrastructure.http_server_setup import run_server
-from newServer.infrastructure.setup_manager import load_launch_time, ask_and_save_launch_time
-from newServer.logs_management.server_logger import log_error, log_new_lines, log
-from newServer.report.mails import setup_email_config
+from src.newServer.core.remote_computers_database import RemoteComputerDatabase
+from src.newServer.infrastructure.config import Infos
+from src.newServer.infrastructure.http_server_setup import run_server
+from src.newServer.infrastructure.setup_manager import load_launch_time, ask_and_save_launch_time
+from src.newServer.logs_management.server_logger import log_error, log_new_lines, log
+from src.newServer.report.mails import setup_email_config
 
 done = False
 
