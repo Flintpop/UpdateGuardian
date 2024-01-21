@@ -1,5 +1,6 @@
 import logging
 import os
+import traceback
 from dataclasses import dataclass
 
 import chardet
@@ -84,10 +85,9 @@ class SSHCommands:
         """
         return self.__execute_command(command)
 
-
     def does_path_exists(self, file_path: str) -> bool:
-        result = self.__execute_command(f"if exist {file_path} (echo True) else (echo False)")
-        return True if result == 'True' else False
+        result = self.__execute_command(f"if exist \"{file_path}\" (echo True) else (echo False)")
+        return True if result.stdout == 'True' else False
 
     def reboot(self) -> None:
         """
@@ -108,7 +108,7 @@ class SSHCommands:
         :param folder_path: The path of the folder to create ON the remote computer.
         :return: True if the folder was created, False otherwise.
         """
-        result: SSHCommandResult = self.__execute_command(f"mkdir {folder_path}")
+        result: SSHCommandResult = self.__execute_command(f"mkdir \"{folder_path}\"")
 
         if result.stderr and "exist" in result.stderr:
             computer.log(f"Folder {folder_path} already exists")
@@ -130,7 +130,8 @@ class SSHCommands:
         :param folder_path: The path of the folder to delete ON the remote computer.
         :return: True if the folder was deleted, False otherwise.
         """
-        stdout, stderr = self.__execute_command(f"rmdir {folder_path}")
+        result = self.__execute_command(f"rmdir \"{folder_path}\"")
+        stdout, stderr = result.stdout, result.stderr
 
         if stderr:
             computer.log_error(f"Error while deleting the folder {folder_path}: {stderr}")
@@ -141,15 +142,21 @@ class SSHCommands:
 
         return True
 
-    def delete_file(self, computer: 'RemoteComputer', file_path: str) -> bool:
-        stdout, stderr = self.__execute_command(f"del {file_path}")
+    def create_file(self, file_path):
+        result = self.__execute_command(f"echo. > \"{file_path}\"")
+        if result.stderr:
+            return False
+        return True
 
-        if stderr:
-            computer.log_error(f"Error while deleting the file {file_path}: {stderr}")
+    def delete_file(self, computer: 'RemoteComputer', file_path: str) -> bool:
+        result = self.__execute_command(f"del \"{file_path}\"")
+
+        if result.stderr:
+            computer.log_error(f"Error while deleting the file {file_path}: {result.stderr}")
             return False
 
-        if stdout:
-            computer.log(f"Stdout : {stdout}")
+        if result.stdout:
+            computer.log(f"Stdout : {result.stdout}")
 
         return True
 
@@ -168,10 +175,13 @@ class SSHCommands:
             sftp.close()
         except Exception:
             logging.getLogger("paramiko").setLevel(original_logging_level)
+            print(f"Error while downloading the file {remote_file_path} to \"{local_file_path}\","
+                  f" here is the traceback:")
+            print(f"{traceback.format_exc()}")
             return False
         return True
 
-    def upload_file(self, local_path: str, remote_path: str) -> bool:
+    def upload_file(self, local_path: str, remote_path: str, computer: 'RemoteComputer') -> bool:
         """
         Sends a file to the remote computer.
         The file will be sent to the remote_path folder, and will keep its original name.
@@ -186,7 +196,11 @@ class SSHCommands:
             sftp = self.__ssh.open_sftp()
             sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
             sftp.close()
-        except Exception:
+        except Exception as e:
+            # computer.log_error(f"Error while uploading the file {local_path} to {remote_path}, here is the traceback:")
+            # computer.log_error(f"{Exception}")
+            print(f"Error while uploading the file {local_path} to \"{ remote_path}\", here is the traceback:")
+            print(f"{traceback.format_exc()}")
             return False
         return True
 

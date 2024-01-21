@@ -95,7 +95,12 @@ class ServerPath:
 
     @staticmethod
     def get_requirement_file():
-        return ServerPath.join(ServerPath.get_project_root_path(), "client", Infos.REQUIREMENTS_CLIENT_FILENAME)
+        return ServerPath.join(ServerPath.get_project_root_path(), "client", Infos.requirements_client_filename)
+
+    @staticmethod
+    def get_ssh_keys_folder():
+        # TODO: Change newServer to server when the project is renamed
+        return ServerPath.join(ServerPath.get_project_root_path(), "src", "newServer", "ssh", "keys")
 
 
 class ClientPath:
@@ -136,7 +141,7 @@ class ClientPath:
         return ClientPath.join(self.get_project_directory(), ServerPath.get_python_installer())
 
     def get_requirements_file(self):
-        return ClientPath.join(self.get_project_directory(), Infos.REQUIREMENTS_CLIENT_FILENAME())
+        return ClientPath.join(self.get_project_directory(), Infos.requirements_client_filename())
 
     def get_main_script(self):
         return ClientPath.join(self.get_project_directory(), Infos.client_main_python_script)

@@ -12,31 +12,29 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 
-from server.data.server_join_path import ServerPath
-from src.server.commands.path_functions import find_directory
+from src.newServer.infrastructure.config import Infos
+from src.newServer.infrastructure.paths import ServerPath
 from typing import TYPE_CHECKING
 
+from src.newServer.core.remote_computers_database import RemoteComputerDatabase
 if TYPE_CHECKING:
-    from src.server.data.computer import Computer
+    from src.newServer.core.remote_computer_manager import RemoteComputerManager
+from src.newServer.logs_management.server_logger import log, log_error, log_new_lines
 
-from src.server.data.computer_database import ComputerDatabase
-from src.server.environnement.server_logs import log, log_error, log_new_lines
-
-authorized_keys_filename = "authorized_keys.json"
-authorized_keys_directory = find_directory("ssh_keys")
-if authorized_keys_directory is None:
+authorized_keys_directory = ServerPath.get_ssh_keys_folder()
+if not ServerPath.exists(authorized_keys_directory):
     os.mkdir(ServerPath.join("src", "server", "data", "ssh_keys"))
-authorized_keys_directory = find_directory("ssh_keys")
-if authorized_keys_directory is None:
-    log_error("Could not create the 'ssh_keys' directory.")
-    sys.exit(1)
-authorized_keys_file = os.path.join(authorized_keys_directory, authorized_keys_filename)
+    if not ServerPath.exists(authorized_keys_directory):
+        log_error("Could not create the SSH keys directory.")
+        sys.exit(1)
+
+authorized_keys_file = ServerPath.join(authorized_keys_directory, Infos.authorized_keys_filename)
 
 
 # This is for Windows only
 class PowerInformation(ctypes.Structure):
     """
-    Class that is used to get the power information on Windows.
+    Class used to get the power information on Windows.
     """
     _fields_ = [('ACLineStatus', ctypes.c_byte),
                 ('BatteryFlag', ctypes.c_byte),
@@ -74,7 +72,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
     Class that handles the HTTP requests so that the server can receive the whoami command and send the SSH public
     keys to the clients.
     """
-    computer_database: ComputerDatabase = ComputerDatabase.load_computer_data_if_exists()
+    # computer_database: ComputerDatabase = ComputerDatabase.load_computer_data_if_exists()
+    computer_database: 'RemoteComputerDatabase' = RemoteComputerDatabase.load_computer_data_if_exists()
 
     # noinspection PyShadowingBuiltins
     def log_message(self, format, *args):
@@ -139,7 +138,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
         hostname_index: int = 2
         hostname: str = self.path.split("/")[hostname_index]
-        computer: 'Computer' = self.computer_database.find_computer(hostname)
+        computer: 'RemoteComputerManager' = self.computer_database.find_computer(hostname)
 
         if not computer:
             self.send_error(404, f"Computer with hostname '{hostname}' not found.")
@@ -187,7 +186,7 @@ def run_server(server_class=HTTPServer, handler_class=MyRequestHandler, port=800
     httpd = server_class(server_address, handler_class)
     log(f"Starting server on port {port}", print_formatted=False)
 
-    MyRequestHandler.computer_database = ComputerDatabase.load_computer_data_if_exists()
+    MyRequestHandler.computer_database = RemoteComputerDatabase.load_computer_data_if_exists()
     server_thread = threading.Thread(target=httpd.serve_forever)
     # Start a thread with the server -- that thread will then start one more thread for each request
     server_thread.start()

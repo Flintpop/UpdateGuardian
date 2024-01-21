@@ -202,6 +202,14 @@ class RemoteComputerManager:
         """
         return self.ssh_commands.delete_folder(self.remote_computer, folder_path)
 
+    def create_file(self, file_path: str) -> bool:
+        """
+        Creates a file on the remote computer.
+        :param file_path: The path of the file to create.
+        :return: True if the file was created successfully, False otherwise.
+        """
+        return self.ssh_commands.create_file(file_path)
+
     def delete_file(self, file_path: str) -> bool:
         """
         Deletes a file on the remote computer.
@@ -226,7 +234,7 @@ class RemoteComputerManager:
         :param remote_file_path: The path where to save the file.
         :return: True if the file was uploaded successfully, False otherwise.
         """
-        return self.ssh_commands.upload_file(local_file_path, remote_file_path)
+        return self.ssh_commands.upload_file(local_file_path, remote_file_path, self.remote_computer)
 
     def upload_files(self, files: list[str], remote_path: str) -> bool:
         """
@@ -303,6 +311,9 @@ class RemoteComputerManager:
 
     def get_public_key_filepath(self):
         return self.remote_computer.get_public_key_filepath()
+
+    def get_public_key(self):
+        return self.remote_computer.get_public_key()
 
     def get_hostname(self):
         return self.remote_computer.get_hostname()

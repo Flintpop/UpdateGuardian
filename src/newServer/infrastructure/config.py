@@ -4,9 +4,11 @@ class Infos:
     """
     client_main_python_script = "main_client.py"
     launch_time_filename = "launch_time.json"
-    REQUIREMENTS_CLIENT_FILENAME = "requirements_client.txt"
+    requirements_client_filename = "requirements_client.txt"
     config_json_file = "config.json"
     email_infos_json = "email_infos.json"
+    authorized_keys_filename = "authorized_keys.json"
+
     PROJECT_NAME: str = "updateguardian"
     python_version = "3.11"
     python_folder_name = f"Python{python_version.replace('.', '')}"

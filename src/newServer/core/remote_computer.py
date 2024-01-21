@@ -94,3 +94,6 @@ class RemoteComputer:
 
     def get_logger(self):
         return self.computer_logger
+
+    def get_public_key(self):
+        return self.ssh_key_manager.get_public_key()
