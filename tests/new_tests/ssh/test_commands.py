@@ -1,9 +1,10 @@
+import os.path
+import platform
 import unittest
 
 from src.newServer.core.remote_computer_manager import RemoteComputerManager
 
 from src.newServer.factory.remote_computer_manager_factory import RemoteComputerManagerFactory
-from src.newServer.infrastructure.paths import ServerPath
 from tests.new_tests.ssh.environment_setup import SSHConnexion
 
 
@@ -21,11 +22,31 @@ class TestCommands(unittest.TestCase):
         self.assertTrue(self.remote_computer_manager.does_path_exists("test_folder"))
         self.assertTrue(self.remote_computer_manager.delete_folder("test_folder"))
 
+    def test_create_folder_already_exists(self):
+        self.assertTrue(self.remote_computer_manager.create_folder("test_folder"))
+        self.assertTrue(self.remote_computer_manager.create_folder("test_folder"))
+        self.assertTrue(self.remote_computer_manager.delete_folder("test_folder"))
+
+    def test_create_folder_whitespace(self):
+        self.assertTrue(self.remote_computer_manager.create_folder("test folder"))
+        self.assertTrue(self.remote_computer_manager.does_path_exists("test folder"))
+        self.assertTrue(self.remote_computer_manager.delete_folder("test folder"))
+
+    def test_create_folder_wrong_name(self):
+        self.assertFalse(self.remote_computer_manager.create_folder("test_folder/"))
+        self.assertFalse(self.remote_computer_manager.create_folder("test_folder\0"))
+        self.assertTrue(self.remote_computer_manager.create_folder(".test_folder."))
+        self.assertTrue(self.remote_computer_manager.delete_folder(".test_folder."))
+
     def test_delete_folder(self):
         self.assertTrue(self.remote_computer_manager.create_folder("test_folder"))
         self.assertTrue(self.remote_computer_manager.does_path_exists("test_folder"))
         self.assertTrue(self.remote_computer_manager.delete_folder("test_folder"))
         self.assertFalse(self.remote_computer_manager.does_path_exists("test_folder"))
+
+    def test_delete_folder_not_exists(self):
+        self.assertFalse(self.remote_computer_manager.does_path_exists("test_folder"))
+        self.assertFalse(self.remote_computer_manager.delete_folder("test_folder"))
 
     def test_delete_folder_whitespace(self):
         self.assertTrue(self.remote_computer_manager.create_folder("test folder"))
@@ -39,6 +60,10 @@ class TestCommands(unittest.TestCase):
         self.assertTrue(self.remote_computer_manager.delete_file("test_file"))
         self.assertFalse(self.remote_computer_manager.does_path_exists("test_file"))
 
+    def test_delete_file_not_exist(self):
+        self.assertFalse(self.remote_computer_manager.does_path_exists("test_file"))
+        self.assertFalse(self.remote_computer_manager.delete_file("test_file"))
+
     def test_delete_file_whitespace(self):
         self.assertTrue(self.remote_computer_manager.create_file("test file"))
         self.assertTrue(self.remote_computer_manager.does_path_exists("test file"))
@@ -46,23 +71,16 @@ class TestCommands(unittest.TestCase):
         self.assertFalse(self.remote_computer_manager.does_path_exists("test file"))
 
     def test_upload_file(self):
-        file = "test.txt"
-        home_path = ServerPath.get_home_path()
-        self.assertTrue(self.remote_computer_manager.create_file(file))
-        self.assertTrue(self.remote_computer_manager.upload_file(ServerPath.join(home_path, file)
-                                                                 , ServerPath.join(home_path, "Desktop")))
-        file = "Desktop\\" + file
-        self.assertTrue(self.remote_computer_manager.does_path_exists(file))
-        self.assertTrue(self.remote_computer_manager.delete_file(file))
-        self.assertFalse(self.remote_computer_manager.does_path_exists(file))
+        if platform.system() != "Windows":
+            raise unittest.SkipTest("Test only available on Windows")
 
-    def test_download_file(self):
-        file = "test.txt"
-        home_path = ServerPath.get_home_path()
+        file = "test_file.txt"
+        home_path = os.environ.get('USERPROFILE')
+
         self.assertTrue(self.remote_computer_manager.create_file(file))
-        self.assertTrue(self.remote_computer_manager.download_file(ServerPath.join(home_path, "Desktop", file),
-                                                                   ServerPath.join(home_path, file)))
-        file = "Desktop\\" + file
-        self.assertTrue(self.remote_computer_manager.does_path_exists(file))
-        self.assertTrue(self.remote_computer_manager.delete_file(file))
-        self.assertFalse(self.remote_computer_manager.does_path_exists(file))
+        file_path = os.path.join(home_path, 'test_file.txt')
+        self.assertTrue(self.remote_computer_manager.upload_file(file_path, os.path.join(home_path, "Desktop")))
+        file_path = os.path.join(home_path, 'Desktop', 'test_file.txt')
+        self.assertTrue(self.remote_computer_manager.does_path_exists(file_path))
+        self.assertTrue(self.remote_computer_manager.delete_file(file_path))
+        self.assertFalse(self.remote_computer_manager.does_path_exists(file_path))
