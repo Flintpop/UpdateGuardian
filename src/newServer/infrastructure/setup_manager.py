@@ -125,7 +125,7 @@ class SetupManager:
         email_infos_file: str | None = ServerPath.get_email_infos_json_file()
         email_infos_file_exists: bool = ServerPath.exists(email_infos_file)
 
-        if email_infos_file_exists is None:
+        if email_infos_file_exists is None or not email_infos_file_exists:
             # Setup not done
             return False
 
