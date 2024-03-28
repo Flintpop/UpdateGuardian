@@ -1,5 +1,7 @@
 import sys
 
+import apscheduler.schedulers
+
 from path_production_fix import add_project_to_path
 
 add_project_to_path()
@@ -35,7 +37,10 @@ class Program:
             self.stop()
 
     def stop(self):
-        self.scheduler_manager.stop()
+        try:
+            self.scheduler_manager.stop()
+        except apscheduler.schedulers.SchedulerNotRunningError:
+            pass
 
 
 if __name__ == '__main__':

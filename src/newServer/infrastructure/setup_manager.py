@@ -52,6 +52,10 @@ def ask_and_save_launch_time():
 
 
 def check_if_setup_needed() -> bool:
+    """
+    Checks if the setup is needed. True if the setup of the application regarding
+     computers registration. False if the setup is already done, i.e. : already at least one computer registered.
+    """
     if ServerPath.exists(ServerPath.get_database_path()) is False:
         return True
     return False
@@ -60,18 +64,18 @@ def check_if_setup_needed() -> bool:
 class SetupManager:
     def __init__(self):
         pass
+
     # Initialisation des attributs nécessaires
 
     def server_setup(self) -> bool:
-        if not check_if_setup_needed():
-            if not self.register_computers_first_time():
-                return False
-
         if not self.is_launch_time_setup() and not ask_and_save_launch_time():
             return False
 
         if not self.setup_email_config_done():
             setup_email_config()
+
+        if check_if_setup_needed() and not self.register_computers_first_time():
+            return False
 
         return True
 
@@ -91,7 +95,8 @@ class SetupManager:
                 log("Setup cancelled. Exiting...")
                 exit(0)
             if usr_input != "y":
-                log_error("Error: Invalid input. Please enter 'y' to continue, or 'exit' to cancel.", print_formatted=False)
+                log_error("Error: Invalid input. Please enter 'y' to continue, or 'exit' to cancel.",
+                          print_formatted=False)
 
         log_new_lines(print_in_console=True)
         log("Starting setup...", print_formatted=False)
@@ -154,7 +159,7 @@ class SetupManager:
                 return False
             elif data.get("password", None) is None:
                 log_error("Error: The password for the email is not saved in the email_infos.json file in a linux "
-                          "environnement.",
+                          "environnement, nor in the keyring.",
                           print_formatted=False)
                 return False
 
