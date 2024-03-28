@@ -3,7 +3,6 @@ import paramiko
 from src.newServer.core.computer import Computer
 from src.newServer.core.remote_computer import RemoteComputer
 from src.newServer.core.remote_computer_manager import RemoteComputerManager
-from src.newServer.factory.HostFactory import HostFactory
 
 
 class RemoteComputerManagerFactory:
@@ -47,10 +46,10 @@ class RemoteComputerManagerFactory:
         :param init_logger: True if the logger should be initialized, False otherwise.
         :return: The RemoteComputerManager object.
         """
-        ipv4: str = dict_computer.get("ipv4", None)
-        hostname: str = dict_computer.get("hostname", None)
-        mac_address: str = dict_computer.get("mac_address", None)
-        username: str = dict_computer.get("username", None)
+        ipv4: str | None = dict_computer.get("ipv4", None)
+        hostname: str | None = dict_computer.get("hostname", None)
+        mac_address: str | None = dict_computer.get("mac_address", None)
+        username: str | None = dict_computer.get("username", None)
 
         cond = ipv4 and hostname and mac_address and username
         if not cond:
@@ -65,16 +64,17 @@ class RemoteComputerManagerFactory:
     def create_from_dictionary_and_ssh(dict_computer: dict, ssh: paramiko.SSHClient,
                                        init_logger: bool = True) -> RemoteComputerManager:
         """
-        Creates a RemoteComputerManager object from a dictionary.
+        Creates a RemoteComputerManager object from a dictionary, AND ssh. The ssh client must be setup and
+        connected to the remote computer, since the RemoteComputerManager object will use it and be linked to it.
         :param dict_computer: The dictionary.
         :param ssh: The ssh client.
         :param init_logger: True if the logger should be initialized, False otherwise.
         :return: The RemoteComputerManager object.
         """
-        ipv4: str = dict_computer.get("ipv4", None)
-        hostname: str = dict_computer.get("hostname", None)
-        mac_address: str = dict_computer.get("mac_address", None)
-        username: str = dict_computer.get("username", None)
+        ipv4: str | None = dict_computer.get("ipv4", None)
+        hostname: str | None = dict_computer.get("hostname", None)
+        mac_address: str | None = dict_computer.get("mac_address", None)
+        username: str | None = dict_computer.get("username", None)
 
         cond = ipv4 and hostname and mac_address and username
         if not cond:

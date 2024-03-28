@@ -29,7 +29,7 @@ class RemoteComputerManager:
 
     def is_pc_on(self, port: int = 22, timeout: float = 5.0, print_log_connected: bool = True) -> bool:
         """
-        Give true if the pc is on
+        Give true if the pc is on.
         :param port: The port to test
         :param timeout: The timeout to test
         :param print_log_connected: If True, the computer will log when it is connected to the socket
