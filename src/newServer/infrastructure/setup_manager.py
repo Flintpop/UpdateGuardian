@@ -70,8 +70,8 @@ class SetupManager:
         if not self.is_launch_time_setup() and not ask_and_save_launch_time():
             return False
 
-        if not self.setup_email_config_done() and not setup_email_config():
-            return False
+        if not self.setup_email_config_done():
+            setup_email_config()
 
         return True
 

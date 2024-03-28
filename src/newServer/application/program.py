@@ -23,13 +23,16 @@ class Program:
         self.scheduler_manager = SchedulerManager(self.update_manager, self.setup_manager)
 
     def start(self):
-        if self.setup_manager.server_setup():
-            self.scheduler_manager.start()
-        else:
-            log_error("Failed to set up the server. Exiting...")
-            sys.exit(1)
+        try:
+            if self.setup_manager.server_setup():
+                self.scheduler_manager.start()
+            else:
+                log_error("Failed to set up the server. Exiting...")
+                sys.exit(1)
 
-        self.cli.start()
+            self.cli.start()
+        except KeyboardInterrupt:
+            self.stop()
 
     def stop(self):
         self.scheduler_manager.stop()
