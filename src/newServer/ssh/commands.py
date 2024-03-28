@@ -108,6 +108,13 @@ class SSHCommands:
         :param folder_path: The path of the folder to create ON the remote computer.
         :return: True if the folder was created, False otherwise.
         """
+        forbidden_characters = ["/", "\0"]
+        for character in forbidden_characters:
+            if character in folder_path:
+                computer.log_error(f"Error while creating the folder {folder_path}: "
+                                   f"the character '{character}' is forbidden in a folder name.")
+                return False
+
         result: SSHCommandResult = self.__execute_command(f"mkdir \"{folder_path}\"")
 
         if result.stderr and "exist" in result.stderr:
@@ -175,9 +182,6 @@ class SSHCommands:
             sftp.close()
         except Exception:
             logging.getLogger("paramiko").setLevel(original_logging_level)
-            print(f"Error while downloading the file {remote_file_path} to \"{local_file_path}\","
-                  f" here is the traceback:")
-            print(f"{traceback.format_exc()}")
             return False
         return True
 
@@ -188,6 +192,7 @@ class SSHCommands:
 
         :param local_path: The local path of the file to send.
         :param remote_path: The remote path of the folder where the file will be sent.
+        :param computer: The computer on which to send the file.
         :return: True if the file was sent successfully, False otherwise.
         """
 
@@ -197,9 +202,8 @@ class SSHCommands:
             sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
             sftp.close()
         except Exception as e:
-            # computer.log_error(f"Error while uploading the file {local_path} to {remote_path}, here is the traceback:")
-            # computer.log_error(f"{Exception}")
-            print(f"Error while uploading the file {local_path} to \"{ remote_path}\", here is the traceback:")
+            computer.log_error(f"{e}")
+            print(f"Error while uploading the file {local_path} to {remote_path}, here is the traceback:")
             print(f"{traceback.format_exc()}")
             return False
         return True
