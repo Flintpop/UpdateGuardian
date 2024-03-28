@@ -1,5 +1,9 @@
 import sys
 
+from path_production_fix import add_project_to_path
+
+add_project_to_path()
+
 from src.newServer.application.cli import Cli
 from src.newServer.application.scheduler_manager import SchedulerManager
 from src.newServer.infrastructure.setup_manager import SetupManager
