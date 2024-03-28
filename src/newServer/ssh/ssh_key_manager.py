@@ -4,6 +4,8 @@ import paramiko
 
 from typing import TYPE_CHECKING
 
+from src.newServer.infrastructure.paths import ServerPath
+
 if TYPE_CHECKING:
     from src.newServer.core.computer import Computer
 
@@ -12,8 +14,10 @@ class SSHKeyManager:
     def __init__(self, computer: 'Computer', log_error: callable, log: callable):
         self.__private_key: paramiko.PKey | None = None
         self.__public_key: str | None = None
-        self.private_key_filepath: str = os.path.join("keys", f"private_key_{computer.hostname}")
-        self.public_key_filepath: str = os.path.join("keys", f"public_key_{computer.hostname}.pub")
+        self.private_key_filepath: str = os.path.join(
+            ServerPath.get_ssh_keys_folder(), f"private_key_{computer.hostname}")
+        self.public_key_filepath: str = os.path.join(
+            ServerPath.get_ssh_keys_folder(), f"public_key_{computer.hostname}.pub")
         self.log_error = log_error
         self.log = log
 
