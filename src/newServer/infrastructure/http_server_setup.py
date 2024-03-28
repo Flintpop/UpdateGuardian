@@ -23,7 +23,7 @@ from src.newServer.logs_management.server_logger import log, log_error, log_new_
 
 authorized_keys_directory = ServerPath.get_ssh_keys_folder()
 if not ServerPath.exists(authorized_keys_directory):
-    os.makedirs(ServerPath.join("src", "newServer", "data", "ssh_keys"))
+    os.makedirs(authorized_keys_directory)
     if not ServerPath.exists(authorized_keys_directory):
         log_error("Could not create the SSH keys directory.")
         sys.exit(1)
