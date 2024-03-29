@@ -60,8 +60,7 @@ class ComputerUpdateManager:
                 self.no_updates = True
 
             self.log_add_vertical_space()
-            if not self.computer.shutdown():
-                return self.log_error("Could not shut down client.")
+            self.computer.shutdown()
 
             self.updated_successfully = True
             return True
@@ -99,10 +98,6 @@ class ComputerUpdateManager:
         if not computer_dependencies_manager.python_installation():
             return False
 
-        # self.log_add_vertical_space()
-        # if not computer_dependencies_manager.python_path(computer=self):
-        #     return False
-
         self.log_add_vertical_space()
         if not computer_dependencies_manager.python_packages():
             return False
@@ -131,6 +126,7 @@ class ComputerUpdateManager:
                     self.log_error("Could not wait for pc to be online again.")
                     return False, None
 
+                self.computer.set_ssh_session_to_commands()
                 return True, None
             if result["UpdateCount"] == 0:
                 self.log("No updates found.")

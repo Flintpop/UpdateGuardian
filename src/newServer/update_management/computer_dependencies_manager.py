@@ -321,7 +321,7 @@ class ComputerDependenciesManager:
             res: SSHCommandResult = self.computer.execute_command(f"pip show {req}")
             stdout, stderr = res.stdout, res.stderr
 
-            if not stderr and req in stdout:
+            if not stderr and "already satis" in stdout.lower():
                 self.computer.log(f"{req} is installed")
             elif stderr and "package(s) not found" in stderr.lower():
                 self.computer.log(f"{req} is not found. Make sure you have the correct name in requirements_client.txt",
