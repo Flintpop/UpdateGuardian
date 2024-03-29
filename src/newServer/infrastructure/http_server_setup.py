@@ -73,7 +73,9 @@ class MyRequestHandler(BaseHTTPRequestHandler):
     keys to the clients.
     """
     # computer_database: ComputerDatabase = ComputerDatabase.load_computer_data_if_exists()
-    computer_database: 'RemoteComputerDatabase' = RemoteComputerDatabase.load_computer_data_if_exists()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.computer_database: 'RemoteComputerDatabase' = RemoteComputerDatabase.load_computer_data_if_exists()
 
     # noinspection PyShadowingBuiltins
     def log_message(self, format, *args):

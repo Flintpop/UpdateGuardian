@@ -1,11 +1,11 @@
 import json
 import os
-import unittest
 
 import paramiko
 
 from src.newServer.infrastructure.paths import ServerPath
 from src.newServer.infrastructure.setup_manager import SetupManager
+from src.newServer.ssh.connect import SSHConnect
 
 
 class SSHConnexion:
@@ -21,22 +21,35 @@ class SSHConnexion:
             credentials = json.load(file)
             if not credentials:
                 raise ValueError("No credentials found in credentials.json")
-            if not credentials["port"]:
+
+            self.port = credentials.get("port")
+            if not self.port:
                 raise ValueError("No port found in credentials.json")
-            if not credentials["hostname"]:
+
+            self.hostname = credentials.get("hostname")
+            if not self.hostname:
                 raise ValueError("No hostname found in credentials.json")
-            if not credentials["username"]:
+
+            self.username = credentials.get("username")
+            if not self.username:
                 raise ValueError("No username found in credentials.json")
-            if not credentials["password"]:
-                raise ValueError("No password found in credentials.json")
-            if not credentials["mac_address"]:
+
+            self.password = credentials.get("password")
+            host_key = credentials.get("host_key")
+            if not self.password and not host_key:
+                raise ValueError("No password found, and no host key too in credentials.json")
+
+            self.mac_address = credentials.get("mac_address")
+            if not self.mac_address:
                 raise ValueError("No mac_address found in credentials.json")
 
-            self.mac_address = credentials["mac_address"]
-            self.port = credentials["port"]
-            self.hostname = credentials["hostname"]
-            self.username = credentials["username"]
-            self.password = credentials["password"]
+            if credentials["host_key"] and credentials["ipv4"]:
+                print("Connecting with host key, to a remote computer")
+                private_key = paramiko.Ed25519Key.from_private_key_file(
+                    ServerPath.join(ServerPath.get_ssh_keys_folder(), f"private_key_{self.hostname}"))
+                self.ssh_session = SSHConnect.private_key_connexion_no_computer(self.hostname, self.username,
+                                                                                private_key)
+                return
 
             self.ssh_session = paramiko.SSHClient()
             self.ssh_session.set_missing_host_key_policy(paramiko.RejectPolicy())

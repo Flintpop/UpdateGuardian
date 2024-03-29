@@ -76,14 +76,15 @@ class ServerPath:
         import os
         files: list[str] = [file for file in list_files_recursive(ServerPath.get_client_folder()) if
                             file.endswith(".py")
-                            or file.endswith(".txt")]
+                            or file.endswith(".txt")
+                            or file.endswith(".ps1")]
         files = [os.path.basename(file) for file in files]
-        files = [os.path.join(ServerPath.get_project_root_path(), "client", file) for file in files]
+        files = [os.path.join(ServerPath.get_client_folder(), file) for file in files]
         return files
 
     @staticmethod
     def get_client_folder():
-        return ServerPath.join(ServerPath.get_project_root_path(), "client")
+        return ServerPath.join(ServerPath.get_project_root_path(), "src", "client")
 
     @staticmethod
     def get_python_installer():
@@ -95,7 +96,7 @@ class ServerPath:
 
     @staticmethod
     def get_requirement_file():
-        return ServerPath.join(ServerPath.get_project_root_path(), "client", Infos.requirements_client_filename)
+        return ServerPath.join(ServerPath.get_project_root_path(), "src", "client", Infos.requirements_client_filename)
 
     @staticmethod
     def get_ssh_keys_folder():
@@ -135,13 +136,13 @@ class ClientPath:
         return ClientPath.join(self.get_home_directory(), Infos.PROJECT_NAME)
 
     def get_home_directory(self):
-        return "C:\\Users\\" + self.username
+        return "C:\\Users\\" + self.username.split("\\")[1]  # Get the username without the domain
 
     def get_installer_path(self):
         return ClientPath.join(self.get_project_directory(), ServerPath.get_python_installer())
 
     def get_requirements_file(self):
-        return ClientPath.join(self.get_project_directory(), Infos.requirements_client_filename())
+        return ClientPath.join(self.get_project_directory(), Infos.requirements_client_filename)
 
     def get_main_script(self):
         return ClientPath.join(self.get_project_directory(), Infos.client_main_python_script)

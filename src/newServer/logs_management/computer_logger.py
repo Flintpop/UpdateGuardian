@@ -71,36 +71,37 @@ class ComputerLogger:
 
     def setup_log_file(self, new_msg_header: str) -> None:
         write_lines: bool = False
-        with open(self.logs_filename, "r", encoding="utf-8") as f:
+        with open(self.logs_filename, "r", encoding="utf-8", errors="replace") as f:
             if len(f.read()) > 1:
                 write_lines = True
 
         if write_lines:
-            with open(self.logs_filename, "a", encoding="utf-8") as f:
+            with open(self.logs_filename, "a", encoding="utf-8", errors="replace") as f:
                 f.write("\n\n")
 
         # Write the header
-        with open(self.logs_filename, "a", encoding="utf-8") as f:
+        with open(self.logs_filename, "a", encoding="utf-8", errors="replace") as f:
             f.write(self.get_header_style_string(header_txt=new_msg_header) + "\n")
 
     def log_add_vertical_space(self, new_lines: int = 1, print_in_console: bool = False) -> None:
         """
         To make the logs more readable, add a vertical space in the log file and in the console.
         :param new_lines: The number of new lines to add.
+        :param print_in_console: If True, print the new lines in the console.
         :return: Nothing.
         """
-        with open(self.logs_filename, "a", encoding="utf-8") as f:
+        with open(self.logs_filename, "a", encoding="utf-8", errors="replace") as f:
             new_lines: str = "\n" * new_lines
             f.write(new_lines)
 
         if print_in_console:
             print(new_lines.split("\n").pop(0))
 
-    def log_raw(self, param):
+    def log_raw(self, message: str) -> None:
         """
         Log a raw object, without the formatter.
-        :param param: The object to log.
+        :param message: The object to log.
         :return: Nothing.
         """
         with open(self.logs_filename, "a", encoding="utf-8") as f:
-            f.write(str(param) + "\n")
+            f.write(str(message) + "\n")

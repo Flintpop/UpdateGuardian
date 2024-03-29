@@ -14,6 +14,8 @@ class ComputerDependenciesManager:
         self.computer: 'RemoteComputerManager' = remote_computer_manager
 
     def python_scripts(self):
+        self.computer.log(f"Checking if python scripts and other files are installed on the path : "
+                          f"{self.computer.paths.get_project_directory()}...")
         installed: bool = self.check_python_script_installed()
 
         if installed:
@@ -48,10 +50,12 @@ class ComputerDependenciesManager:
 
         if not install_exists:
             self.computer.log(
-                "There is not installation of the python script on the remote computer,"
+                "There is no installation of the python script on the remote computer,"
                 " because the folder is not here."
             )
             return install_exists
+
+        self.computer.log("Folder exists, checking if all the files are here...")
 
         return self.check_all_files_exists()
 
@@ -63,6 +67,12 @@ class ComputerDependenciesManager:
         :return: True if all the files exist, False otherwise.
         """
         files: list[str] = ServerPath.get_client_files()
+        files = [os.path.basename(file) for file in files]
+        files = [self.computer.paths.join(self.computer.paths.get_project_directory(), file) for file in files]
+
+        if len(files) == 0:
+            self.computer.log_error("Error, no files to check.")
+            return False
 
         for file in files:
             if not self.computer.does_path_exists(file):
@@ -313,7 +323,7 @@ class ComputerDependenciesManager:
 
             if not stderr and req in stdout:
                 self.computer.log(f"{req} is installed")
-            elif stderr or stdout and "package(s) not found" in stderr.lower():
+            elif stderr and "package(s) not found" in stderr.lower():
                 self.computer.log(f"{req} is not found. Make sure you have the correct name in requirements_client.txt",
                                   level="warning")
                 all_installed = False

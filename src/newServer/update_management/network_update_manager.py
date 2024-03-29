@@ -1,11 +1,12 @@
+import concurrent
 import json
 import os
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
-from typing import List
 
-from src.newServer.core.remote_computer_manager import RemoteComputerManager
 from src.newServer.core.remote_computers_database import RemoteComputerDatabase
+from src.newServer.exceptions.ConnectionSSHException import ConnectionSSHException
 from src.newServer.factory.computer_updater_manager_factory import ComputerUpdaterManagerFactory
 from src.newServer.infrastructure.config import Infos
 from src.newServer.infrastructure.paths import ServerPath
@@ -47,7 +48,10 @@ class UpdateManager(RemoteComputerDatabase):
             log("Checking for updates...", print_formatted=False)
             # check_for_update_and_restart("--force")
 
+            self.load_computer_data()
+            self.load_email_infos()
             log("Force executing scheduled task...", print_formatted=False)
+            print()
             log_new_lines(2)
             self.update_all_computers()
 
@@ -55,34 +59,52 @@ class UpdateManager(RemoteComputerDatabase):
         max_workers = self.get_max_number_of_simultaneous_updates()
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Update all computers using threads
-            computers: list[RemoteComputerManager] = self.get_computers()
-            executor.map(self.update_one_computer, computers)
+            computers: list[ComputerUpdateManager] = self.get_computers()
+            if not computers:
+                log("No computers to update.")
+                return
 
-        log("Update rollout over. Checks logs for more informations.")
-        log("Sending result email...")
+            # Lancer les tâches de mise à jour et récupérer les résultats
+            future_to_computer = {executor.submit(self.update_one_computer, computer): computer for computer in computers}
+
+            # Itérer sur les résultats pour détecter et traiter les exceptions
+            for future in concurrent.futures.as_completed(future_to_computer):
+                computer = future_to_computer[future]
+                try:
+                    result = future.result()  # Cela lèvera une exception si la tâche a échoué
+                    print(result)
+                    # Traiter le résultat ici si nécessaire
+                except Exception as exc:
+                    # Récupérer le traceback complet
+                    tb = traceback.format_exc()
+                    log(f"Computer update failed for {computer} with exception: {exc}\nTraceback: {tb}", print_formatted=False)
+
+        log("Update rollout over. Checks logs for more informations.", print_formatted=False)
         if Infos.email_send:
+            log("Sending result email...", print_formatted=False)
             EmailResults(self).send_email_results()
 
     @staticmethod
-    def update_one_computer(remote_computer_manager: RemoteComputerManager):
-        log(message="Updating computer " + remote_computer_manager.get_hostname() + "...")
-        computer = ComputerUpdateManager(remote_computer_manager)
+    def update_one_computer(computer: ComputerUpdateManager):
+        log(message="Updating computer " + computer.get_hostname() + "...")
 
-        if not computer.update():
-            remote_computer_manager.download_log_file_ssh()
-            computer.updated_successfully = False
-            computer.no_updates = False
+        try:
+            if not computer.update():
+                computer.updated_successfully = False
+                computer.no_updates = False
 
-            log_error("Error while updating computer " + remote_computer_manager.get_hostname())
+                log_error("Error while updating computer " + computer.get_hostname())
+                log_error("Skipping this computer...")
+                return
+
+            if computer.no_updates:
+                log("Computer " + computer.get_hostname() + " has no updates.")
+                return
+
+            log("Computer " + computer.get_hostname() + " updated successfully!")
+        except ConnectionSSHException:
+            log_error("SSH connection error on :" + computer.get_hostname())
             log_error("Skipping this computer...")
-            return
-
-        if computer.no_updates:
-            log("Computer " + remote_computer_manager.get_hostname() + " has no updates.")
-            return
-
-        log("Computer " + remote_computer_manager.get_hostname() + " updated successfully!")
 
     def get_successfully_number_of_updated_computers(self) -> int:
         res = 0
@@ -133,9 +155,7 @@ class UpdateManager(RemoteComputerDatabase):
     def add_computer(self, computer: 'ComputerUpdateManager') -> None:
         self.computers.append(computer)
 
-    @classmethod
-    def load_computer_data(cls) -> "UpdateManager":
-        computer_database = UpdateManager()
+    def load_computer_data(self) -> None:
         computers_data_json_file = ServerPath.get_database_path()
 
         if not ServerPath.exists(computers_data_json_file):
@@ -143,9 +163,9 @@ class UpdateManager(RemoteComputerDatabase):
                                     f"It should have been created at the" "setup phase. Please check the setup process,"
                                     " and restart the program.")
 
-        cls.__load_computers_from_json(computer_database, computers_data_json_file, init_logger=True)
+        UpdateManager.__load_computers_from_json(self, computers_data_json_file, init_logger=True)
 
-        return computer_database
+        log(f"Loaded {len(self.computers)} computers from the database.")
 
     @classmethod
     def load_computer_data_if_exists(cls, init_logger=False) -> 'UpdateManager':
@@ -164,6 +184,8 @@ class UpdateManager(RemoteComputerDatabase):
                                    init_logger) -> None:
         with open(json_file_path, "r") as file:
             computer_database.computers_json = json.loads(file.read())
+
+        computer_database.computers.clear()
 
         # Add all the computers to the database, using the Computer class.
         for computer_hostname in computer_database.computers_json:

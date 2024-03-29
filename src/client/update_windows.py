@@ -318,9 +318,10 @@ def check_disk_space(disk_space_required: int = 5):
     hdd = psutil.disk_usage('/')
     free_space_gb = hdd.free / (1024 ** 3)
     if free_space_gb < disk_space_required:  # Adjust the value as needed
-        print_and_log_client(f"Not enough disk space available for the update, there is only {free_space_gb:.2f} GB."
-                             f"The program aimed at {disk_space_required} GB.", "error")
-        raise EnvironmentError("Not enough disk space available for the update.")
+        error_string: str = f"Not enough disk space available for the update, there is only {free_space_gb:.2f} GB." \
+                            f"The program aimed at {disk_space_required} GB."
+        print_and_log_client(error_string, "error")
+        raise EnvironmentError(error_string)
 
 
 def start_client_update():
@@ -337,13 +338,14 @@ def start_client_update():
         check_internet_connection()
         update_windows()
     except Exception as e:
-        traceback_str: str = traceback.format_exc()
-        print_and_log_client(f"Error occurred during Python update process:\n {e}\nTraceback:\n {traceback_str}",
-                             "error")
-        check_disk_space(20)
-        check_internet_connection()
+        # traceback_str: str = traceback.format_exc()
+        # print_and_log_client(f"Error occurred during Python update process:\n {e}\nTraceback:\n {traceback_str}",
+        #                      "error")
+        # check_disk_space(20)
+        # check_internet_connection()
         # reset_windows_update_components()
-        update_windows()
+        # update_windows()
+        print_and_log_client(f"Error occurred during Python update process:\n {e}", "error")
 
 
 def run_windows_update_troubleshooter():

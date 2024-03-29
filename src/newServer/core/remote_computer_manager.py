@@ -19,6 +19,9 @@ class RemoteComputerManager:
         self.ssh_commands: 'SSHCommands' = SSHCommandsFactory.create(computer.get_ssh_session())
         self.paths: 'ClientPath' = ClientPath(self.get_hostname(), self.get_username())
 
+    def set_ssh_session_to_commands(self) -> None:
+        self.ssh_commands.set_ssh_session(self.remote_computer.get_ssh_session())
+
     def execute_command(self, command: str) -> SSHCommandResult:
         """
         Executes a command on the remote computer.
@@ -346,7 +349,10 @@ class RemoteComputerManager:
         self.remote_computer.get_logger().log_raw(message=message)
 
     def connect(self):
-        return self.remote_computer.connect()
+        res = self.remote_computer.connect()
+        if res:
+            self.set_ssh_session_to_commands()
+        return res
 
     def get_ssh_session(self):
         return self.remote_computer.get_ssh_session()

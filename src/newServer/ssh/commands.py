@@ -40,6 +40,8 @@ class SSHCommandExecutor(ISSHCommand):
         :param command: The command to execute
         :return: An object SSHCommandResult containing the stdout and stderr outputs decoded in the correct format.
         """
+        if not self.ssh:
+            raise ValueError("The SSHClient object cannot be None")
         _, stdout, stderr = self.ssh.exec_command("cmd /C \"" + command + "\"")
         stdout = SSHCommandExecutor.__decode_stream(stdout.read())
         stderr = SSHCommandExecutor.__decode_stream(stderr.read())
@@ -65,6 +67,9 @@ class SSHCommandExecutor(ISSHCommand):
 
         raise DecodingError("None of the tested encodings were able to decode the stream")
 
+    def set_ssh_session(self, param):
+        self.ssh = param
+
 
 class SSHCommands:
     """
@@ -72,6 +77,7 @@ class SSHCommands:
     """
 
     def __init__(self, ssh_command_executor: SSHCommandExecutor):
+        self.commands = ssh_command_executor
         self.__execute_command: SSHCommandExecutor.execute = ssh_command_executor.execute
         self.__ssh: paramiko.SSHClient = ssh_command_executor.ssh
 
@@ -246,3 +252,7 @@ class SSHCommands:
             return True
 
         return False
+
+    def set_ssh_session(self, param):
+        self.__ssh = param
+        self.commands.set_ssh_session(param)

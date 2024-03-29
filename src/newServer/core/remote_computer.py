@@ -3,6 +3,7 @@ import traceback
 import paramiko
 
 from src.newServer.core.computer import Computer
+from src.newServer.infrastructure.paths import ServerPath
 from src.newServer.logs_management.computer_logger import ComputerLogger
 from src.newServer.ssh.connect import SSHConnect
 from src.newServer.ssh.ssh_key_manager import SSHKeyManager
@@ -11,7 +12,7 @@ from src.newServer.ssh.ssh_key_manager import SSHKeyManager
 class RemoteComputer:
     def __init__(self, computer: 'Computer', init_logger: bool = True):
         self.__computer = computer
-        self.logs_filename = f"{computer.hostname}.log"
+        self.logs_filename = ServerPath.join(ServerPath.get_log_folder_path(), f"{computer.hostname}.log")
         self.computer_logger = None
         self.ssh_key_manager = SSHKeyManager(computer, self.log_error, self.log)
         self.ssh_session: paramiko.SSHClient | None = None

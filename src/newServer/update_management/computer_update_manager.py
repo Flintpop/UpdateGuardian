@@ -3,6 +3,7 @@ import os
 import traceback
 
 from src.newServer.core.remote_computer_manager import RemoteComputerManager
+from src.newServer.exceptions.ConnectionSSHException import ConnectionSSHException
 from src.newServer.infrastructure.config import Infos
 from src.newServer.logs_management.computer_logger import ComputerLogger
 from src.newServer.report.mails import send_error_email
@@ -36,11 +37,13 @@ class ComputerUpdateManager:
             if not self.computer.is_pc_on():
                 self.log("Waking up the pc...")
                 if not self.computer.awake_pc():
-                    return self.log_error("Could not awake computer... Cannot Update.")
+                    self.log_error("Could not awake computer... Cannot Update.")
+                    raise ConnectionSSHException()
 
             self.log_add_vertical_space()
             if not self.computer.connect():
-                return self.log_error("Could not connect to computer... Cannot Update.")
+                self.log_error("Could not connect to computer... Cannot Update.")
+                raise ConnectionSSHException()
 
             self.log_add_vertical_space()
             if not self.install_prerequisites_client():
@@ -88,6 +91,7 @@ class ComputerUpdateManager:
 
     def prerequisites_installed(self):
         computer_dependencies_manager = ComputerDependenciesManager(self.computer)
+
         if not computer_dependencies_manager.python_scripts():
             return False
 
@@ -188,3 +192,6 @@ class ComputerUpdateManager:
 
     def get_hostname(self):
         return self.hostname
+
+    def __str__(self):
+        return f"ComputerUpdateManager({self.hostname})"
