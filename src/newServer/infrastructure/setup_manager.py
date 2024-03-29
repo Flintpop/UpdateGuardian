@@ -142,6 +142,9 @@ class SetupManager:
             if email_send is None:
                 log_error("Error: The send_mail key is missing in the email_infos.json file.", print_formatted=False)
                 return False
+
+            Infos.email_send = email_send
+
             if email_send is True and email is None:
                 log_error("Error: The email key is missing in the email_infos.json file.", print_formatted=False)
                 return False
@@ -163,6 +166,7 @@ class SetupManager:
                           print_formatted=False)
                 return False
 
+        Infos.email = email_send
         return True
 
     @staticmethod
