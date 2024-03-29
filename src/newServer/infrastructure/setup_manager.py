@@ -61,6 +61,33 @@ def check_if_setup_needed() -> bool:
     return False
 
 
+def setup_config():
+    """
+    Sets up the configuration file for the server.
+    """
+    log("Setting up the configuration file...", print_formatted=False)
+    print("How many computers do you want to update at the same time ?")
+    max_computers = input("> ")
+    if not max_computers.isdigit():
+        log_error("Error: Invalid input. Please enter a number.")
+        return setup_config()
+
+    max_computers = int(max_computers)
+
+    if max_computers < 1:
+        log_error("Error: The number of computers must be at least 1.")
+        return setup_config()
+
+    # Dump the config file as json
+
+    config = {
+        "max_computers_per_iteration": max_computers
+    }
+
+    with open(ServerPath.get_config_json_file(), "w") as file:
+        json.dump(config, file, indent=4)
+
+
 class SetupManager:
     def __init__(self):
         pass
@@ -73,6 +100,9 @@ class SetupManager:
 
         if not self.setup_email_config_done():
             setup_email_config()
+
+        if not self.is_settings_configured():
+            setup_config()
 
         if check_if_setup_needed() and not self.register_computers_first_time():
             return False
@@ -242,3 +272,7 @@ class SetupManager:
 
         log("Please, enter (y) when you are ready to start the setup, 'exit' to cancel.", print_formatted=False)
         print()
+
+    @staticmethod
+    def is_settings_configured():
+        return ServerPath.exists(ServerPath.get_config_json_file())
