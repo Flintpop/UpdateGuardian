@@ -89,8 +89,8 @@ class RemoteComputerManager:
         """
         self.log("Stopping sshd service...")
 
-        _, stderr = self.execute_command("powershell -Command \"Stop-Service sshd\"")
-        if stderr:
+        result = self.execute_command("powershell -Command \"Stop-Service sshd\"")
+        if result.stderr:
             self.log_error("Failed to stop sshd service. \nStderr: \n" + stderr)
             return False
 
