@@ -57,5 +57,11 @@ apt install -y python3-pip &> /dev/null
 echo "Installation des dépendances Python..."
 python3.11 -m pip install -r /opt/updateguardian/requirements.txt
 
+chmod +x /opt/updateguardian/start.sh
+
+# Ajouter un lien symbolique dans /usr/local/bin pour exécuter UpdateGuardian
+echo "Configuration de la commande updateguardian..."
+ln -s /opt/updateguardian/start.sh /usr/local/bin/updateguardian
+
 echo "Installation terminée."
-echo "Démarrer le logiciel avec bash /opt/updateguardian/start.sh"
+echo "Démarrer le logiciel avec la commande 'updateguardian'"
