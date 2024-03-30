@@ -15,12 +15,11 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat,
 
 from typing import TYPE_CHECKING
 
-from server.data.server_join_path import ServerPath
-
 if TYPE_CHECKING:
-    from src.server.data.computer import Computer
+    from src.server.core.remote_computer_manager import RemoteComputerManager
+from src.server.infrastructure.paths import ServerPath
 
-from src.server.environnement.server_logs import log
+from src.server.logs_management.server_logger import log
 
 
 def create_known_hosts_file() -> None:
@@ -32,7 +31,7 @@ def create_known_hosts_file() -> None:
     known_hosts_file.close()
 
 
-def gen_keys_and_save_them(computer: 'Computer', host_key: str) -> None:
+def gen_keys_and_save_them(computer: 'RemoteComputerManager', host_key: str) -> None:
     """
     Generate and saves a new ED25519 private key and its public key.
     :param computer: The computer object to which the keys will be saved.
@@ -42,8 +41,8 @@ def gen_keys_and_save_them(computer: 'Computer', host_key: str) -> None:
     # Generate an RSA private key
     private_key = ed25519.Ed25519PrivateKey.generate()
 
-    private_key_file: str = computer.private_key_filepath
-    public_key_file: str = computer.public_key_filepath
+    private_key_file: str = computer.get_private_key_filepath()
+    public_key_file: str = computer.get_public_key_filepath()
 
     # Serialize the private key to OpenSSH format
     private_openssh = private_key.private_bytes(
@@ -89,9 +88,10 @@ def gen_keys_and_save_them(computer: 'Computer', host_key: str) -> None:
 
     ssh_client = paramiko.SSHClient()
     ssh_client.load_host_keys(ServerPath.join(ssh_user_directory, "known_hosts"))  # Load the existing known_hosts file
-    ssh_client.get_host_keys().add(computer.hostname, 'ssh-ed25519', host_key_raw)
+    ssh_client.get_host_keys().add(computer.get_hostname(), 'ssh-ed25519', host_key_raw)
 
-    ssh_client.save_host_keys(ServerPath.join(user_directory, ".ssh", "known_hosts"))  # Save the updated known_hosts file
+    # Save the updated known_hosts file
+    ssh_client.save_host_keys(ServerPath.join(user_directory, ".ssh", "known_hosts"))
 
     log(f"Private and public ed25519 keys have been generated and saved to files and ssh-agent "
-        f"for computer {computer.hostname}.", print_formatted=False)
+        f"for computer {computer.get_hostname()}.", print_formatted=False)
