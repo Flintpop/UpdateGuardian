@@ -34,7 +34,7 @@ fi
 
 # Installer pip pour Python 3.11
 echo "Installation de pip pour Python 3.11..."
-apt install -y python3-pip
+apt install -y python3-pip &> /dev/null
 
 # Installer les dépendances Python spécifiées dans requirements.txt
 echo "Installation des dépendances Python..."
@@ -43,6 +43,6 @@ python3.11 -m pip install -r /opt/updateguardian/requirements.txt
 # Démarrer le logiciel (à ajuster selon la manière dont le logiciel est démarré)
 echo "Démarrage d'UpdateGuardian..."
 chmod +x /opt/updateguardian/start.sh
-python3.11 /opt/updateguardian/start.sh
+./opt/updateguardian/start.sh
 
 echo "Installation terminée."
