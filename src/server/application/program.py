@@ -33,6 +33,8 @@ class Program:
                 sys.exit(1)
 
             self.cli.start()
+
+            self.scheduler_manager.stop()
         except KeyboardInterrupt:
             self.stop()
 

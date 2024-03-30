@@ -111,6 +111,7 @@ def modify_settings():
     """
     global done
     print_infos()
+    done = False
     inputs = {
         "launch time": lambda: modify_launch_time(),
         "mails": lambda: mails(),
