@@ -17,7 +17,7 @@ class ComputerLogger:
 
     def setup_logger(self, new_msg_header: str) -> logging.Logger:
         if not os.path.isdir(ServerPath.get_log_folder_path()):
-            os.mkdir("logs")
+            os.mkdir(ServerPath.get_log_folder_path())
 
         logger = logging.getLogger(self.logs_filename)
         logger.setLevel(logging.INFO)

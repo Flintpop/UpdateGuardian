@@ -6,6 +6,12 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+# Vérifie que updateguardian n'est pas déjà installé
+if [ -d "/opt/updateguardian" ]; then
+    echo "UpdateGuardian est déjà installé."
+    exit 1
+fi
+
 # Mise à jour des paquets et installation de Python 3.11 et Git
 echo "Mise à jour des paquets et installation de Python 3.11 et Git..."
 apt update && apt install -y python3.11 git
@@ -31,6 +37,9 @@ if [ ! -d "/opt/updateguardian" ]; then
     echo "Le clonage du repository a échoué."
     exit 1
 fi
+sudo_caller=${SUDO_USER:-$USER}
+# Changer le propriétaire de /opt/updateguardian à l'utilisateur non-root
+chown -R $sudo_caller:$sudo_caller /opt/updateguardian
 
 old_pwd=$(pwd)
 cd /opt/updateguardian
