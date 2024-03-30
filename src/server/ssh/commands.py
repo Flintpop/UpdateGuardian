@@ -209,8 +209,8 @@ class SSHCommands:
             sftp.close()
         except Exception as e:
             computer.log_error(f"{e}")
-            print(f"Error while uploading the file {local_path} to {remote_path}, here is the traceback:")
-            print(f"{traceback.format_exc()}")
+            computer.log_error(f"Error while uploading the file {local_path} to {remote_path}, here is the traceback:")
+            computer.log_error(f"{traceback.format_exc()}")
             return False
         return True
 

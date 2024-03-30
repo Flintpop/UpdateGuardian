@@ -79,7 +79,14 @@ class ServerPath:
         """
         client_folder: str = ServerPath.get_client_folder()
         exe_file: str = ServerPath.join(client_folder, "dist", Infos.client_exe_filename)
-        ps1_file: str = ServerPath.join(client_folder, Infos.powershell_client_script_installer_name)
+        ps1_file: str = ServerPath.join(ServerPath.get_project_root_path(), "scripts_powershell", Infos.powershell_client_script_installer_name)
+
+        if not os.path.exists(exe_file):
+            raise FileNotFoundError(f"The client exe file was not found at {exe_file}")
+
+        if not os.path.exists(ps1_file):
+            raise FileNotFoundError(f"The client ps1 file was not found at {ps1_file}")
+
         return [exe_file, ps1_file]
 
     @staticmethod
