@@ -18,6 +18,7 @@ class Program:
     Main class of the program. It is used to start the program and to stop it.
     Initializes the different managers, and starts the CLI and the scheduler.
     """
+
     def __init__(self):
         self.setup_manager = SetupManager()
         self.update_manager = UpdateManager()
@@ -25,6 +26,7 @@ class Program:
         self.scheduler_manager = SchedulerManager(self.update_manager, self.setup_manager)
 
     def start(self):
+        # AutoUpdateProgram().start()
         try:
             if self.setup_manager.server_setup():
                 self.scheduler_manager.start()
@@ -34,6 +36,7 @@ class Program:
 
             self.cli.start()
 
+            # If the code reaches this point, the user has stopped the program
             self.scheduler_manager.stop()
         except KeyboardInterrupt:
             self.stop()
