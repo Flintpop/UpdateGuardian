@@ -9,9 +9,9 @@ import json
 import os.path
 import unittest
 
-from src.newServer.infrastructure.paths import ServerPath
-from src.newServer.report.mails import EmailResults, setup_email_config, load_email_infos
-from src.newServer.update_management.network_update_manager import UpdateManager
+from src.server.infrastructure.paths import ServerPath
+from src.server.report.mails import EmailResults, setup_email_config, load_email_infos
+from src.server.update_management.network_update_manager import UpdateManager
 
 
 class TestMails(unittest.TestCase):

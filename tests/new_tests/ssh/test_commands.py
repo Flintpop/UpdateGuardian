@@ -2,9 +2,9 @@ import os.path
 import platform
 import unittest
 
-from src.newServer.core.remote_computer_manager import RemoteComputerManager
+from src.server.core.remote_computer_manager import RemoteComputerManager
 
-from src.newServer.factory.remote_computer_manager_factory import RemoteComputerManagerFactory
+from src.server.factory.remote_computer_manager_factory import RemoteComputerManagerFactory
 from tests.new_tests.ssh.environment_setup import SSHConnexion
 
 

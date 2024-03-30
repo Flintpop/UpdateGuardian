@@ -1,0 +1,25 @@
+/.idea/sonarlint/issuestore/0/b/0bcbd3df964882b1e91e7367ca73cc4562dea92f
+/logs/
+/src/newServer/data/ssh_keys/
+/dist/
+/build/
+/.idea/
+/src/client/update_windows.log
+/scripts_powershell/script_tests.ps1
+/main.spec
+/launch_infos.json
+/src/client/.vscode/launch.json
+/email_infos.json
+/computers_database_backup.json
+/computers_database.json
+/mdp backup gmail  prymfxlvqipmvpqr.txt
+/test_computers_database.json
+/scripts_powershell/test.ps1
+/scripts_powershell/uninstall_update_guardian.exe
+/UpdateGuardianLogo.png
+*.pyc
+/tests/new_tests/ssh/credentials.json
+/src/newServer/ssh/keys/
+/src/server/ssh/keys/
+/src/client/build/
+/src/client/dist/

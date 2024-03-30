@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 
-from src.newServer.infrastructure.paths import ServerPath
+from src.server.infrastructure.paths import ServerPath
 
 
 class TestYourClass(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestYourClass(unittest.TestCase):
         ]
 
         expected_path = '/path/to/your/project'
-        with patch('src.newServer.infrastructure.config.Infos.PROJECT_NAME', 'project'):
+        with patch('src.server.infrastructure.config.Infos.PROJECT_NAME', 'project'):
             result = ServerPath.get_project_root_path()
             self.assertEqual(result, expected_path)
 
@@ -30,7 +30,7 @@ class TestYourClass(unittest.TestCase):
         # Mock the __file__ and directory structure
         mock_abspath.return_value = '/path/to/wrong/dir/file.py'
 
-        with patch('src.newServer.infrastructure.config.Infos.PROJECT_NAME', 'project'), \
+        with patch('src.server.infrastructure.config.Infos.PROJECT_NAME', 'project'), \
                 self.assertRaises(EnvironmentError) as context:
             ServerPath.get_project_root_path()
 

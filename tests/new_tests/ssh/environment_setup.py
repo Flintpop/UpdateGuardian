@@ -3,9 +3,9 @@ import os
 
 import paramiko
 
-from src.newServer.infrastructure.paths import ServerPath
-from src.newServer.infrastructure.setup_manager import SetupManager
-from src.newServer.ssh.connect import SSHConnect
+from src.server.infrastructure.paths import ServerPath
+from src.server.infrastructure.setup_manager import SetupManager
+from src.server.ssh.connect import SSHConnect
 
 
 class SSHConnexion:
