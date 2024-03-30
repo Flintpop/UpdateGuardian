@@ -32,6 +32,14 @@ if [ ! -d "/opt/updateguardian" ]; then
     exit 1
 fi
 
+old_pwd=$(pwd)
+cd /opt/updateguardian
+git config --global --add safe.directory /opt/updateguardian
+git checkout main
+git pull
+
+cd $old_pwd
+
 # Installer pip pour Python 3.11
 echo "Installation de pip pour Python 3.11..."
 apt install -y python3-pip &> /dev/null
@@ -43,6 +51,6 @@ python3.11 -m pip install -r /opt/updateguardian/requirements.txt
 # Démarrer le logiciel (à ajuster selon la manière dont le logiciel est démarré)
 echo "Démarrage d'UpdateGuardian..."
 chmod +x /opt/updateguardian/start.sh
-./opt/updateguardian/start.sh
+bash /opt/updateguardian/start.sh
 
 echo "Installation terminée."

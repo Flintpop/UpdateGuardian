@@ -3,7 +3,8 @@
 LOCKFILE=/tmp/updateguardian.lock
 
 (
-    flock -n 9 || exit 1
+    flock -n 9 || { echo "UpdateGuardian est déjà en cours d'exécution. Si vous êtes sûr
+    qu'il ne l'est pas, veuillez supprimer /tmp/updateguardian.lock pour lancer le programme."; exit 1; }
     DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
     PYTHON_SCRIPT="$DIR/src/server/application/program.py"
 
