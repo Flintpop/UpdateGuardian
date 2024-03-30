@@ -56,7 +56,7 @@ If you go with the default installation options, the following prerequisites are
 ### Server
 
 ```bash
-curl -sSl https://raw.githubusercontent.com/Flintpop/UpdateGuardian/main/install.sh | sudo sh
+curl -sSl https://raw.githubusercontent.com/Flintpop/UpdateGuardian/main/install.sh | sudo bash
 ```
 
 The program will handle the installation or activation on the client of:

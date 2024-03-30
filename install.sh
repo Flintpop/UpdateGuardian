@@ -34,7 +34,7 @@ fi
 
 # Installer pip pour Python 3.11
 echo "Installation de pip pour Python 3.11..."
-apt install -y python3.11-pip
+apt install -y python3-pip
 
 # Installer les dépendances Python spécifiées dans requirements.txt
 echo "Installation des dépendances Python..."
