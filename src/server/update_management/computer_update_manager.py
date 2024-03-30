@@ -100,7 +100,7 @@ class ComputerUpdateManager:
     def install_update(self):
         self.log("Installing update on the client...")
         try:
-            result: dict = self.__start_python_script()
+            result: dict = self.__start_client_program()
 
             if not result:
                 self.log_error("Could not start python script.")
@@ -131,9 +131,9 @@ class ComputerUpdateManager:
 
         return True, None
 
-    def __start_python_script(self):
-        self.log("Starting the python script...")
-        command: str = "cd " + Infos.PROJECT_NAME + " && python " + self.computer.paths.get_main_script()
+    def __start_client_program(self):
+        self.log("Starting the client program...")
+        command: str = "cd " + Infos.PROJECT_NAME + " && " + self.computer.paths.get_program_path()
 
         res: 'SSHCommandResult' = self.computer.execute_command(command)
         stdout, stderr = res.stdout, res.stderr
