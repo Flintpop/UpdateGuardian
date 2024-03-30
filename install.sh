@@ -8,11 +8,11 @@ fi
 
 # Mise à jour des paquets et installation de Python 3.12 et Git
 echo "Mise à jour des paquets et installation de Python 3.12 et Git..."
-apt update && apt install -y python3.12 git
+apt update && apt install -y python3.11 git
 
 # Vérifier si Python 3.12 est correctement installé
-if ! command -v python3.12 &> /dev/null; then
-    echo "L'installation de Python 3.12 a échoué."
+if ! command -v python3.11 &> /dev/null; then
+    echo "L'installation de Python 3.11 a échoué."
     exit 1
 fi
 
@@ -32,9 +32,9 @@ if [ ! -d "/opt/updateguardian" ]; then
     exit 1
 fi
 
-# Installer pip pour Python 3.12
-echo "Installation de pip pour Python 3.12..."
-apt install -y python3-pip
+# Installer pip pour Python 3.11
+echo "Installation de pip pour Python 3.11..."
+apt install -y python3.11-pip
 
 # Installer les dépendances Python spécifiées dans requirements.txt
 echo "Installation des dépendances Python..."
