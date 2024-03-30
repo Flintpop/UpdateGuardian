@@ -10,8 +10,8 @@ fi
 echo "Mise à jour des paquets et installation de Python 3.11 et Git..."
 apt update && apt install -y python3.11 git
 
-# Vérifier si Python 3.11 est correctement installé
-if ! command -v python3.11 &> /dev/null; then
+# Vérifier si Python 3.11 est correctement installé en utilisant une commande Python pour obtenir sa version
+if ! python3.11 -c 'import sys; assert "3.11" in sys.version, "Version de Python incorrecte"' &> /dev/null; then
     echo "L'installation de Python 3.11 a échoué."
     exit 1
 fi

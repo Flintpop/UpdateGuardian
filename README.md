@@ -31,52 +31,53 @@ It is a free and open source project, licensed under the Apache License 2.0.
 
 ## Main Features
 
-Only intended to work on Windows 10 and 11. Other OS not supported.
+Only intended to work on Windows 10 and 11 for the clients. Other OS not supported.
 
 These are the current features :
 
 - Update automation
 - Update scheduling
 - Centralized update management
-- Update notifications and reporting (email), logs
-- Installer
-- Modular
+- Logs
+- Installers for the server and the clients
 
 ## Prerequisites
 
 If you go with the default installation options, the following prerequisites are required:
 
-- Windows 10 or 11: Must be part of a **wired** local network with Wake-on-LAN (WoL) support. If WoL is not available, you'll need to manually power on the PCs for network updates.
-- Server PC: A Windows machine that can act as a server, either running 24/7 for scheduled rollouts or manually triggered for updates.
-- Internet Connection: Required for updates and remote access.
-- Firewall Configuration: The server PC must allow SSH traffic, specifically on ports 22 and 8000 within the local network.
-
 - Windows 10 or 11 **wired** local network with wake on lan. If WOL is not available, you will have to manually turn on the pcs to update your network. Later on, a feature that uses smart plug could be imagined.
-- A windows pc that will act like a server. Can be turned on 24/7 and plan the rollout or you can manually force updates.
+- A Windows/Linux pc that will act like a server. Can be turned on 24/7 and plan the rollout, or you can manually force updates.
 - An internet connection
-- A check of the firewall with ssh, port 22 and 8000 not blocked on the local network for the windows pc that acts like a server.
+- A check of the firewall with ssh, port 22 and 8000 not blocked on the local network for the Windows/Linux pc that acts like a server.
 - All interacting PCs must have static IP addresses
 
 ## Installation and Configuration 
 
-The program will handle the installation or activation of:
+### Server
 
-- Python (admin user only)
+```bash
+curl -sSl https://raw.githubusercontent.com/Flintpop/UpdateGuardian/main/install.sh | sudo sh
+```
+
+The program will handle the installation or activation on the client of:
+
 - SSH Server
 - PSWindowsUpdate PowerShell module
 - Dependencies for PSWindowsUpdate
-- Various Python packages
-- Modifications to some Windows Firewall rules
-- Wake-on-LAN (if supported)
+- Modifications to some Windows Firewall rules (like icmp)
 
 ### Software Installed on the Server
 
-The installer will set up:
+The installer will set up on a Windows server:
 
 - Chocolatey package manager
 - Git
 - Python
 - Python packages
+
+On linux:
+- Git
+- Python 3.11
 
 First, again, make sure all pcs have a static ip address, and better if they are linked to the mac address.
 
