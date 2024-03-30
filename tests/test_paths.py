@@ -1,35 +1,51 @@
 import os
 import unittest
+from unittest.mock import patch, MagicMock
 
-from src.server.commands.path_functions import go_back_one_dir, go_back_n_dir, is_path_valid
+
+from src.server.infrastructure.paths import ServerPath
 
 
-class TestPathsUtils(unittest.TestCase):
+class TestYourClass(unittest.TestCase):
 
-    def setUp(self):
-        if os.name == 'nt':
-            self.path_correct = "C:\\Users\\Administrateur\\Desktop"
-            self.path_correct_one_dir_back = "C:\\Users\\Administrateur"
-            self.path_correct_two_dir_back = "C:\\Users"
-            self.path_incorrect = "C:\\Users\\Administrateur/s\\"
-        else:
-            self.path_correct = "/home/administrateur/Desktop"
-            self.path_correct_one_dir_back = "/home/administrateur"
-            self.path_correct_two_dir_back = "/home"
-            self.path_incorrect = "/home/administrateur/Desktop\\"
+    @patch('os.path.abspath')
+    @patch('os.path.dirname')
+    def test_get_project_root_path_success(self, mock_dirname, mock_abspath):
+        # Mock the __file__ and directory structure
+        mock_abspath.return_value = '/path/to/your/project/subdir/file.py'
+        mock_dirname.side_effect = [
+            '/path/to/your/project/subdir',
+            '/path/to/your/project',
+            '/path/to/your',
+            '/path/to'
+        ]
 
-    def test_is_path_valid(self):
-        self.assertTrue(is_path_valid(self.path_correct))
-        self.assertFalse(is_path_valid(self.path_incorrect))
+        expected_path = '/path/to/your/project'
+        with patch('src.server.infrastructure.config.Infos.PROJECT_NAME', 'project'):
+            result = ServerPath.get_project_root_path()
+            self.assertEqual(result, expected_path)
 
-    def test_go_back_one_dir(self):
-        self.assertEqual(go_back_one_dir(self.path_correct), self.path_correct_one_dir_back)
-        self.assertNotEqual(go_back_one_dir(self.path_correct), self.path_correct)
-        self.assertEqual(go_back_one_dir(go_back_one_dir(self.path_correct)), self.path_correct_two_dir_back)
+    @patch('os.path.abspath')
+    def test_get_project_root_path_failure(self, mock_abspath):
+        # Mock the __file__ and directory structure
+        mock_abspath.return_value = '/path/to/wrong/dir/file.py'
 
-    def test_go_n_dir_back(self):
-        self.assertEqual(go_back_n_dir(self.path_correct, 2), self.path_correct_two_dir_back)
-        self.assertEqual(go_back_n_dir(self.path_correct, 0), self.path_correct)
-        self.assertEqual(go_back_n_dir(self.path_correct, 1), self.path_correct_one_dir_back)
+        with patch('src.server.infrastructure.config.Infos.PROJECT_NAME', 'project'), \
+                self.assertRaises(EnvironmentError) as context:
+            ServerPath.get_project_root_path()
 
-        self.assertNotEqual(go_back_n_dir(self.path_correct, 2), self.path_correct)
+        self.assertIn("The project root path is not correct", str(context.exception))
+
+    def test_get_project_root_path_current_state(self):
+        # Obtenez le chemin attendu en utilisant la logique de votre fonction
+        path = os.path.abspath(__file__)
+        for _ in range(3):  # Assurez-vous que ce nombre correspond à votre méthode
+            path = os.path.dirname(path)
+
+        # Exécutez la méthode et comparez le résultat avec le chemin attendu
+        result = ServerPath.get_project_root_path()
+        self.assertEqual(result, path)
+
+
+if __name__ == '__main__':
+    unittest.main()
