@@ -2,6 +2,7 @@
 Import-Module PSWindowsUpdate
 $logFilePath = "C:\Temp\UpdateGuardian\update_powershell_log.txt"
 $jsonFilePath = "C:\Temp\UpdateGuardian\update_status.json"
+$lockFilePath = "C:\Temp\UpdateGuardian\update_status.lock"
 
 # Function to log messages with timestamps
 function Write-Log
@@ -23,14 +24,42 @@ function Write-Log
 
 
 
-# Function to write update status to JSON file
-function Write-JSON
-{
+# Fonction modifiée pour attendre le fichier de verrouillage jusqu'à 10 secondes avant de forcer l'écriture
+function Write-JSON {
     param (
         [Parameter(Mandatory = $true)]
         [pscustomobject] $UpdateStatus
     )
+
+    $lockExists = Test-Path -Path $lockFilePath
+    $waitTime = 0
+
+    # Attendre jusqu'à 10 secondes pour que le fichier de verrouillage disparaisse
+    if ($lockExists) {
+        Write-Log "INFO: Lock file detected. Waiting for lock file to be removed before writing JSON."
+    }
+    while ($lockExists -and $waitTime -lt 10) {
+        Start-Sleep -Seconds 1
+        $lockExists = Test-Path -Path $lockFilePath
+        $waitTime++
+    }
+
+    # Si le fichier de verrouillage existe toujours après 10 secondes, log un avertissement et le supprime
+    if ($lockExists) {
+        Write-Log "WARNING: Lock file still exists after waiting. Attempting to override and write JSON."
+        Remove-Item -Path $lockFilePath -Force
+    }
+
+    # Création du fichier de verrouillage
+    Write-Log "INFO: Creating lock file to prevent concurrent writes to JSON file."
+    New-Item -Path $lockFilePath -ItemType File -Force | Out-Null
+
+    # Écriture dans le fichier JSON
     $UpdateStatus | ConvertTo-Json -Depth 100 | Out-File -FilePath $jsonFilePath -Encoding UTF8
+
+    # Suppression du fichier de verrouillage
+    Write-Log "INFO: Removing lock file after writing JSON."
+    Remove-Item -Path $lockFilePath -Force
 }
 
 # Initialize JSON object
@@ -111,10 +140,10 @@ try
         Write-Log "A reboot is required" -new_lines 1
         $updateStatus.RebootRequired = $true
         Write-JSON -UpdateStatus $updateStatus
-        Write-Log "Rebooting in 3 seconds..."
+        Write-Log "Rebooting in 5 seconds..."
         Write-Log "Script ended"
 
-        Start-Sleep -Seconds 3
+        Start-Sleep -Seconds 5
         Get-WindowsUpdate -AutoReboot
     }
     else

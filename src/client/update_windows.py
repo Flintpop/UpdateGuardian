@@ -1,7 +1,4 @@
 import ctypes
-import win32api
-import win32security
-import ntsecuritycon as con
 import json
 import subprocess
 import os
@@ -53,48 +50,12 @@ def remove_existing_update_status_file():
         os.remove(STATUS_FILENAME)
 
 
-def get_sids():
-    # Get the SID for the current user and SYSTEM user
-    user_sid = win32security.LookupAccountName(None, win32api.GetUserName())[0]
-    system_sid = win32security.LookupAccountName(None, "SYSTEM")[0]
-    everyone_sid = win32security.LookupAccountName(None, "Everyone")[0]
-    return user_sid, system_sid, everyone_sid
-
-
-def set_dacl(user_sid, system_sid, everyone_sid):
-    # Define the ACL we want to set
-    dacl = win32security.ACL()
-    dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, user_sid)
-    dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, system_sid)
-    dacl.AddAccessDeniedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, everyone_sid)
-    return dacl
-
-
 def create_update_folder():
     if not os.path.exists(TEMP_FOLDER):
         os.mkdir(TEMP_FOLDER)
         os.mkdir(UPDATE_FOLDER)
     if not os.path.exists(UPDATE_FOLDER):
         os.mkdir(UPDATE_FOLDER)
-    # set_security_attributes_to_folder(UPDATE_FOLDER, dacl)
-    # set_security_attributes_to_files(UPDATE_FOLDER, dacl)
-
-
-def set_security_attributes_to_folder(folder_path, dacl):
-    # Set the security attributes to the folder
-    sd = win32security.GetFileSecurity(folder_path, win32security.DACL_SECURITY_INFORMATION)
-    sd.SetSecurityDescriptorDacl(1, dacl, 0)
-    win32security.SetFileSecurity(folder_path, win32security.DACL_SECURITY_INFORMATION, sd)
-
-
-def set_security_attributes_to_files(folder_path, dacl):
-    # Traverse the directory and update each file's DACL
-    for root, dirs, files in os.walk(folder_path):
-        for name in dirs + files:
-            path = os.path.join(root, name)
-            sd = win32security.GetFileSecurity(path, win32security.DACL_SECURITY_INFORMATION)
-            sd.SetSecurityDescriptorDacl(1, dacl, 0)
-            win32security.SetFileSecurity(path, win32security.DACL_SECURITY_INFORMATION, sd)
 
 
 def create_symbolic_link():
@@ -150,6 +111,16 @@ def run_task():
         raise OSError(f'Failed to run task: {run_task.stderr}')
 
 
+def update_windows():
+    print_and_log_client("Starting Windows Update and launching the scheduled task...")
+    remove_existing_update_status_file()
+    create_update_folder()
+    link_path = create_symbolic_link()
+    batch_file_path = create_batch_file(link_path)
+    update_windows_task(batch_file_path)
+    save_updates_info()
+
+
 def save_updates_info():
     json_infos = get_updates_info()
     if json_infos is None:
@@ -165,42 +136,8 @@ def save_updates_info():
     print_and_log_client("Windows Update finished, json file dumped.")
 
 
-def update_windows():
-    print_and_log_client("Starting Windows Update and launching the scheduled task...")
-    remove_existing_update_status_file()
-    # user_sid, system_sid, everyone_sid = get_sids()
-    # dacl = set_dacl(user_sid, system_sid, everyone_sid)
-    # create_update_folder(dacl)
-    create_update_folder()
-    link_path = create_symbolic_link()
-    batch_file_path = create_batch_file(link_path)
-    update_windows_task(batch_file_path)
-    save_updates_info()
-
-
-def handle_json_decode_error(e, json_file_path):
-    global counter
-    with open(json_file_path, 'r', encoding="utf-8-sig") as faulty_json_file:
-        content = faulty_json_file.read()
-        print_and_log_client(f"JSONDecodeError occurred. Error details: \n{e}. Content of the file: \n{content}",
-                             "error")
-    counter = counter + 1
-
-
-def handle_file_not_found_error(e, already_printed: bool):
-    if not already_printed:
-        print_and_log_client(f"File not found: {e}. Waiting for file to be created...", "warning")
-
-
-def handle_general_error(e):
-    logging.error(f"An unexpected error occurred. Error details: {e}")
-    print_and_log_client(f"An unexpected error occurred. Error details: \n{e}\n\nTraceback: \n{traceback.format_exc()}",
-                         "error")
-    sys.exit(0)
-
-
 def process_data_json_updates_results(data: dict):
-    update_finished: bool = data.get("UpdateFinished", None)
+    update_finished: bool | None = data.get("UpdateFinished", None)
     error_message = data.get("ErrorMessage", None)
 
     if error_message is not None and error_message is not False:
@@ -242,6 +179,43 @@ def process_json_file(file_path):
         return will_return, res
 
 
+def handle_json_decode_error(e, json_file_path):
+    global counter
+    with open(json_file_path, 'r', encoding="utf-8-sig") as faulty_json_file:
+        content = faulty_json_file.read()
+        print_and_log_client(f"JSONDecodeError occurred. Error details: \n{e}. Content of the file: \n{content}",
+                             "error")
+    counter = counter + 1
+
+
+def handle_file_not_found_error(e, already_printed: bool):
+    if not already_printed:
+        print_and_log_client(f"File not found: {e}. Waiting for file to be created...", "warning")
+
+
+def handle_general_error(e):
+    logging.error(f"An unexpected error occurred. Error details: {e}")
+    print_and_log_client(f"An unexpected error occurred. Error details: \n{e}\n\nTraceback: \n{traceback.format_exc()}",
+                         "error")
+    sys.exit(0)
+
+
+def wait_for_lock_to_release(max_wait_time=20):
+    lock_file_path = "C:\\Temp\\UpdateGuardian\\update_status.lock"
+    wait_time = 0
+    while os.path.exists(lock_file_path) and wait_time < max_wait_time:
+        if wait_time == 0:  # Log only at the beginning
+            print_and_log_client("Lock file exists. Waiting for it to be released...", "warning")
+        time.sleep(1)
+        wait_time += 1
+    if os.path.exists(lock_file_path):
+        print_and_log_client("Lock file still exists after waiting. There might be a deadlock.", "error")
+    else:
+        if wait_time > 0:  # If we waited, log that the lock was released
+            print_and_log_client("Lock file released. Continuing...", "info")
+
+
+# Assurez-vous d'appeler wait_for_lock_to_release avant de lire le fichier JSON
 def get_updates_info() -> dict | None:
     global counter
     already_printed: bool = False
@@ -257,6 +231,7 @@ def get_updates_info() -> dict | None:
             already_printed = False
 
         try:
+            wait_for_lock_to_release()  # Attente pour la libération du fichier de verrouillage
             if check_file_empty(json_file_path):
                 time.sleep(1)
                 continue
@@ -277,29 +252,6 @@ def get_updates_info() -> dict | None:
             return None
         finally:
             time.sleep(1)
-
-
-def reset_windows_update_components():
-    commands = [
-        "net stop wuauserv",
-        "net stop cryptSvc",
-        "net stop bits",
-        "net stop msiserver",
-        "ren C:\\Windows\\SoftwareDistribution SoftwareDistribution.old",
-        "ren C:\\Windows\\System32\\catroot2 catroot2.old",
-        "net start wuauserv",
-        "net start cryptSvc",
-        "net start bits",
-        "net start msiserver"
-    ]
-
-    for command in commands:
-        try:
-            subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            print_and_log_client(f"Successfully executed command: {command}")
-        except subprocess.CalledProcessError as e:
-            print_and_log_client(f"Error occurred while executing command '{command}': {e.stderr.decode('cp850')}",
-                                 "error")
 
 
 def check_internet_connection():
@@ -338,13 +290,6 @@ def start_client_update():
         check_internet_connection()
         update_windows()
     except Exception as e:
-        # traceback_str: str = traceback.format_exc()
-        # print_and_log_client(f"Error occurred during Python update process:\n {e}\nTraceback:\n {traceback_str}",
-        #                      "error")
-        # check_disk_space(20)
-        # check_internet_connection()
-        # reset_windows_update_components()
-        # update_windows()
         print_and_log_client(f"Error occurred during Python update process:\n {e}", "error")
 
 
