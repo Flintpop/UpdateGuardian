@@ -13,6 +13,8 @@ import requests
 
 counter: int = 0
 
+lock_file_path = "C:\\Temp\\UpdateGuardian\\update_status.lock"
+
 
 class SystemPowerStatus(ctypes.Structure):
     _fields_ = [
@@ -201,25 +203,27 @@ def handle_general_error(e):
 
 
 def wait_for_lock_to_release(max_wait_time=20):
-    lock_file_path = "C:\\Temp\\UpdateGuardian\\update_status.lock"
     wait_time = 0
     while os.path.exists(lock_file_path) and wait_time < max_wait_time:
         if wait_time == 0:  # Log only at the beginning
-            print_and_log_client("Lock file exists. Waiting for it to be released...", "warning")
+            print_and_log_client("Lock file exists. Waiting for it to be released...", "info")
         time.sleep(1)
         wait_time += 1
     if os.path.exists(lock_file_path):
-        print_and_log_client("Lock file still exists after waiting. There might be a deadlock.", "error")
+        print_and_log_client(f"Lock file still exists after waiting {max_wait_time} seconds."
+                             "There is likely a deadlock. Exiting program", "error")
+        sys.exit(1)
     else:
         if wait_time > 0:  # If we waited, log that the lock was released
-            print_and_log_client("Lock file released. Continuing...", "info")
+            print_and_log_client(f"Lock file released after {max_wait_time} seconds. "
+                                 "Reading the file...", "info")
 
 
-# Assurez-vous d'appeler wait_for_lock_to_release avant de lire le fichier JSON
 def get_updates_info() -> dict | None:
     global counter
     already_printed: bool = False
     json_file_path: str = "C:\\Temp\\updateguardian\\update_status.json"
+    lock_file = None
     while True:
         if not file_exists(json_file_path, already_printed):
             already_printed = True
@@ -232,6 +236,7 @@ def get_updates_info() -> dict | None:
 
         try:
             wait_for_lock_to_release()  # Attente pour la libération du fichier de verrouillage
+            lock_file = open(lock_file_path, "w")
             if check_file_empty(json_file_path):
                 time.sleep(1)
                 continue
@@ -239,6 +244,9 @@ def get_updates_info() -> dict | None:
             if will_return:
                 return res
             counter = 0
+            lock_file.close()
+            os.remove(lock_file_path)
+            lock_file = None
         except json.JSONDecodeError as e:
             handle_json_decode_error(e, json_file_path)
             if counter >= 20:
@@ -251,6 +259,13 @@ def get_updates_info() -> dict | None:
             handle_general_error(e)
             return None
         finally:
+            if os.path.exists(lock_file_path) and lock_file is not None:
+                lock_file.close()
+                os.remove(lock_file_path)
+                lock_file = None
+
+            # If the file is there, but not handled by the program, it will be checked again
+            # and if it is a mistake, it will be signaled in wait_for_lock_to_release
             time.sleep(1)
 
 
@@ -317,9 +332,10 @@ def is_admin():
         return False
 
 
-def print_and_log_client(message: str, level: str = "info") -> None:
+def print_and_log_client(message: str, level: str = "info", print_mess=True) -> None:
     message = message + "\n"
-    print(message, end="")
+    if print_mess:
+        print(message, end="")
     if level == "info":
         logging.info(message)
     elif level == "error":
