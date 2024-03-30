@@ -5,6 +5,7 @@ class Infos:
     client_exe_filename = "update.exe"
     client_main_python_script = "main_client.py"
     client_program_name = "update.exe"
+    client_powershell_program_name = "Update.ps1"
     launch_time_filename = "launch_time.json"
     requirements_client_filename = "requirements_client.txt"
     config_json_file = "config.json"
