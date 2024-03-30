@@ -67,24 +67,20 @@ class ServerPath:
                                                                                 f"-ERROR-LOGS.log")
 
     @staticmethod
-    def get_client_files():
-        """
-        Gets all the useful files that can be uploaded to the client.
-        This includes .py files, and .txt files only.
-        :return: A list of all the files that can be uploaded to the client.
-        """
-        import os
-        files: list[str] = [file for file in list_files_recursive(ServerPath.get_client_folder()) if
-                            file.endswith(".py")
-                            or file.endswith(".txt")
-                            or file.endswith(".ps1")]
-        files = [os.path.basename(file) for file in files]
-        files = [os.path.join(ServerPath.get_client_folder(), file) for file in files]
-        return files
-
-    @staticmethod
     def get_client_folder():
         return ServerPath.join(ServerPath.get_project_root_path(), "src", "client")
+
+    @staticmethod
+    def get_client_files() -> list[str]:
+        """
+        Gets all the useful files that can be uploaded to the client.
+        This includes the .exe file, and the .ps1 file only.
+        :return: A list of all the files that can be uploaded to the client.
+        """
+        client_folder: str = ServerPath.get_client_folder()
+        exe_file: str = ServerPath.join(client_folder, "dist", Infos.client_exe_filename)
+        ps1_file: str = ServerPath.join(client_folder, Infos.powershell_client_script_installer_name)
+        return [exe_file, ps1_file]
 
     @staticmethod
     def get_python_installer():

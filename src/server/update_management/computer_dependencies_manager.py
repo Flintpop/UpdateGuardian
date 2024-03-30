@@ -13,37 +13,37 @@ class ComputerDependenciesManager:
         self.STDOUT_MESSAGE = "STDOUT :"
         self.computer: 'RemoteComputerManager' = remote_computer_manager
 
-    def python_scripts(self):
-        self.computer.log(f"Checking if python scripts and other files are installed on the path : "
+    def send_client_application(self):
+        self.computer.log(f"Checking if the executable and other files are uploaded on the path : "
                           f"{self.computer.paths.get_project_directory()}...")
-        installed: bool = self.check_python_script_installed()
+        installed: bool = self.check_client_files_uploaded()
 
         if installed:
-            self.computer.log("Scripts are installed.")
+            self.computer.log("Files are uploaded.")
         else:
-            self.computer.log("Scripts are not installed or not up to date, installing / updating them...")
+            self.computer.log("Files are not uploaded, uploading them...")
 
-            if not self.upload_python_scripts():
+            if not self.upload_client_files():
                 self.computer.log_error("Error, could not install scripts.")
                 return False
 
-        self.computer.log("Checking if scripts are up to date...")
-        up_to_date: bool = self.check_python_script_up_to_date()
+        self.computer.log("Checking if files are up to date...")
+        up_to_date: bool = self.are_client_files_up_to_date()
         if up_to_date:
-            self.computer.log("Scripts are up to date.")
+            self.computer.log("Files are up to date.")
         else:
-            self.computer.log("Scripts are not up to date, updating them...")
-            updated_python_scripts_success: bool = self.upload_python_scripts()
+            self.computer.log("Files are not up to date, updating them...")
+            updated_python_scripts_success: bool = self.upload_client_files()
             if not updated_python_scripts_success:
                 self.computer.log_error("Error, could not update scripts.")
                 return False
 
         return True
 
-    def check_python_script_installed(self) -> bool:
+    def check_client_files_uploaded(self) -> bool:
         """
-        Checks if the python script is installed on the remote computer.
-        :return: True if the script is installed, False otherwise.
+        Checks if the client application files are installed on the remote computer
+        :return True if the files are sent, False otherwise.
         """
         client_folder_path: str = self.computer.paths.get_project_directory()
         install_exists: bool = self.computer.does_path_exists(client_folder_path)
@@ -62,7 +62,7 @@ class ComputerDependenciesManager:
     def check_all_files_exists(self) -> bool:
         """
         Checks if all the installation files exist on the remote computer.
-        It compares all .py and .txt files in the client folder, with the files on the remote computer
+        It compares the two .ps1 and .exe files in the client folder, with the files on the remote computer
         in the %USERPROFILE%/Infos.project_name folder.
         :return: True if all the files exist, False otherwise.
         """
@@ -80,9 +80,9 @@ class ComputerDependenciesManager:
                 return False
         return True
 
-    def upload_python_scripts(self) -> bool:
+    def upload_client_files(self) -> bool:
         """
-        Installs the update_windows python script on the remote computer. Overwrites the files if they already exist.
+        Installs the client files on the computer. Overwrites the files if they already exist.
 
         :return: True if the upload was successful, False otherwise.
         """
@@ -104,7 +104,7 @@ class ComputerDependenciesManager:
 
         return True
 
-    def check_python_script_up_to_date(self):
+    def are_client_files_up_to_date(self):
         files: list[str] = ServerPath.get_client_files()
         remote_root_path: str = self.computer.paths.get_project_directory()
 
