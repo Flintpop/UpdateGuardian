@@ -65,19 +65,21 @@ class UpdateManager(RemoteComputerDatabase):
                 return
 
             # Lancer les tâches de mise à jour et récupérer les résultats
-            future_to_computer = {executor.submit(self.update_one_computer, computer): computer for computer in computers}
+            future_to_computer = {
+                executor.submit(self.update_one_computer, computer): computer for computer in computers
+            }
 
             # Itérer sur les résultats pour détecter et traiter les exceptions
             for future in concurrent.futures.as_completed(future_to_computer):
                 computer = future_to_computer[future]
                 try:
-                    result = future.result()  # Cela lèvera une exception si la tâche a échoué
-                    print(result)
+                    future.result()  # Cela lèvera une exception si la tâche a échoué
                     # Traiter le résultat ici si nécessaire
                 except Exception as exc:
                     # Récupérer le traceback complet
                     tb = traceback.format_exc()
-                    log(f"Computer update failed for {computer} with exception: {exc}\nTraceback: {tb}", print_formatted=False)
+                    log(f"Computer update failed for {computer} with exception: {exc}\nTraceback: {tb}",
+                        print_formatted=False)
 
         log("Update rollout over. Checks logs for more informations.", print_formatted=False)
         if Infos.email_send:

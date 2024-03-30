@@ -6,11 +6,11 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-# Mise à jour des paquets et installation de Python 3.12 et Git
-echo "Mise à jour des paquets et installation de Python 3.12 et Git..."
+# Mise à jour des paquets et installation de Python 3.11 et Git
+echo "Mise à jour des paquets et installation de Python 3.11 et Git..."
 apt update && apt install -y python3.11 git
 
-# Vérifier si Python 3.12 est correctement installé
+# Vérifier si Python 3.11 est correctement installé
 if ! command -v python3.11 &> /dev/null; then
     echo "L'installation de Python 3.11 a échoué."
     exit 1
@@ -38,11 +38,11 @@ apt install -y python3.11-pip
 
 # Installer les dépendances Python spécifiées dans requirements.txt
 echo "Installation des dépendances Python..."
-python3.12 -m pip install -r /opt/updateguardian/requirements.txt
+python3.11 -m pip install -r /opt/updateguardian/requirements.txt
 
 # Démarrer le logiciel (à ajuster selon la manière dont le logiciel est démarré)
 echo "Démarrage d'UpdateGuardian..."
 chmod +x /opt/updateguardian/start.sh
-python3.12 /opt/updateguardian/start.sh
+python3.11 /opt/updateguardian/start.sh
 
 echo "Installation terminée."
