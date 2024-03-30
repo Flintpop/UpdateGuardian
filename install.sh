@@ -57,9 +57,5 @@ apt install -y python3-pip &> /dev/null
 echo "Installation des dépendances Python..."
 python3.11 -m pip install -r /opt/updateguardian/requirements.txt
 
-# Démarrer le logiciel (à ajuster selon la manière dont le logiciel est démarré)
-echo "Démarrage d'UpdateGuardian..."
-chmod +x /opt/updateguardian/start.sh
-bash /opt/updateguardian/start.sh
-
 echo "Installation terminée."
+echo "Démarrer le logiciel avec bash /opt/updateguardian/start.sh"

@@ -133,8 +133,8 @@ class SetupManager:
         log("Scanning network... and setting up http server...", print_formatted=False)
 
         log_new_lines(print_in_console=True)
-        log("Please press ctrl+c to stop the http server and continue the setup process once all desired computers has "
-            "been registered...", print_formatted=False)
+        log("Please press ctrl+c to stop the http server and continue the setup process once all desired "
+            "computers have been registered...", print_formatted=False)
 
         if not run_server():
             log_error("Error with the http server. The database may be empty, or something else went wrong.",
