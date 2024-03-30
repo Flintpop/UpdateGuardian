@@ -1,1 +1,1 @@
-python3.11 src/newServer/application/program.py
+python3.11 src/server/application/program.py
