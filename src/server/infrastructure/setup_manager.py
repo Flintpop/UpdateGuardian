@@ -225,7 +225,7 @@ class SetupManager:
         """
 
         try:
-            powershell_client_path = ServerPath.get_powershell_client_script_installer_path()
+            powershell_client_path = ServerPath.get_powershell_client_script_installer()
 
             if not ServerPath.exists(powershell_client_path):
                 raise FileNotFoundError(f"The client \n"

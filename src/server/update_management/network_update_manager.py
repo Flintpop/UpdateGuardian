@@ -8,6 +8,7 @@ from threading import Lock
 from src.server.core.remote_computers_database import RemoteComputerDatabase
 from src.server.exceptions.ConnectionSSHException import ConnectionSSHException
 from src.server.factory.computer_updater_manager_factory import ComputerUpdaterManagerFactory
+from src.server.factory.auto_update_factory import AutoUpdateFactory
 from src.server.infrastructure.config import Infos
 from src.server.infrastructure.paths import ServerPath
 from src.server.logs_management.server_logger import log, log_new_lines, log_error
@@ -27,10 +28,11 @@ class UpdateManager(RemoteComputerDatabase):
         :returns: None
         """
         with self.lock:
-            log("Checking for updates...", print_formatted=False)
-            # check_for_update_and_restart("--force")
-
             log("Executing scheduled task...", print_formatted=False)
+
+            log("Checking for updates..., may be converted to forced task if there are updates",
+                print_formatted=False)
+            AutoUpdateFactory.create_auto_update(force_update=True).update()
 
             log_new_lines(2)
 
@@ -39,12 +41,14 @@ class UpdateManager(RemoteComputerDatabase):
 
             self.update_all_computers()
 
-    def force_execute_update(self):
+    def force_execute_update(self, already_updated: bool = False):
         """
         Forces the execution of the automation update program
         :returns: None
         """
         with self.lock:
+            if not already_updated:
+                AutoUpdateFactory.create_auto_update(force_update=True).update()
             log("Checking for updates...", print_formatted=False)
             # check_for_update_and_restart("--force")
 

@@ -3,6 +3,7 @@ import sys
 import apscheduler.schedulers
 
 from path_production_fix import add_project_to_path
+from src.server.factory.auto_update_factory import AutoUpdateFactory
 
 add_project_to_path()
 
@@ -25,8 +26,16 @@ class Program:
         self.cli: Cli = Cli(update_manager=self.update_manager)
         self.scheduler_manager = SchedulerManager(self.update_manager, self.setup_manager)
 
-    def start(self):
-        # AutoUpdateProgram().start()
+    @staticmethod
+    def already_updated(args):
+        return args.force
+
+    def start(self, args):
+        if self.already_updated(args):
+            self.update_manager.force_execute_update(already_updated=True)
+        else:
+            AutoUpdateFactory.create_auto_update(force_update=False).update()
+
         try:
             if self.setup_manager.server_setup():
                 self.scheduler_manager.start()
@@ -49,5 +58,9 @@ class Program:
 
 
 if __name__ == '__main__':
-    # TODO: Logique de maj automatique
-    Program().start()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true")
+    arguments = parser.parse_args()
+    Program().start(arguments)
