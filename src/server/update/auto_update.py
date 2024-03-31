@@ -33,7 +33,7 @@ class AutoUpdate:
             for line in file:
                 if line.strip().startswith('$server_ip'):
                     self.server_ip = line.strip().split('=')[1].strip()
-                    self.log(f"Saved server_ip: {self.server_ip}")
+                    self.log(f"Saved server_ip: {self.server_ip}", print_formatted=False)
                     break
 
     def restore_server_ip(self):
@@ -48,7 +48,7 @@ class AutoUpdate:
                     file.write(f'$server_ip = {self.server_ip}\n')
                 else:
                     file.write(line)
-        self.log("Restored server_ip in the .ps1 file.")
+        self.log("Restored server_ip in the .ps1 file.", print_formatted=False)
 
     def preserve_untracked_files(self):
         """
@@ -58,7 +58,7 @@ class AutoUpdate:
         untracked_files = repo.untracked_files
         if untracked_files:
             repo.git.stash('save', '--keep-index', '--include-untracked')
-            self.log("Untracked files have been stashed.")
+            self.log("Untracked files have been stashed.", print_formatted=False)
         return untracked_files
 
     def restore_untracked_files(self, untracked_files):
@@ -68,7 +68,7 @@ class AutoUpdate:
         if untracked_files:
             repo = git.Repo(self.repo_path)
             repo.git.stash('pop')
-            self.log("Untracked files have been restored from stash.")
+            self.log("Untracked files have been restored from stash.", print_formatted=False)
 
     def update(self):
         """
@@ -89,18 +89,18 @@ class AutoUpdate:
             remote_commit = repo.remotes.origin.refs.main.commit
 
             if local_commit != remote_commit:
-                self.log('New updates detected. Applying changes...')
+                self.log('New updates detected. Applying changes...', print_formatted=False)
                 self.save_server_ip()
                 untracked_files = self.preserve_untracked_files()
                 repo.git.reset('--hard', 'origin/main')
                 self.restore_untracked_files(untracked_files)
                 self.restore_server_ip()
-                self.log("Restarting the application to apply updates...")
+                self.log("Restarting the application to apply updates...", print_formatted=False)
                 self.restart_application()
             else:
-                self.log('No new updates.')
+                self.log('No new updates.', print_formatted=False)
         except GitCommandError as e:
-            self.log_error(f"Error updating the repository: {e}")
+            self.log_error(f"Error updating the repository: {e}", print_formatted=False)
 
     def restart_application(self):
         """
@@ -109,7 +109,8 @@ class AutoUpdate:
         self.log("Restarting software...", print_formatted=False)
         main_file = self.main_file
         if not os.path.exists(main_file):
-            self.log_error(f"Main file not found: {main_file}. Could not restart the application. Exiting...")
+            self.log_error(f"Main file not found: {main_file}. Could not restart the application. Exiting...",
+                           print_formatted=False)
             sys.exit(1)
 
         if self.force_update:
