@@ -8,11 +8,11 @@ from threading import Lock
 from src.server.core.remote_computers_database import RemoteComputerDatabase
 from src.server.exceptions.ConnectionSSHException import ConnectionSSHException
 from src.server.factory.computer_updater_manager_factory import ComputerUpdaterManagerFactory
+from src.server.factory.auto_update_factory import AutoUpdateFactory
 from src.server.infrastructure.config import Infos
 from src.server.infrastructure.paths import ServerPath
 from src.server.logs_management.server_logger import log, log_new_lines, log_error
 from src.server.report.mails import EmailResults
-from src.server.update.auto_update_factory import AutoUpdateFactory
 from src.server.update_management.computer_update_manager import ComputerUpdateManager
 
 

@@ -3,7 +3,7 @@ import sys
 import apscheduler.schedulers
 
 from path_production_fix import add_project_to_path
-from src.server.update.auto_update_factory import AutoUpdateFactory
+from src.server.factory.auto_update_factory import AutoUpdateFactory
 
 add_project_to_path()
 

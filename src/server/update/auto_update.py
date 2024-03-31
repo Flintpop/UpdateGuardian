@@ -9,7 +9,7 @@ from git.exc import GitCommandError
 # noinspection PyShadowingNames
 class AutoUpdate:
     """
-    Class used to manage the automatic update of the server.
+    Class used to manage automatic update of the server.
     It uses GitHub and gitpython to update the server.
     Only the main branch is used.
     Before updating, the server_ip variable in the .ps1 file is preserved,
