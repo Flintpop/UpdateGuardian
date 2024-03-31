@@ -78,10 +78,10 @@ class AutoUpdate:
             repo = git.Repo(self.repo_path)
 
             if repo.active_branch.name != 'main':
-                self.log_error("The active branch is not 'main'. Cancelling update..."
-                               "Please switch to the 'main' (stable) branch of the software before updating "
-                               "and running the app. \nRun the command : 'git checkout main'. \nExiting...")
-                sys.exit(1)
+                self.log("The active branch is not 'main'. Cancelling update..."
+                         "Please switch to the 'main' (stable) branch of the software before updating "
+                         "and running the app. \nRun the command : 'git checkout main' to update the software.")
+                return
 
             repo.remotes.origin.fetch()
 
@@ -117,4 +117,3 @@ class AutoUpdate:
         else:
             subprocess.call([sys.executable, main_file])
         sys.exit(0)
-

@@ -26,7 +26,8 @@ class Program:
         self.cli: Cli = Cli(update_manager=self.update_manager)
         self.scheduler_manager = SchedulerManager(self.update_manager, self.setup_manager)
 
-    def already_updated(self, args):
+    @staticmethod
+    def already_updated(args):
         return args.force
 
     def start(self, args):
