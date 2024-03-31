@@ -33,15 +33,13 @@ It is a free and open source project, licensed under the Apache License 2.0.
 
 ## Main Features
 
-Only intended to work on Windows 10 and 11 for the clients. Other OS not supported.
-
-These are the current features :
-
 - Update automation
 - Update scheduling
 - Centralized update management
 - Logs
 - Installers for the server and the clients
+
+Only intended to work on Windows 10 and 11 for the clients. Other OS not supported.
 
 ## Prerequisites
 

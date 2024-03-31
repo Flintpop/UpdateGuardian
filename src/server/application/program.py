@@ -1,11 +1,12 @@
 import sys
 
-import apscheduler.schedulers
-
 from path_production_fix import add_project_to_path
-from src.server.factory.auto_update_factory import AutoUpdateFactory
 
 add_project_to_path()
+
+import apscheduler.schedulers
+
+from src.server.factory.auto_update_factory import AutoUpdateFactory
 
 from src.server.application.cli import Cli
 from src.server.application.scheduler_manager import SchedulerManager
