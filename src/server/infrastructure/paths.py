@@ -19,7 +19,7 @@ class ServerPath:
         return os.path.expanduser("~")
 
     @staticmethod
-    def get_project_root_path():
+    def get_project_root():
         # Get the path of the project root folder, in absolute.
         # To be tested
         number_of_goback: int = 4
@@ -34,11 +34,11 @@ class ServerPath:
 
     @staticmethod
     def get_log_folder_path():
-        return ServerPath.join(ServerPath.get_project_root_path(), "logs")
+        return ServerPath.join(ServerPath.get_project_root(), "logs")
 
     @staticmethod
     def get_database_path():
-        return ServerPath.join(ServerPath.get_project_root_path(), ServerPath.json_computers_database_filename)
+        return ServerPath.join(ServerPath.get_project_root(), ServerPath.json_computers_database_filename)
 
     @staticmethod
     def exists(computers_data_json_file):
@@ -46,19 +46,19 @@ class ServerPath:
 
     @staticmethod
     def get_config_json_file():
-        return ServerPath.join(ServerPath.get_project_root_path(), Infos.config_json_file)
+        return ServerPath.join(ServerPath.get_project_root(), Infos.config_json_file)
 
     @staticmethod
     def get_email_infos_json_file():
-        return ServerPath.join(ServerPath.get_project_root_path(), Infos.email_infos_json)
+        return ServerPath.join(ServerPath.get_project_root(), Infos.email_infos_json)
 
     @staticmethod
     def get_launch_time_filename():
-        return ServerPath.join(ServerPath.get_project_root_path(), Infos.launch_time_filename)
+        return ServerPath.join(ServerPath.get_project_root(), Infos.launch_time_filename)
 
     @staticmethod
-    def get_powershell_client_script_installer_path():
-        return ServerPath.join(ServerPath.get_project_root_path(), "scripts_powershell",
+    def get_powershell_client_script_installer():
+        return ServerPath.join(ServerPath.get_project_root(), "scripts_powershell",
                                Infos.powershell_client_script_installer_name)
 
     @staticmethod
@@ -68,7 +68,7 @@ class ServerPath:
 
     @staticmethod
     def get_client_folder():
-        return ServerPath.join(ServerPath.get_project_root_path(), "src", "client")
+        return ServerPath.join(ServerPath.get_project_root(), "src", "client")
 
     @staticmethod
     def get_client_files() -> list[str]:
@@ -95,15 +95,19 @@ class ServerPath:
         :returns: The name of the server python installer
         """
         path: str = "python_" + Infos.python_precise_version + ".exe"
-        return ServerPath.join(ServerPath.get_project_root_path(), path)
+        return ServerPath.join(ServerPath.get_project_root(), path)
 
     @staticmethod
     def get_requirement_file():
-        return ServerPath.join(ServerPath.get_project_root_path(), "src", "client", Infos.requirements_client_filename)
+        return ServerPath.join(ServerPath.get_project_root(), "src", "client", Infos.requirements_client_filename)
 
     @staticmethod
     def get_ssh_keys_folder():
-        return ServerPath.join(ServerPath.get_project_root_path(), "src", "server", "ssh", "keys")
+        return ServerPath.join(ServerPath.get_project_root(), "src", "server", "ssh", "keys")
+
+    @staticmethod
+    def get_main_file():
+        return ServerPath.join(ServerPath.get_project_root(), "src", "server", "application", "program.py")
 
 
 class ClientPath:

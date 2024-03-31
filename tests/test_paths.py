@@ -22,7 +22,7 @@ class TestYourClass(unittest.TestCase):
 
         expected_path = '/path/to/your/project'
         with patch('src.server.infrastructure.config.Infos.PROJECT_NAME', 'project'):
-            result = ServerPath.get_project_root_path()
+            result = ServerPath.get_project_root()
             self.assertEqual(result, expected_path)
 
     @patch('os.path.abspath')
@@ -32,7 +32,7 @@ class TestYourClass(unittest.TestCase):
 
         with patch('src.server.infrastructure.config.Infos.PROJECT_NAME', 'project'), \
                 self.assertRaises(EnvironmentError) as context:
-            ServerPath.get_project_root_path()
+            ServerPath.get_project_root()
 
         self.assertIn("The project root path is not correct", str(context.exception))
 
@@ -43,7 +43,7 @@ class TestYourClass(unittest.TestCase):
             path = os.path.dirname(path)
 
         # Exécutez la méthode et comparez le résultat avec le chemin attendu
-        result = ServerPath.get_project_root_path()
+        result = ServerPath.get_project_root()
         self.assertEqual(result, path)
 
 
