@@ -36,7 +36,7 @@ class RemoteComputer:
     def connect(self):
         self.log(message=f"Connecting to {self.get_hostname()} computer via SSH...")
         try:
-            if not self.connect_ssh_procedures():
+            if not self.private_key_ssh_procedures_connexion():
                 return False
 
             self.log(f"Connected via SSH to computer {self.get_hostname()}.")
@@ -61,13 +61,20 @@ class RemoteComputer:
             self.log_error(f"Here is the traceback: \n{traceback.format_exc()}\n")
             return False
 
-    def connect_ssh_procedures(self) -> bool:
+    def private_key_ssh_procedures_connexion(self) -> bool:
         private_key = self.ssh_key_manager.get_private_key()
         if not private_key:
             self.log_error("Could not get the private key.")
             return False
         self.ssh_session: paramiko.SSHClient = SSHConnect.private_key_connexion(self.__computer, private_key)
         return True
+
+    # def password_ssh_procedures_connexion(self, password: str) -> bool:
+    #     if not password:
+    #         self.log_error("Could not get the password.")
+    #         return False
+    #     self.ssh_session: paramiko.SSHClient = SSHConnect.password_connexion(self.__computer, password)
+    #     return True
 
     def get_ssh_session(self) -> paramiko.SSHClient:
         return self.ssh_session

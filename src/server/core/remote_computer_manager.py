@@ -91,7 +91,7 @@ class RemoteComputerManager:
 
         result = self.execute_command("powershell -Command \"Stop-Service sshd\"")
         if result.stderr:
-            self.log_error("Failed to stop sshd service. \nStderr: \n" + stderr)
+            self.log_error("Failed to stop sshd service. \nStderr: \n" + result.stderr)
             return False
 
         self.log("Sshd service stopped.")
@@ -120,7 +120,7 @@ class RemoteComputerManager:
                     continue
                 success_count = 0
                 for _ in range(attempts):  # check connection stability n times
-                    self.remote_computer.connect_ssh_procedures()
+                    self.remote_computer.private_key_ssh_procedures_connexion()
                     success_count += 1
                     time.sleep(0.2)
 

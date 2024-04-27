@@ -42,7 +42,7 @@ class SSHCommandExecutor(ISSHCommand):
         """
         if not self.ssh:
             raise ValueError("The SSHClient object cannot be None")
-        _, stdout, stderr = self.ssh.exec_command("cmd /C \"" + command + "\"")
+        _, stdout, stderr = self.ssh.exec_command(command)
         stdout = SSHCommandExecutor.__decode_stream(stdout.read())
         stderr = SSHCommandExecutor.__decode_stream(stderr.read())
         return SSHCommandResult(stdout, stderr)
