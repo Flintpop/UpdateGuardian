@@ -6,53 +6,72 @@ import asyncio
 import paramiko
 
 
-def test_with_paramiko(hostname: str, username: str, password: str, command: str, responses: list[str]) -> None:
+def _create_ssh_client(hostname: str, username: str, password: str) -> paramiko.SSHClient:
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    command_full_response: str = ""
-    response_index: int = 0
-    channel = None
+    client.connect(hostname, username=username, password=password)
+    return client
 
+
+def _verify_responses(responses: list[str]) -> None:
+    """
+    Throws an exception if the responses list is empty or if any response is empty or does not end with a newline
+    """
     if len(responses) != 0 and [x for x in responses if x == "" or not x.endswith("\n")] != []:
         raise ValueError("Empty response not allowed, or response must end with a newline character.")
 
+
+def _exec_command(client: paramiko.SSHClient, command: str) -> paramiko.Channel:
+    channel = client.get_transport().open_session()
+    channel.exec_command(command)
+    return channel
+
+
+def _read_and_respond(channel: paramiko.Channel, responses: list[str]) -> str:
+    command_full_response = ""
+    response_index = 0
+
+    while not channel.exit_status_ready():
+        while not channel.recv_ready() and not channel.exit_status_ready():
+            time.sleep(0.1)
+
+        if channel.recv_ready():
+            output = channel.recv(4096).decode('utf-8')
+            command_full_response += output
+            print(output)
+
+            if not channel.exit_status_ready() and response_index < len(responses):
+                channel.send(responses[response_index].encode())
+                print("> " + responses[response_index])
+                response_index += 1
+            elif response_index >= len(responses):
+                raise ValueError(
+                    "Not enough responses provided, at least one response is missing.\n\n" + command_full_response)
+
+    # Read any remaining output after the command execution completes
+    while channel.recv_ready():
+        output = channel.recv(4096).decode('utf-8')
+        command_full_response += output
+        print(output)
+
+    return command_full_response
+
+
+def execute_interactive_command(hostname: str, username: str, password: str, command: str,
+                                responses: list[str]) -> None:
+    _verify_responses(responses)
+    client = None
+
     try:
-        client.connect(hostname, username=username, password=password)
-        channel = client.get_transport().open_session()
-        channel.exec_command(command)
-
-        # Utiliser un buffer pour recevoir toutes les données
-        while True:
-            # Attendre que les données soient disponibles
-            while not channel.recv_ready() and not channel.exit_status_ready():
-                time.sleep(0.1)
-
-            # Lire les données disponibles
-            if channel.recv_ready():
-                output = channel.recv(4096).decode('utf-8')
-                command_full_response += output
-                print(output)
-                if not channel.exit_status_ready():
-                    if response_index >= len(responses):
-                        raise ValueError("Not enough responses provided, at least one response is missing.\n\n"
-                                         + command_full_response)
-                    channel.send(responses[response_index].encode())
-                    print("> " + responses[response_index])
-                    response_index += 1
-
-            # Vérifier si la commande a terminé son exécution
-            if channel.exit_status_ready():
-                # S'assurer de lire toutes les données restantes
-                if channel.recv_ready():
-                    output = channel.recv(4096).decode('utf-8')
-                    command_full_response += output
-                    print(output)
-                break
-
+        client = _create_ssh_client(hostname, username, password)
+        channel = _exec_command(client, command)
+        output = _read_and_respond(channel, responses)
+        print(output)
     finally:
         if channel:
             channel.close()
-        client.close()
+        if client:
+            client.close()
 
     # print(command_full_response)
 
@@ -89,8 +108,8 @@ async def main() -> None:
 
     # await connect_and_run("192.168.1.49", "linuxserver", "changeme",
     #                       install_update_guardian_command, [])
-    test_with_paramiko("192.168.1.49", "linuxserver", "changeme",
-                       start_update_guardian_command, ["Monday\n"])
+    execute_interactive_command("192.168.1.49", "linuxserver", "changeme",
+                                start_update_guardian_command, ["Monday\n"])
 
 
 if __name__ == '__main__':
