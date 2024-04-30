@@ -1,116 +1,60 @@
 import os
 import time
 
-import asyncssh
 import asyncio
 
 import paramiko
 
 
-def test_with_paramiko(hostname: str, username: str, password: str, command: str) -> None:
-    # Configuration des informations de connexion
-
-    # Créer une instance client SSH
+def test_with_paramiko(hostname: str, username: str, password: str, command: str, responses: list[str]) -> None:
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    channel = None
     command_full_response: str = ""
+    response_index: int = 0
+    channel = None
+
+    if len(responses) != 0 and [x for x in responses if x == "" or not x.endswith("\n")] != []:
+        raise ValueError("Empty response not allowed, or response must end with a newline character.")
 
     try:
         client.connect(hostname, username=username, password=password)
-        # Ouvrir un canal SSH
         channel = client.get_transport().open_session()
-        # Le programme à exécuter
         channel.exec_command(command)
 
-        # Attente que le serveur soit prêt
-        while not channel.recv_ready():
-            time.sleep(1)
+        # Utiliser un buffer pour recevoir toutes les données
+        while True:
+            # Attendre que les données soient disponibles
+            while not channel.recv_ready() and not channel.exit_status_ready():
+                time.sleep(0.1)
 
-        if channel.recv_ready():
-            output = channel.recv(1024).decode('utf-8')
-            command_full_response += output
-
-        # Gestion des inputs étape par étape
-        while not channel.exit_status_ready():
-            # Lire la sortie du serveur
+            # Lire les données disponibles
             if channel.recv_ready():
-                output = channel.recv(1024).decode('utf-8')
+                output = channel.recv(4096).decode('utf-8')
                 command_full_response += output
-                # Répondre basé sur le prompt
-                if "password" in output:
-                    channel.send('changeme\n')
-                time.sleep(1)
+                print(output)
+                if not channel.exit_status_ready():
+                    if response_index >= len(responses):
+                        raise ValueError("Not enough responses provided, at least one response is missing.\n\n"
+                                         + command_full_response)
+                    channel.send(responses[response_index].encode())
+                    print("> " + responses[response_index])
+                    response_index += 1
+
+            # Vérifier si la commande a terminé son exécution
+            if channel.exit_status_ready():
+                # S'assurer de lire toutes les données restantes
+                if channel.recv_ready():
+                    output = channel.recv(4096).decode('utf-8')
+                    command_full_response += output
+                    print(output)
+                break
+
     finally:
         if channel:
             channel.close()
         client.close()
-        print(command_full_response)
 
-
-async def read_with_timeout(process: asyncssh.connect, timeout: int = 0.5) -> str | None:
-    """
-    Read from process stdout with a timeout to avoid blocking indefinitely.
-
-    :param process: The process from which to read.
-    :param timeout: Timeout in seconds after which the read will return None if no data is received.
-    :return: The received data or None if timed out.
-    """
-    try:
-        return await asyncio.wait_for(process.stdout.read(512), timeout)
-    except asyncio.TimeoutError:
-        return None
-
-
-async def interactive_command_execution(conn: asyncssh.connect, command: str, prompts_responses: list[str]) -> None:
-    """
-    Execute a command interactively, responding to multiple expected prompts.
-
-    :param conn: Active SSH connection.
-    :param command: Command to be executed on the SSH server.
-    :param prompts_responses: Dictionary where keys are prompts to detect and values are the responses to send.
-    """
-    async with conn.create_process(command, stderr=asyncssh.STDOUT) as process:
-        index: int = 0
-        result_concatenated: str = ""
-        while True:
-            recv = await read_with_timeout(process)
-            if not recv:
-                print(result_concatenated)
-                return
-            else:
-                result_concatenated += recv
-
-            if index < len(prompts_responses):
-                # Send the response to the prompt
-                process.stdin.write(prompts_responses[index] + '\n')
-                index += 1
-
-            # No more data received, process likely completed
-            if process.exit_status is not None:
-                print(recv)
-                break
-            await asyncio.sleep(0.1)
-
-
-async def connect_and_run(address: str, username: str, password: str, command: str,
-                          prompts_responses: list[str]) -> None:
-    """
-    Connect to SSH and run a command interactively with multiple prompt handling.
-
-    :param address: SSH server address.
-    :param username: Username for SSH login.
-    :param password: Password for SSH login.
-    :param command: Command to execute.
-    :param prompts_responses: Dictionary of prompts and their respective responses.
-    """
-    try:
-        conn = await asyncssh.connect(address, username=username, password=password)
-        print(f"Connected to {address}")
-        await interactive_command_execution(conn, command, prompts_responses)
-        print("\nCommand execution completed.")
-    except Exception as e:
-        print(f"\nConnection or command failed: {e}")
+    # print(command_full_response)
 
 
 async def launch_vms() -> None:
@@ -141,10 +85,12 @@ async def main() -> None:
     await launch_vms()
 
     install_update_guardian_command: str = """echo 'changeme' | sudo -S bash -c "$(curl -sSl https://raw.githubusercontent.com/Flintpop/UpdateGuardian/main/install.sh)\""""
+    start_update_guardian_command: str = "updateguardian"
 
     # await connect_and_run("192.168.1.49", "linuxserver", "changeme",
     #                       install_update_guardian_command, [])
-    test_with_paramiko("192.168.1.49", "linuxserver", "changeme", install_update_guardian_command)
+    test_with_paramiko("192.168.1.49", "linuxserver", "changeme",
+                       start_update_guardian_command, ["Monday\n"])
 
 
 if __name__ == '__main__':
